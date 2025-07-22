@@ -1,0 +1,35 @@
+name: maebanjumpen
+description: "A new Flutter project."
+publish_to: 'none'
+version: 1.0.1
+
+environment:
+  sdk: ">=3.7.2 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  awesome_dialog: ^3.0.2
+  image_picker: ^1.0.4
+  http: ^1.2.1
+  intl: ^0.20.2
+  flutter_localizations:
+    sdk: flutter
+  flutter_svg: ^2.0.7
+  # Removed flutter_local_notifications and timezone
+  shared_preferences: ^2.2.3
+  uuid: ^4.5.1
+  awesome_notifications: ^0.10.1 # *** UPDATED THIS VERSION ***
+  timezone: ^0.10.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+  provider: ^6.0.5
+
+flutter:
+  assets:
+    - assets/images/
+  uses-material-design: true
