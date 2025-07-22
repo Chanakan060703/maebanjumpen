@@ -3,10 +3,10 @@ import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:maebanjumpen/controller/loginController.dart';
 import 'package:maebanjumpen/model/account_manager.dart';
 import 'package:maebanjumpen/model/admin.dart';
-import 'package:maebanjumpen/model/hirer.dart';
-import 'package:maebanjumpen/model/housekeeper.dart';
+import 'package:maebanjumpen/model/hirer.dart';import 'package:maebanjumpen/model/housekeeper.dart';
 import 'package:maebanjumpen/model/member.dart'; // สำคัญ: ต้องนำเข้า Member model
 import 'package:maebanjumpen/model/penalty.dart'; // สำคัญ: ต้องนำเข้า Penalty model
+import 'package:shared_preferences/shared_preferences.dart'; // สำหรับบันทึกข้อมูล
 // เพิ่ม: นำเข้า Report model
 import 'package:maebanjumpen/screens/home_accountmanager.dart';
 import 'package:maebanjumpen/screens/home_admin.dart';
@@ -33,10 +33,45 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController _passwordController = TextEditingController();
 
   @override
+  void initState() {
+    super.initState();
+    _loadRememberMeCredentials(); // โหลดข้อมูลเมื่อเริ่มต้น
+  }
+
+  @override
   void dispose() {
     _usernameController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+
+  // โหลดชื่อผู้ใช้และรหัสผ่านที่บันทึกไว้
+  Future<void> _loadRememberMeCredentials() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _rememberMe = prefs.getBool('rememberMe') ?? false;
+      if (_rememberMe) {
+        _usernameController.text = prefs.getString('username') ?? '';
+        // ไม่โหลดรหัสผ่านอัตโนมัติเพื่อความปลอดภัย
+        // _passwordController.text = prefs.getString('password') ?? '';
+      }
+    });
+  }
+
+  // บันทึกหรือลบชื่อผู้ใช้และรหัสผ่านตามสถานะ "Remember Me"
+  Future<void> _saveRememberMeCredentials() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (_rememberMe) {
+      await prefs.setBool('rememberMe', true);
+      await prefs.setString('username', _usernameController.text);
+      // ไม่บันทึกรหัสผ่านเพื่อความปลอดภัย
+      // await prefs.setString('password', _passwordController.text);
+    } else {
+      await prefs.setBool('rememberMe', false);
+      await prefs.remove('username');
+      // ลบเฉพาะ username หากไม่เลือก remember me
+      // await prefs.remove('password'); // ไม่ต้องลบ password เพราะไม่ได้บันทึก
+    }
   }
 
   // ปรับปรุงฟังก์ชันแสดง AwesomeDialog ให้ยืดหยุ่นขึ้น
@@ -93,6 +128,9 @@ class _LoginPageState extends State<LoginPage> {
         );
         return; // ออกจากฟังก์ชันหลังจากแสดงข้อผิดพลาด
       }
+
+      // บันทึกสถานะ "Remember Me" หลังจาก Login สำเร็จ
+      await _saveRememberMeCredentials();
 
       // --- ตรวจสอบสถานะบัญชี (accountStatus) สำหรับ Member ทุกประเภท ---
       // ถ้า accountStatus ไม่ใช่ 'active' ให้แสดงข้อความแจ้งการจำกัดบัญชี

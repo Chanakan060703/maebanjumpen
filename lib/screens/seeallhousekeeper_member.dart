@@ -357,8 +357,8 @@ class _SeeAllHousekeeperPageState extends State<SeeAllHousekeeperPage> {
                                     // ถ้ามีข้อมูลราคา ให้แสดงราคาจริง
                                     // หากไม่มี ให้ใช้ค่า default ฿ 300 /วัน
                                     (housekeeper.hires != null && housekeeper.hires!.isNotEmpty && housekeeper.dailyRate != null)
-                                        ? "${widget.isEnglish ? '\$' : '฿'} ${housekeeper.dailyRate!.toStringAsFixed(0)} ${widget.isEnglish ? '/day' : '/วัน'}"
-                                        : "${widget.isEnglish ? '\$' : '฿'} 300 ${widget.isEnglish ? '/day' : '/วัน'}",
+                                        ? "${widget.isEnglish ? '\฿' : '฿'} ${housekeeper.dailyRate!.toStringAsFixed(0)} ${widget.isEnglish ? '/day' : '/วัน'}"
+                                        : "${widget.isEnglish ? '\฿' : '฿'} 300 ${widget.isEnglish ? '/day' : '/วัน'}",
                                     style: const TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.bold,
