@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:awesome_notifications/awesome_notifications.dart'; // เปลี่ยนมาใช้ awesome_notifications
-// ไม่ต้องใช้ timezone และ dart:io show Platform แล้ว ถ้าใช้ awesome_notifications
 
 class NotificationService {
   // ไม่ต้องใช้ FlutterLocalNotificationsPlugin แล้ว

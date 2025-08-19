@@ -7,6 +7,7 @@ import 'package:maebanjumpen/screens/deposit_member.dart';
 import 'package:maebanjumpen/screens/hirehousekeeper_member.dart';
 import 'package:maebanjumpen/screens/hirelist_member.dart';
 import 'package:maebanjumpen/screens/home_member.dart';
+import 'package:maebanjumpen/screens/login.dart';
 import 'package:maebanjumpen/screens/profile_member.dart';
 
 class ViewHousekeeperPage extends StatefulWidget {
@@ -31,7 +32,10 @@ class _ViewHousekeeperPageState extends State<ViewHousekeeperPage> {
   // Map skill names (จาก backend ที่เป็นภาษาอังกฤษ) ไปยังไอคอนที่เหมาะสม
   // และ map ไปยังข้อความภาษาไทยเพื่อแสดงผล
   final Map<String, Map<String, dynamic>> skillDetails = {
-    'General Cleaning': {'icon': Icons.cleaning_services, 'thaiName': 'ทำความสะอาดทั่วไป'},
+    'General Cleaning': {
+      'icon': Icons.cleaning_services,
+      'thaiName': 'ทำความสะอาดทั่วไป',
+    },
     'Laundry': {'icon': Icons.local_laundry_service, 'thaiName': 'ซักรีด'},
     'Cooking': {'icon': Icons.restaurant, 'thaiName': 'ทำอาหาร'},
     'Garden': {'icon': Icons.local_florist, 'thaiName': 'ดูแลสวน'},
@@ -44,12 +48,20 @@ class _ViewHousekeeperPageState extends State<ViewHousekeeperPage> {
     // *** Debugging Reviews ***
     print('--- Debugging Housekeeper Reviews in ViewHousekeeperPage ---');
     print('Housekeeper ID: ${widget.housekeeper.id}');
-    print('Housekeeper Name: ${widget.housekeeper.person?.firstName} ${widget.housekeeper.person?.lastName}');
-    print('Housekeeper Current Rating (from Backend): ${widget.housekeeper.rating}');
-    print('Housekeeper Skills: ${widget.housekeeper.housekeeperSkills ?? "No skills provided"}'); // Debugging skills
+    print(
+      'Housekeeper Name: ${widget.housekeeper.person?.firstName} ${widget.housekeeper.person?.lastName}',
+    );
+    print(
+      'Housekeeper Current Rating (from Backend): ${widget.housekeeper.rating}',
+    );
+    print(
+      'Housekeeper Skills: ${widget.housekeeper.housekeeperSkills ?? "No skills provided"}',
+    ); // Debugging skills
 
     if (widget.housekeeper.hires == null || widget.housekeeper.hires!.isEmpty) {
-      print('No hires found for this housekeeper. Reviews cannot be displayed.');
+      print(
+        'No hires found for this housekeeper. Reviews cannot be displayed.',
+      );
     } else {
       print('Total hires for housekeeper: ${widget.housekeeper.hires!.length}');
       int completedHiresWithReviews = 0;
@@ -63,10 +75,16 @@ class _ViewHousekeeperPageState extends State<ViewHousekeeperPage> {
           print('        Review Message: "${hire.review?.reviewMessage}"');
           print('        Review Score: ${hire.review?.score}');
           print('        Review Date: ${hire.review?.reviewDate}');
-          print('        Reviewer Name: ${hire.hirer?.person?.firstName ?? 'N/A'}');
-          print('        Reviewer Picture: ${hire.hirer?.person?.pictureUrl ?? 'N/A'}');
+          print(
+            '        Reviewer Name: ${hire.hirer?.person?.firstName ?? 'N/A'}',
+          );
+          print(
+            '        Reviewer Picture: ${hire.hirer?.person?.pictureUrl ?? 'N/A'}',
+          );
         } else {
-          print('        !!! Review is STILL NULL for this hire (check Backend Housekeeper fetch & serialization) !!!');
+          print(
+            '        !!! Review is STILL NULL for this hire (check Backend Housekeeper fetch & serialization) !!!',
+          );
         }
       }
       print('Total completed hires with reviews: $completedHiresWithReviews');
@@ -88,15 +106,20 @@ class _ViewHousekeeperPageState extends State<ViewHousekeeperPage> {
     // ตรวจสอบว่าเป็น Base64
     if (imageData.contains('data:image/') || imageData.length > 100) {
       try {
-        String base64Stripped = imageData.contains(',') ? imageData.split(',')[1] : imageData;
+        String base64Stripped =
+            imageData.contains(',') ? imageData.split(',')[1] : imageData;
         final decodedBytes = base64Decode(base64Stripped);
         return MemoryImage(decodedBytes);
       } catch (e) {
         debugPrint('Error decoding Base64 image: $e');
-        return const AssetImage('assets/placeholder_image.png'); // รูปภาพสำรองเมื่อ Base64 ผิดพลาด
+        return const AssetImage(
+          'assets/placeholder_image.png',
+        ); // รูปภาพสำรองเมื่อ Base64 ผิดพลาด
       }
     }
-    return const AssetImage('assets/placeholder_image.png'); // รูปภาพสำรองสุดท้าย
+    return const AssetImage(
+      'assets/placeholder_image.png',
+    ); // รูปภาพสำรองสุดท้าย
   }
 
   // --- ฟังก์ชันสำหรับคำนวณคะแนนที่ใช้แสดงผลดาว (ใช้กับ review score) ---
@@ -139,7 +162,9 @@ class _ViewHousekeeperPageState extends State<ViewHousekeeperPage> {
 
     for (var hire in widget.housekeeper.hires!) {
       // ตรวจสอบว่า hire นี้เป็น "Completed" และมีรีวิว
-      if (hire.jobStatus == 'Completed' && hire.review != null && hire.review!.score != null) {
+      if (hire.jobStatus == 'Completed' &&
+          hire.review != null &&
+          hire.review!.score != null) {
         totalScore += hire.review!.score!;
         reviewCount++;
       }
@@ -151,35 +176,40 @@ class _ViewHousekeeperPageState extends State<ViewHousekeeperPage> {
   @override
   Widget build(BuildContext context) {
     final double? backendRating = widget.housekeeper.rating;
-    final String displayRatingText = backendRating != null && backendRating > 0
-        ? backendRating.toStringAsFixed(1)
-        : (widget.isEnglish ? "No Rating" : "ไม่มีคะแนน");
+    final String displayRatingText =
+        backendRating != null && backendRating > 0
+            ? backendRating.toStringAsFixed(1)
+            : (widget.isEnglish ? "No Rating" : "ไม่มีคะแนน");
 
     // นับจำนวนงานที่ทำเสร็จสิ้นและมีรีวิว
-    final int completedJobsWithReviews = widget.housekeeper.hires
-            ?.where((hire) => hire.jobStatus == 'Completed' && hire.review != null)
+    final int completedJobsWithReviews =
+        widget.housekeeper.hires
+            ?.where(
+              (hire) => hire.jobStatus == 'Completed' && hire.review != null,
+            )
             .length ??
         0;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          widget.isEnglish ? 'Housekeeper Info' : 'ข้อมูลแม่บ้าน'),
+        title: Text(widget.isEnglish ? 'Housekeeper Info' : 'ข้อมูลแม่บ้าน'),
         centerTitle: true,
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.red),
-          onPressed: () => Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) => HomePage(
-                user: widget.user,
-                isEnglish: widget.isEnglish,
+          onPressed:
+              () => Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder:
+                      (context) => HomePage(
+                        user: widget.user,
+                        isEnglish: widget.isEnglish,
+                      ),
+                ),
               ),
-            ),
-          ),
         ),
       ),
       body: SingleChildScrollView(
@@ -194,7 +224,9 @@ class _ViewHousekeeperPageState extends State<ViewHousekeeperPage> {
               ),
               backgroundColor: Colors.red,
               onBackgroundImageError: (exception, stackTrace) {
-                debugPrint('Error loading housekeeper profile image: $exception');
+                debugPrint(
+                  'Error loading housekeeper profile image: $exception',
+                );
               },
             ),
             const SizedBox(height: 8),
@@ -225,10 +257,10 @@ class _ViewHousekeeperPageState extends State<ViewHousekeeperPage> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 const Icon(Icons.location_pin, color: Colors.grey, size: 18),
-                  Text(
-                    widget.housekeeper.person?.address ?? '',
-                    style: const TextStyle(color: Colors.grey),
-                   )
+                Text(
+                  widget.housekeeper.person?.address ?? '',
+                  style: const TextStyle(color: Colors.grey),
+                ),
               ],
             ),
             const SizedBox(height: 16),
@@ -244,7 +276,10 @@ class _ViewHousekeeperPageState extends State<ViewHousekeeperPage> {
                       // *** แสดงคะแนนเฉลี่ยเป็นตัวเลขตามค่าจาก Backend ***
                       Text(
                         displayRatingText,
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 24),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 24,
+                        ),
                       ),
                       Text(widget.isEnglish ? "Average Rating" : "คะแนนเฉลี่ย"),
                     ],
@@ -284,53 +319,64 @@ class _ViewHousekeeperPageState extends State<ViewHousekeeperPage> {
                     Wrap(
                       spacing: 12.0, // ช่องว่างแนวนอนระหว่างชิป
                       runSpacing: 12.0, // ช่องว่างแนวตั้งระหว่างแถวของชิป
-                      children: widget.housekeeper.housekeeperSkills!
-                          .map(
-                            (skill) {
-                              final String backendSkillName = skill.skillType?.skillTypeName ?? '';
-                              final Map<String, dynamic>? details = skillDetails[backendSkillName];
+                      children:
+                          widget.housekeeper.housekeeperSkills!.map((skill) {
+                            final String backendSkillName =
+                                skill.skillType?.skillTypeName ?? '';
+                            final Map<String, dynamic>? details =
+                                skillDetails[backendSkillName];
 
-                              final IconData icon = details?['icon'] ?? Icons.build; // Default icon if not found
-                              final String displayName = widget.isEnglish
-                                  ? backendSkillName.isNotEmpty ? backendSkillName : 'No skill name'
-                                  : details?['thaiName'] ?? 'ไม่มีชื่อทักษะ';
+                            final IconData icon =
+                                details?['icon'] ??
+                                Icons.build; // Default icon if not found
+                            final String displayName =
+                                widget.isEnglish
+                                    ? backendSkillName.isNotEmpty
+                                        ? backendSkillName
+                                        : 'No skill name'
+                                    : details?['thaiName'] ?? 'ไม่มีชื่อทักษะ';
 
-                              return Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(8),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.grey.withOpacity(0.2),
-                                      spreadRadius: 1,
-                                      blurRadius: 5,
-                                      offset: const Offset(0, 2),
+                            return Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 12,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(8),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.grey.withOpacity(0.2),
+                                    spreadRadius: 1,
+                                    blurRadius: 5,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: Row(
+                                mainAxisSize:
+                                    MainAxisSize
+                                        .min, // ทำให้ Row หดขนาดตามเนื้อหา
+                                children: [
+                                  Icon(icon, color: Colors.red, size: 24),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    displayName,
+                                    style: const TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w500,
                                     ),
-                                  ],
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min, // ทำให้ Row หดขนาดตามเนื้อหา
-                                  children: [
-                                    Icon(icon, color: Colors.red, size: 24),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      displayName,
-                                      style: const TextStyle(
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
-                          )
-                          .toList(),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }).toList(),
                     )
                   else
                     Text(
-                      widget.isEnglish ? "No skills listed" : "ไม่มีความสามารถระบุ",
+                      widget.isEnglish
+                          ? "No skills listed"
+                          : "ไม่มีความสามารถระบุ",
                       style: const TextStyle(fontSize: 16, color: Colors.grey),
                     ),
                 ],
@@ -366,7 +412,10 @@ class _ViewHousekeeperPageState extends State<ViewHousekeeperPage> {
                             widget.isEnglish ? "Starting from" : "เริ่มต้นที่",
                             style: const TextStyle(color: Colors.red),
                           ),
-                          Text("${widget.housekeeper.dailyRate} ฿ / วัน", style: TextStyle(fontSize: 16)),
+                          Text(
+                            "${widget.housekeeper.dailyRate} ฿ / วัน",
+                            style: TextStyle(fontSize: 16),
+                          ),
                         ],
                       ),
                     ),
@@ -385,27 +434,42 @@ class _ViewHousekeeperPageState extends State<ViewHousekeeperPage> {
                         ),
                       ),
                       onPressed: () {
-                        // ตรวจสอบยอดเงินก่อนที่จะไปหน้า Hire
-                        if (widget.user.balance != null &&
-                            widget.housekeeper.dailyRate != null &&
-                            widget.user.balance! >= widget.housekeeper.dailyRate!) {
+                        // 🔑 เริ่มต้นด้วยการตรวจสอบว่า user มีค่าหรือไม่
+                        if (widget.user.person == null) {
+                          // ถ้าไม่มีข้อมูลผู้ใช้ (ถือว่ายังไม่ได้ล็อกอิน) ให้ไปยังหน้า Login
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => HireHousekeeperPage(
-                                housekeeper: widget.housekeeper,
-                                isEnglish: widget.isEnglish,
-                                user: widget.user,
-                              ),
+                              builder: (context) => const LoginPage(),
+                            ),
+                          );
+                        } else if (widget.user.balance != null &&
+                            widget.housekeeper.dailyRate != null &&
+                            widget.user.balance! >=
+                                widget.housekeeper.dailyRate!) {
+                          // ถ้ามีผู้ใช้ล็อกอินแล้วและยอดเงินเพียงพอ ให้ไปยังหน้า Hire
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder:
+                                  (context) => HireHousekeeperPage(
+                                    housekeeper: widget.housekeeper,
+                                    isEnglish: widget.isEnglish,
+                                    user: widget.user,
+                                  ),
                             ),
                           );
                         } else {
-                          // แสดง AlertDialog แจ้งเตือนว่าเงินไม่พอ
+                          // ถ้ามีผู้ใช้ล็อกอินแล้ว แต่ยอดเงินไม่พอ ให้แสดง AlertDialog
                           showDialog(
                             context: context,
                             builder: (BuildContext context) {
                               return AlertDialog(
-                                title: Text(widget.isEnglish ? "Insufficient Balance" : "ยอดเงินไม่เพียงพอ"),
+                                title: Text(
+                                  widget.isEnglish
+                                      ? "Insufficient Balance"
+                                      : "ยอดเงินไม่เพียงพอ",
+                                ),
                                 content: Text(
                                   widget.isEnglish
                                       ? "Your balance (${widget.user.balance?.toStringAsFixed(2) ?? '0.00'} ฿) is less than the housekeeper's daily rate (${widget.housekeeper.dailyRate?.toStringAsFixed(2) ?? '0.00'} ฿). Please top up your balance."
@@ -413,7 +477,9 @@ class _ViewHousekeeperPageState extends State<ViewHousekeeperPage> {
                                 ),
                                 actions: <Widget>[
                                   TextButton(
-                                    child: Text(widget.isEnglish ? "OK" : "ตกลง"),
+                                    child: Text(
+                                      widget.isEnglish ? "OK" : "ตกลง",
+                                    ),
                                     onPressed: () {
                                       Navigator.of(context).pop();
                                     },
@@ -447,22 +513,39 @@ class _ViewHousekeeperPageState extends State<ViewHousekeeperPage> {
                   const SizedBox(height: 8),
                   if (widget.housekeeper.hires != null &&
                       widget.housekeeper.hires!.any(
-                          (hire) => hire.review != null && hire.jobStatus == 'Completed'))
+                        (hire) =>
+                            hire.review != null &&
+                            hire.jobStatus == 'Completed',
+                      ))
                     ...widget.housekeeper.hires!
-                        .where((hire) => hire.review != null && hire.jobStatus == 'Completed')
+                        .where(
+                          (hire) =>
+                              hire.review != null &&
+                              hire.jobStatus == 'Completed',
+                        )
                         .map(
                           (hire) => buildReview(
-                            name: hire.hirer?.person?.firstName ?? (widget.isEnglish ? 'Unknown User' : 'ผู้ใช้ไม่ทราบชื่อ'), // เปลี่ยนเป็นภาษาไทย
+                            name:
+                                hire.hirer?.person?.firstName ??
+                                (widget.isEnglish
+                                    ? 'Unknown User'
+                                    : 'ผู้ใช้ไม่ทราบชื่อ'), // เปลี่ยนเป็นภาษาไทย
                             comment: hire.review?.reviewMessage ?? '',
                             rating: hire.review?.score ?? 0.0,
-                            avatarUrl: hire.hirer?.person?.pictureUrl ?? 'https://placehold.co/150x150/EEEEEE/313131?text=No+Image',
-                            reviewDate: hire.review?.reviewDate, // ส่ง DateTime? ไปให้ buildReview จัดการ
+                            avatarUrl:
+                                hire.hirer?.person?.pictureUrl ??
+                                'https://placehold.co/150x150/EEEEEE/313131?text=No+Image',
+                            reviewDate:
+                                hire
+                                    .review
+                                    ?.reviewDate, // ส่ง DateTime? ไปให้ buildReview จัดการ
                           ),
                         )
-                        
                   else
                     Text(
-                      widget.isEnglish ? "No reviews yet" : "ยังไม่มีรีวิว", // เปลี่ยนเป็นภาษาไทย
+                      widget.isEnglish
+                          ? "No reviews yet"
+                          : "ยังไม่มีรีวิว", // เปลี่ยนเป็นภาษาไทย
                       style: const TextStyle(fontSize: 16, color: Colors.grey),
                     ),
                 ],
@@ -477,29 +560,42 @@ class _ViewHousekeeperPageState extends State<ViewHousekeeperPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    widget.isEnglish ? "Contact Us" : "ติดต่อเรา", // เปลี่ยนเป็นภาษาไทย
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    widget.isEnglish
+                        ? "Contact Us"
+                        : "ติดต่อเรา", // เปลี่ยนเป็นภาษาไทย
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   contactButton(
                     Icons.phone,
                     widget.isEnglish ? "Phone Number" : "เบอร์โทรศัพท์",
-                    widget.housekeeper.person?.phoneNumber ?? (widget.isEnglish ? "+66 XXX XXX XXXX" : "+66 XXX XXX XXXX"),
+                    widget.housekeeper.person?.phoneNumber ??
+                        (widget.isEnglish
+                            ? "+66 XXX XXX XXXX"
+                            : "+66 XXX XXX XXXX"),
                     Colors.red,
                     widget.isEnglish ? "Call Now" : "โทรเลย",
                   ),
                   contactButton(
                     Icons.message,
                     "LINE ID",
-                    widget.housekeeper.lineId ?? (widget.isEnglish ?
-                    "LINE ID (Not provided)" : "LINE ID (ไม่ได้ระบุ)"), // เพิ่ม lineId ใน Housekeeper model
+                    widget.housekeeper.lineId ??
+                        (widget.isEnglish
+                            ? "LINE ID (Not provided)"
+                            : "LINE ID (ไม่ได้ระบุ)"), // เพิ่ม lineId ใน Housekeeper model
                     Colors.green,
                     widget.isEnglish ? "Open Page" : "เปิดหน้า",
                   ),
                   contactButton(
                     Icons.facebook,
                     "Facebook",
-                    widget.housekeeper.facebookLink ?? (widget.isEnglish ? "Facebook (Not provided)" : "Facebook (ไม่ได้ระบุ)"), // เพิ่ม facebookLink ใน Housekeeper model
+                    widget.housekeeper.facebookLink ??
+                        (widget.isEnglish
+                            ? "Facebook (Not provided)"
+                            : "Facebook (ไม่ได้ระบุ)"), // เพิ่ม facebookLink ใน Housekeeper model
                     Colors.blue,
                     widget.isEnglish ? "Open Page" : "เปิดหน้า",
                   ),
@@ -511,7 +607,12 @@ class _ViewHousekeeperPageState extends State<ViewHousekeeperPage> {
             // --- ส่วนแผนที่ (ตัวอย่าง) ---
             ListTile(
               leading: const Icon(Icons.location_on, color: Colors.blue),
-              title: Text(widget.housekeeper.person?.address ?? (widget.isEnglish ? "Address Not Available" : "ไม่พบที่อยู่")),
+              title: Text(
+                widget.housekeeper.person?.address ??
+                    (widget.isEnglish
+                        ? "Address Not Available"
+                        : "ไม่พบที่อยู่"),
+              ),
             ),
             Padding(
               padding: const EdgeInsets.all(16.0),
@@ -549,52 +650,65 @@ class _ViewHousekeeperPageState extends State<ViewHousekeeperPage> {
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(
-                builder: (context) => HomePage(
-                  user: widget.user,
-                  isEnglish: widget.isEnglish,
-                ),
+                builder:
+                    (context) => HomePage(
+                      user: widget.user,
+                      isEnglish: widget.isEnglish,
+                    ),
               ),
             );
           } else if (index == 1) {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => CardpageMember(
-                  user: widget.user,
-                  isEnglish: widget.isEnglish,
-                ),
+                builder:
+                    (context) => CardpageMember(
+                      user: widget.user,
+                      isEnglish: widget.isEnglish,
+                    ),
               ),
             );
           } else if (index == 2) {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => HireListPage(
-                  isEnglish: widget.isEnglish,
-                  user: widget.user,
-                ),
+                builder:
+                    (context) => HireListPage(
+                      isEnglish: widget.isEnglish,
+                      user: widget.user,
+                    ),
               ),
             );
           } else if (index == 3) {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => ProfileMemberPage(
-                  user: widget.user,
-                  isEnglish: widget.isEnglish,
-                ),
+                builder:
+                    (context) => ProfileMemberPage(
+                      user: widget.user,
+                      isEnglish: widget.isEnglish,
+                    ),
               ),
             );
           }
         },
         items: [
-          BottomNavigationBarItem(icon: const Icon(Icons.home), label: widget.isEnglish ? 'Home' : 'หน้าหลัก'),
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.home),
+            label: widget.isEnglish ? 'Home' : 'หน้าหลัก',
+          ),
           BottomNavigationBarItem(
             icon: const Icon(Icons.credit_card),
             label: widget.isEnglish ? 'Cards' : 'บัตร',
           ),
-          BottomNavigationBarItem(icon: const Icon(Icons.people), label: widget.isEnglish ? 'Hire' : 'การจ้าง'),
-          BottomNavigationBarItem(icon: const Icon(Icons.person), label: widget.isEnglish ? 'Profile' : 'โปรไฟล์'),
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.people),
+            label: widget.isEnglish ? 'Hire' : 'การจ้าง',
+          ),
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.person),
+            label: widget.isEnglish ? 'Profile' : 'โปรไฟล์',
+          ),
         ],
       ),
     );
@@ -612,7 +726,10 @@ class _ViewHousekeeperPageState extends State<ViewHousekeeperPage> {
     // จัดรูปแบบ reviewDate ให้เป็นวันที่ที่อ่านง่าย (เช่น "มิ.ย. 11, 2025")
     String formattedReviewDate = '';
     if (reviewDate != null) {
-      formattedReviewDate = DateFormat('MMM dd, yyyy', widget.isEnglish ? 'en_US' : 'th_TH').format(reviewDate.toLocal()); // แสดงเวลาท้องถิ่น
+      formattedReviewDate = DateFormat(
+        'MMM dd, yyyy',
+        widget.isEnglish ? 'en_US' : 'th_TH',
+      ).format(reviewDate.toLocal()); // แสดงเวลาท้องถิ่น
     }
 
     return Card(

@@ -146,20 +146,6 @@ class _CardpageMemberState extends State<CardpageMember> {
           style: const TextStyle(color: Colors.black, fontSize: 18, fontWeight: FontWeight.w500),
         ),
         centerTitle: true,
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 16.0),
-            child: CircleAvatar(
-              radius: 16,
-              backgroundImage: _currentUser.person?.pictureUrl != null && Uri.tryParse(_currentUser.person!.pictureUrl!)?.hasAbsolutePath == true
-                  ? NetworkImage(_currentUser.person!.pictureUrl!) as ImageProvider
-                  : const AssetImage('assets/images/logo.png'), // หรือภาพ default อื่นๆ
-              child: _currentUser.person?.pictureUrl == null || Uri.tryParse(_currentUser.person!.pictureUrl!)?.hasAbsolutePath == false
-                  ? const Icon(Icons.person, color: Colors.grey, size: 24)
-                  : null,
-            ),
-          ),
-        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20.0),

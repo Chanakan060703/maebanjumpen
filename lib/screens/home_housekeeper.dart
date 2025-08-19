@@ -190,9 +190,6 @@ class _HousekeeperPageState extends State<HousekeeperPage> {
                 backgroundImage: profileImage,
                 onBackgroundImageError: (exception, stackTrace) {
                   print('Error loading image: $exception');
-                  // ไม่ต้อง setState ตรงนี้ เพราะจะทำให้เกิด infinite loop
-                  // หากเกิด error ควรแสดงรูป default แทน
-                  // หรือจัดการใน method _fetchHousekeeperData() หรือที่ๆ รูปถูกโหลดมา
                 },
               ),
               const SizedBox(width: 12),

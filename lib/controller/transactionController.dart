@@ -249,19 +249,21 @@ class TransactionController {
       );
 
       print('QR Code API Response Status: ${response.statusCode}');
-      // พิมพ์แค่บางส่วนของ body หรือความยาว เพื่อหลีกเลี่ยงการตัดใน console
       print('QR Code API Response Body Length: ${response.bodyBytes.length} bytes');
-
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> responseData = json.decode(utf8.decode(response.bodyBytes));
 
         String? qrCodeBase64 = responseData['qrCodeImageBase64'];
-        int? transactionId = responseData['transactionId']; // ต้องได้ transactionId จาก response ของ Spring Boot
+        int? transactionId = responseData['transactionId'];
 
         if (qrCodeBase64 != null && qrCodeBase64.isNotEmpty) {
-          print('TransactionController: Received qrCodeImageBase64 successfully. Length: ${qrCodeBase64.length}');
-          return {'qrCodeImageBase64': qrCodeBase64, 'transactionId': transactionId}; // ส่ง transactionId กลับไปด้วย
+          // >>> แก้ไข: ทำความสะอาด Base64 string ก่อนส่งออก <<<
+          String cleanBase64 = qrCodeBase64.replaceAll(RegExp(r'\s+'), ''); // ลบอักขระช่องว่างทั้งหมด
+          
+          print('TransactionController: Received qrCodeImageBase64 successfully. Cleaned Length: ${cleanBase64.length}');
+          
+          return {'qrCodeImageBase64': cleanBase64, 'transactionId': transactionId};
         } else {
           print('TransactionController: qrCodeImageBase64 is null or empty in responseData. Full response: $responseData');
           throw Exception('Backend did not return valid QR Code Base64 data.');
@@ -284,13 +286,12 @@ class TransactionController {
     }
   }
 
-  // *** เพิ่ม Method นี้เข้ามา สำหรับ Polling สถานะ Transaction ***
   Future<Map<String, dynamic>?> getTransactionStatus(int transactionId) async {
-    final url = Uri.parse('$baseURL/maeban/transactions/$transactionId/status'); // URL สำหรับดึงสถานะ
+    final url = Uri.parse('$baseURL/maeban/transactions/$transactionId/status');
     try {
       final response = await http.get(
         url,
-        headers: headers, // ใช้ headers ที่กำหนดไว้ใน constant_value.dart
+        headers: headers,
       );
 
       if (response.statusCode == 200) {
