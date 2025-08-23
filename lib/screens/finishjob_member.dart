@@ -8,8 +8,8 @@ import 'package:maebanjumpen/model/housekeeper.dart';
 import 'package:maebanjumpen/screens/deposit_member.dart';
 import 'package:maebanjumpen/screens/home_member.dart';
 import 'package:maebanjumpen/screens/profile_member.dart';
-import 'package:maebanjumpen/styles/finishJobStyles.dart'; // สำคัญมาก: ต้อง Import ไฟล์ Styles/Localizations
-import 'package:maebanjumpen/widgets/verifyJob_member_dialog.dart'; // สำคัญมาก: ต้อง Import Dialog
+import 'package:maebanjumpen/styles/finishJobStyles.dart';
+import 'package:maebanjumpen/widgets/verifyJob_member_dialog.dart';
 
 class VerifyJobPage extends StatefulWidget {
   final bool isEnglish;
@@ -29,11 +29,22 @@ class VerifyJobPage extends StatefulWidget {
 
 class _VerifyJobPageState extends State<VerifyJobPage> {
   int _currentIndex = 2; // ตั้งค่าเริ่มต้นให้เป็น Index ของ 'การจ้าง' (Bookings)
-
   final Hirecontroller _hireController = Hirecontroller();
 
+  // แก้ไข: เปลี่ยนจาก late Hire _currentHire; เป็น final Hire _currentHire;
+  // เพื่อกำหนดค่าเริ่มต้นทันทีใน initState()
+  late Hire _currentHire;
+
+  @override
+  void initState() {
+    super.initState();
+    // กำหนดค่าเริ่มต้นให้ _currentHire เป็น widget.hire ที่รับเข้ามาทันที
+    _currentHire = widget.hire;
+    // จากนั้นค่อยโหลดข้อมูลล่าสุดจาก API
+    _fetchJobDetails();
+  }
+
   // Helper function to calculate duration
-  // เปลี่ยน parameter เป็น String? เพื่อจัดการ null อย่างปลอดภัยก่อน parse
   double _calculateHoursDuration(String? startTime, String? endTime) {
     try {
       final List<DateFormat> formatters = [
@@ -46,15 +57,12 @@ class _VerifyJobPageState extends State<VerifyJobPage> {
       DateTime? startDateTime;
       DateTime? endDateTime;
 
-      // ตรวจสอบ null ก่อนพยายาม parse
       if (startTime != null && startTime.isNotEmpty) {
         for (final formatter in formatters) {
           try {
             startDateTime = formatter.parse(startTime);
             break;
-          } catch (_) {
-            // Continue to try other formats
-          }
+          } catch (_) {}
         }
       }
 
@@ -63,9 +71,7 @@ class _VerifyJobPageState extends State<VerifyJobPage> {
           try {
             endDateTime = formatter.parse(endTime);
             break;
-          } catch (_) {
-            // Continue to try other formats
-          }
+          } catch (_) {}
         }
       }
 
@@ -75,27 +81,27 @@ class _VerifyJobPageState extends State<VerifyJobPage> {
         return 0.0;
       }
 
-      // Handle case where end time is on the next day
       if (endDateTime.isBefore(startDateTime)) {
         return endDateTime
-                .add(const Duration(days: 1))
-                .difference(startDateTime)
-                .inMinutes /
+            .add(const Duration(days: 1))
+            .difference(startDateTime)
+            .inMinutes /
             60.0;
       }
 
       return endDateTime.difference(startDateTime).inMinutes / 60.0;
     } catch (e) {
-      debugPrint('An unexpected error occurred during time duration calculation: $e');
+      debugPrint(
+          'An unexpected error occurred during time duration calculation: $e');
       return 0.0;
     }
   }
 
   // Function to show confirmation dialog
   void _showConfirmFinishJobAlert(
-    BuildContext context,
-    AppLocalizations localizations,
-  ) {
+      BuildContext context,
+      AppLocalizations localizations,
+      ) {
     showDialog(
       context: context,
       builder: (BuildContext dialogContext) {
@@ -118,55 +124,48 @@ class _VerifyJobPageState extends State<VerifyJobPage> {
             }
 
             final updatedHireForServer = Hire(
-              hireId: widget.hire.hireId,
-              hireName: widget.hire.hireName,
-              hireDetail: widget.hire.hireDetail,
-              paymentAmount: widget.hire.paymentAmount,
-              hireDate: widget.hire.hireDate,
-              startDate: widget.hire.startDate,
-              startTime: widget.hire.startTime,
-              endTime: widget.hire.endTime,
-              location: widget.hire.location,
-              // Keep progressionImageUrl as is, as it's already set by housekeeper
-              progressionImageUrl: widget.hire.progressionImageUrl,
-              jobStatus: 'Completed', // Set status to Completed
-              hirer: widget.hire.hirer != null
+              hireId: _currentHire.hireId,
+              hireName: _currentHire.hireName,
+              hireDetail: _currentHire.hireDetail,
+              paymentAmount: _currentHire.paymentAmount,
+              hireDate: _currentHire.hireDate,
+              startDate: _currentHire.startDate,
+              startTime: _currentHire.startTime,
+              endTime: _currentHire.endTime,
+              location: _currentHire.location,
+              progressionImageUrls: _currentHire.progressionImageUrls,
+              jobStatus: 'Completed',
+              hirer: _currentHire.hirer != null
                   ? Hirer(
-                      id: widget.hire.hirer!.id,
-                      type: widget.hire.hirer!.type,
-                    )
+                id: _currentHire.hirer!.id,
+                type: _currentHire.hirer!.type,
+              )
                   : null,
-              housekeeper: widget.hire.housekeeper != null
+              housekeeper: _currentHire.housekeeper != null
                   ? Housekeeper(
-                      id: widget.hire.housekeeper!.id,
-                      type: widget.hire.housekeeper!.type,
-                    )
+                id: _currentHire.housekeeper!.id,
+                type: _currentHire.housekeeper!.type,
+              )
                   : null,
-              review: widget.hire.review, // May not have review yet
+              review: _currentHire.review,
             );
 
             final responseHire = await _hireController.updateHire(
-              widget.hire.hireId!,
+              _currentHire.hireId!,
               updatedHireForServer,
             );
 
-            // บล็อกโค้ดจัดการผลลัพธ์ ถูกรวมให้เหลือแค่บล็อกเดียว
             if (responseHire != null) {
-              // สำเร็จ
-              Navigator.of(alertButtonContext).pop(); // Pop the dialog
-              Navigator.of(context).pop(); // Pop current VerifyJobPage
+              Navigator.of(alertButtonContext).pop();
+              Navigator.of(context).pop();
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(localizations.getJobStatusUpdatedSuccess()),
                   backgroundColor: AppColors.primaryGreen,
                 ),
               );
-              // คุณอาจจะส่งค่ากลับไปหน้า HireListPage เพื่อให้รีเฟรชข้อมูล
-              // หรือใช้ package state management เช่น provider/bloc เพื่ออัปเดตสถานะ
-              // เช่น: Navigator.of(context).pop(true);
             } else {
-              // ล้มเหลว (อาจเป็นเพราะเงินไม่พอ, ไม่พบผู้จ้าง/แม่บ้าน ฯลฯ)
-              Navigator.of(alertButtonContext).pop(); // Pop the dialog
+              Navigator.of(alertButtonContext).pop();
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(
@@ -186,14 +185,12 @@ class _VerifyJobPageState extends State<VerifyJobPage> {
   ImageProvider _getHousekeeperProfileImage(String? pictureUrl) {
     if (pictureUrl != null &&
         pictureUrl.isNotEmpty &&
-        (pictureUrl.startsWith('http://') ||
-            pictureUrl.startsWith('https://'))) {
+        (pictureUrl.startsWith('http://') || pictureUrl.startsWith('https://'))) {
       return NetworkImage(pictureUrl);
     }
-    // Fallback to local asset if URL is invalid or empty
     return const AssetImage(
       'assets/placeholder_housekeeper.png',
-    ); // Ensure this asset exists and is declared in pubspec.yaml
+    );
   }
 
   // Helper function to get the appropriate image provider for progression image
@@ -203,21 +200,33 @@ class _VerifyJobPageState extends State<VerifyJobPage> {
         (imageUrl.startsWith('http://') || imageUrl.startsWith('https://'))) {
       return NetworkImage(imageUrl);
     }
-    // Fallback to a placeholder for progression images if URL is invalid or empty
     return const AssetImage(
       'assets/no_image_available.png',
-    ); // You might want a specific placeholder for "no progress image"
+    );
   }
 
-  @override
-  void initState() {
-    super.initState();
-    debugPrint('VerifyJobPage: User object received is: ${widget.user}');
-    if (widget.user?.person != null) {
-      debugPrint(
-          'VerifyJobPage: User Name: ${widget.user!.person!.firstName} ${widget.user!.person!.lastName}');
-    } else {
-      debugPrint('VerifyJobPage: User object or User Person is NULL.');
+  // เพิ่มฟังก์ชันสำหรับโหลดข้อมูลงาน
+  Future<void> _fetchJobDetails() async {
+    try {
+      if (widget.hire.hireId != null) {
+        final updatedHire = await _hireController.getHireById(widget.hire.hireId!);
+        if (updatedHire != null) {
+          // ใช้ mounted เพื่อตรวจสอบว่า widget ยังอยู่ใน widget tree หรือไม่ก่อนเรียก setState
+          if (mounted) {
+            setState(() {
+              _currentHire = updatedHire;
+              debugPrint('Job details reloaded successfully.');
+              if (_currentHire.progressionImageUrls != null) {
+                debugPrint('Progression Image URLs: ${_currentHire.progressionImageUrls}');
+              }
+            });
+          }
+        } else {
+          debugPrint('Failed to get updated job details from API.');
+        }
+      }
+    } catch (e) {
+      debugPrint('Error fetching job details: $e');
     }
   }
 
@@ -226,27 +235,26 @@ class _VerifyJobPageState extends State<VerifyJobPage> {
     final localizations = AppLocalizations(widget.isEnglish);
 
     final String housekeeperName =
-        (widget.hire.housekeeper?.person?.firstName != null &&
-                widget.hire.housekeeper?.person?.lastName != null)
-            ? '${widget.hire.housekeeper!.person!.firstName} ${widget.hire.housekeeper!.person!.lastName}'
+        (_currentHire.housekeeper?.person?.firstName != null &&
+            _currentHire.housekeeper?.person?.lastName != null)
+            ? '${_currentHire.housekeeper!.person!.firstName} ${_currentHire.housekeeper!.person!.lastName}'
             : localizations.getUnknownHousekeeper();
 
     final String? housekeeperImageUrl =
-        widget.hire.housekeeper?.person?.pictureUrl;
+        _currentHire.housekeeper?.person?.pictureUrl;
 
-    final String jobDate = (widget.hire.startDate != null)
-        ? '${widget.hire.startDate!.day} ${localizations.getMonthName(widget.hire.startDate!.month)}, ${widget.hire.startDate!.year}'
+    final String jobDate = (_currentHire.startDate != null)
+        ? '${_currentHire.startDate!.day} ${localizations.getMonthName(_currentHire.startDate!.month)}, ${_currentHire.startDate!.year}'
         : '';
 
-    // ส่งค่า String? ให้ _calculateHoursDuration โดยใช้ ?? '' เพื่อป้องกัน null
     final double calculatedHours = _calculateHoursDuration(
-      widget.hire.startTime, // ไม่ต้อง cast เป็น String แล้ว
-      widget.hire.endTime, // ไม่ต้อง cast เป็น String แล้ว
+      _currentHire.startTime,
+      _currentHire.endTime,
     );
     final String jobTimeAndHours =
-        '${widget.hire.startTime ?? ''} - ${widget.hire.endTime ?? ''} (${localizations.getHoursText(calculatedHours)})';
+        '${_currentHire.startTime ?? ''} - ${_currentHire.endTime ?? ''} (${localizations.getHoursText(calculatedHours)})';
 
-    final bool isJobCompleted = widget.hire.jobStatus == 'Completed';
+    final bool isJobCompleted = _currentHire.jobStatus == 'Completed';
 
     return Scaffold(
       appBar: AppBar(
@@ -264,175 +272,44 @@ class _VerifyJobPageState extends State<VerifyJobPage> {
         ),
         centerTitle: true,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(AppSpacings.medium),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                CircleAvatar(
-                  radius: AppSpacings.avatarRadius,
-                  backgroundImage: _getHousekeeperProfileImage(
-                    housekeeperImageUrl,
-                  ),
-                  onBackgroundImageError: (exception, stackTrace) {
-                    debugPrint(
-                      'Error displaying housekeeper image: $exception',
-                    );
-                  },
-                ),
-                const SizedBox(width: AppSpacings.medium),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        housekeeperName,
-                        style: AppTextStyles.housekeeperName,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      Text(jobDate, style: AppTextStyles.jobDetails),
-                      Text(jobTimeAndHours, style: AppTextStyles.jobDetails),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpacings.medium),
-            // Service Details Card
-            Container(
-              padding: const EdgeInsets.all(AppSpacings.medium),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(
-                  AppSpacings.buttonBorderRadius,
-                ),
-                border: Border.all(color: AppColors.lightGreyBorder),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+      body: RefreshIndicator(
+        onRefresh: _fetchJobDetails,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(AppSpacings.medium),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
                 children: [
-                  Text(
-                    localizations.getServiceDetailsTitle(),
-                    style: AppTextStyles.sectionTitle,
+                  CircleAvatar(
+                    radius: AppSpacings.avatarRadius,
+                    backgroundImage: _getHousekeeperProfileImage(
+                      housekeeperImageUrl,
+                    ),
+                    onBackgroundImageError: (exception, stackTrace) {
+                      debugPrint(
+                        'Error displaying housekeeper image: $exception',
+                      );
+                    },
                   ),
-                  const SizedBox(height: AppSpacings.small),
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.location_on_outlined,
-                        color: AppColors.greyText,
-                      ),
-                      const SizedBox(width: AppSpacings.small),
-                      Expanded(
-                        child: Text(
-                          widget.hire.location ??
-                              (widget.isEnglish ? 'N/A' : 'ไม่ระบุ'),
-                          style: AppTextStyles.jobDetails,
+                  const SizedBox(width: AppSpacings.medium),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          housekeeperName,
+                          style: AppTextStyles.housekeeperName,
                           overflow: TextOverflow.ellipsis,
-                          maxLines: 2,
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: AppSpacings.small),
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.timer_outlined,
-                        color: AppColors.greyText,
-                      ),
-                      const SizedBox(width: AppSpacings.small),
-                      Text(
-                        localizations.getHoursText(calculatedHours),
-                        style: AppTextStyles.jobDetails,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: AppSpacings.medium),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      Text(
-                        '฿${widget.hire.paymentAmount?.toStringAsFixed(0) ?? '0'}', // Changed to 0 decimal places as per previous context
-                        style: AppTextStyles.price,
-                      ),
-                    ],
+                        Text(jobDate, style: AppTextStyles.jobDetails),
+                        Text(jobTimeAndHours, style: AppTextStyles.jobDetails),
+                      ],
+                    ),
                   ),
                 ],
               ),
-            ),
-            const SizedBox(height: AppSpacings.medium),
-            // Service Includes Card (now showing hireName and hireDetail)
-            Container(
-              padding: const EdgeInsets.all(AppSpacings.medium),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(
-                  AppSpacings.buttonBorderRadius,
-                ),
-                border: Border.all(color: AppColors.lightGreyBorder),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    localizations
-                        .getServiceIncludesTitle(), // "Service Includes"
-                    style: AppTextStyles.sectionTitle,
-                  ),
-                  const SizedBox(height: AppSpacings.small),
-                  // Display hireName
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Icon(
-                        Icons.check_circle_outline,
-                        color: AppColors.primaryGreen,
-                        size: 18,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          widget.isEnglish
-                              ? 'Service Name: ${widget.hire.hireName ?? 'N/A'}'
-                              : 'ชื่องานบริการ: ${widget.hire.hireName ?? 'ไม่ระบุ'}',
-                          style: AppTextStyles.jobDetails,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(
-                      height: 4), // Small spacing between name and detail
-                  // Display hireDetail
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Icon(
-                        Icons.check_circle_outline,
-                        color: AppColors.primaryGreen,
-                        size: 18,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          widget.isEnglish
-                              ? 'Details: ${widget.hire.hireDetail ?? 'N/A'}'
-                              : 'รายละเอียด: ${widget.hire.hireDetail ?? 'ไม่ระบุ'}',
-                          style: AppTextStyles.jobDetails,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: AppSpacings.large),
-
-            // Work Progress Photos Section
-            if (widget.hire.progressionImageUrl != null &&
-                widget.hire.progressionImageUrl!.isNotEmpty)
+              const SizedBox(height: AppSpacings.medium),
               Container(
                 padding: const EdgeInsets.all(AppSpacings.medium),
                 decoration: BoxDecoration(
@@ -446,57 +323,119 @@ class _VerifyJobPageState extends State<VerifyJobPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      localizations
-                          .getWorkProgressPhotosTitle(), // "Work Progress Photos"
+                      localizations.getServiceDetailsTitle(),
                       style: AppTextStyles.sectionTitle,
                     ),
                     const SizedBox(height: AppSpacings.small),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(
-                        AppSpacings.borderRadius,
-                      ),
-                      child: Image(
-                        image: _getProgressionImage(
-                          widget.hire.progressionImageUrl,
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.location_on_outlined,
+                          color: AppColors.greyText,
                         ),
-                        width: double.infinity,
-                        height: 200, // Fixed height for consistency
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          debugPrint('Error loading progress image: $error');
-                          return Container(
-                            height: 200,
-                            color: AppColors.lightGreyBackground,
-                            child: Center(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.broken_image,
-                                    color: AppColors.greyText,
-                                    size: 50,
-                                  ),
-                                  Text(
-                                    widget.isEnglish
-                                        ? 'Image failed to load'
-                                        : 'ไม่สามารถโหลดรูปภาพได้',
-                                    style: AppTextStyles.jobDetails.copyWith(
-                                      color: AppColors.greyText,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-                        },
-                      ),
+                        const SizedBox(width: AppSpacings.small),
+                        Expanded(
+                          child: Text(
+                            _currentHire.location ??
+                                (widget.isEnglish ? 'N/A' : 'ไม่ระบุ'),
+                            style: AppTextStyles.jobDetails,
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 2,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacings.small),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.timer_outlined,
+                          color: AppColors.greyText,
+                        ),
+                        const SizedBox(width: AppSpacings.small),
+                        Text(
+                          localizations.getHoursText(calculatedHours),
+                          style: AppTextStyles.jobDetails,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacings.medium),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        Text(
+                          '฿${_currentHire.paymentAmount?.toStringAsFixed(0) ?? '0'}',
+                          style: AppTextStyles.price,
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              )
-            else
+              ),
+              const SizedBox(height: AppSpacings.medium),
               Container(
-                // Display a message if no progression image
+                padding: const EdgeInsets.all(AppSpacings.medium),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(
+                    AppSpacings.buttonBorderRadius,
+                  ),
+                  border: Border.all(color: AppColors.lightGreyBorder),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      localizations.getServiceIncludesTitle(),
+                      style: AppTextStyles.sectionTitle,
+                    ),
+                    const SizedBox(height: AppSpacings.small),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(
+                          Icons.check_circle_outline,
+                          color: AppColors.primaryGreen,
+                          size: 18,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            widget.isEnglish
+                                ? 'Service Name: ${_currentHire.hireName ?? 'N/A'}'
+                                : 'ชื่องานบริการ: ${_currentHire.hireName ?? 'ไม่ระบุ'}',
+                            style: AppTextStyles.jobDetails,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(
+                          Icons.check_circle_outline,
+                          color: AppColors.primaryGreen,
+                          size: 18,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            widget.isEnglish
+                                ? 'Details: ${_currentHire.hireDetail ?? 'N/A'}'
+                                : 'รายละเอียด: ${_currentHire.hireDetail ?? 'ไม่ระบุ'}',
+                            style: AppTextStyles.jobDetails,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: AppSpacings.large),
+
+              // Work Progress Photos Section
+              Container(
                 padding: const EdgeInsets.all(AppSpacings.medium),
                 decoration: BoxDecoration(
                   color: Colors.white,
@@ -513,53 +452,113 @@ class _VerifyJobPageState extends State<VerifyJobPage> {
                       style: AppTextStyles.sectionTitle,
                     ),
                     const SizedBox(height: AppSpacings.small),
-                    Text(
-                      widget.isEnglish
-                          ? 'No work progress photos uploaded.'
-                          : 'ยังไม่มีรูปภาพความคืบหน้าของงาน',
-                      style: AppTextStyles.jobDetails.copyWith(
-                        color: AppColors.greyText,
+                    if (_currentHire.progressionImageUrls != null &&
+                        _currentHire.progressionImageUrls!.isNotEmpty)
+                      SizedBox(
+                        height: 200,
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: _currentHire.progressionImageUrls!.length,
+                          itemBuilder: (context, index) {
+                            final imageUrl =
+                                _currentHire.progressionImageUrls![index];
+                            return Padding(
+                              padding: const EdgeInsets.only(right: 8.0),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(
+                                  AppSpacings.borderRadius,
+                                ),
+                                child: Image(
+                                  image: _getProgressionImage(imageUrl),
+                                  width: 200,
+                                  height: 200,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    debugPrint(
+                                        'Error loading progress image from URL: $imageUrl. Error: $error');
+                                    return Container(
+                                      width: 200,
+                                      height: 200,
+                                      color: AppColors.lightGreyBackground,
+                                      child: Center(
+                                        child: Column(
+                                          mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                          children: [
+                                            const Icon(
+                                              Icons.broken_image,
+                                              color: AppColors.greyText,
+                                              size: 50,
+                                            ),
+                                            Text(
+                                              widget.isEnglish
+                                                  ? 'Image failed to load'
+                                                  : 'ไม่สามารถโหลดรูปภาพได้',
+                                              style: AppTextStyles.jobDetails
+                                                  .copyWith(
+                                                color: AppColors.greyText,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      )
+                    else
+                      Text(
+                        widget.isEnglish
+                            ? 'No work progress photos uploaded.'
+                            : 'ยังไม่มีรูปภาพความคืบหน้าของงาน',
+                        style: AppTextStyles.jobDetails.copyWith(
+                          color: AppColors.greyText,
+                        ),
                       ),
-                    ),
                   ],
                 ),
               ),
-            const SizedBox(height: AppSpacings.large),
+              const SizedBox(height: AppSpacings.large),
 
-            // Confirm Finish Job Button
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: isJobCompleted
-                    ? null // Disable button if job is completed
-                    : () => _showConfirmFinishJobAlert(context, localizations),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: isJobCompleted
-                      ? AppColors.greyText
-                      : AppColors.primaryGreen, // Grey out if completed
-                  padding: const EdgeInsets.symmetric(
-                    vertical: AppSpacings.medium,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(
-                      AppSpacings.buttonBorderRadius,
+              // Confirm Finish Job Button
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: isJobCompleted
+                      ? null
+                      : () => _showConfirmFinishJobAlert(context, localizations),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: isJobCompleted
+                        ? AppColors.greyText
+                        : AppColors.primaryGreen,
+                    padding: const EdgeInsets.symmetric(
+                      vertical: AppSpacings.medium,
                     ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(
+                        AppSpacings.buttonBorderRadius,
+                      ),
+                    ),
+                    foregroundColor: Colors.white,
                   ),
-                  foregroundColor:
-                      Colors.white, // Text color is always white for readability
-                ),
-                child: Text(
-                  isJobCompleted
-                      ? localizations.getJobCompletedButton()
-                      : localizations.getConfirmFinishJobButton(),
-                  style: AppTextStyles.buttonTextWhite,
+                  child: Text(
+                    isJobCompleted
+                        ? localizations.getJobCompletedButton()
+                        : localizations.getConfirmFinishJobButton(),
+                    style: AppTextStyles.buttonTextWhite,
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
       bottomNavigationBar: BottomNavigationBar(
+        // ... (โค้ด bottomNavigationBar เหมือนเดิม)
         selectedFontSize: 14,
         unselectedFontSize: 12,
         type: BottomNavigationBarType.fixed,
@@ -568,7 +567,7 @@ class _VerifyJobPageState extends State<VerifyJobPage> {
         unselectedItemColor: AppColors.greyText,
         onTap: (index) {
           setState(() {
-            _currentIndex = index; // Update currentIndex when tapped
+            _currentIndex = index;
           });
 
           if (index != 2 && widget.user == null) {
@@ -602,10 +601,6 @@ class _VerifyJobPageState extends State<VerifyJobPage> {
               ),
             );
           } else if (index == 2) {
-            // Do nothing, already on this page (Bookings) or navigate to HireListPage
-            // Given the context of this page, if it's accessed from a list,
-            // going back to the list might be more appropriate than doing nothing.
-            // For simplicity, staying on this page if already here.
           } else if (index == 3) {
             Navigator.pushReplacement(
               context,
@@ -643,14 +638,13 @@ class _VerifyJobPageState extends State<VerifyJobPage> {
 
 class ServiceItem extends StatelessWidget {
   final String text;
-  final bool
-      isEnglish; // isEnglish is not directly used here but kept for consistency
+  final bool isEnglish;
 
   const ServiceItem({super.key, required this.text, required this.isEnglish});
 
   @override
   Widget build(BuildContext context) {
-    if (text.isEmpty) return const SizedBox.shrink(); // Don't show if text is empty
+    if (text.isEmpty) return const SizedBox.shrink();
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 4.0),

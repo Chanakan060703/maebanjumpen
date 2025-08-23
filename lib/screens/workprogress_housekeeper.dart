@@ -1,16 +1,22 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'dart:ui' as ui;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:image_picker/image_picker.dart';
 import 'package:maebanjumpen/controller/hireController.dart';
 import 'package:maebanjumpen/controller/image_uploadController.dart';
-import 'package:maebanjumpen/model/hire.dart'; // Import Hire model
-// หากคุณมีไฟล์ AppColors หรือ Styles โปรดนำเข้ามาที่นี่
-// import 'package:maebanjumpen/styles/app_colors.dart'; // ตัวอย่าง
+import 'package:maebanjumpen/model/hire.dart';
+import 'dart:typed_data';
+
+// Assuming these are external classes and models.
+// If you are missing these, you will need to define them.
+// class HireController { ... }
+// class ImageUploadService { ... }
+// class Hire { ... }
 
 class WorkProgressScreen extends StatefulWidget {
-  final Hire hire; // เพิ่มตัวแปรสำหรับรับ Hire object
-  final bool isEnglish; // เพิ่มตัวแปรสำหรับภาษา
+  final Hire hire;
+  final bool isEnglish;
 
   const WorkProgressScreen({
     super.key,
@@ -30,24 +36,22 @@ class _WorkProgressScreenState extends State<WorkProgressScreen> {
   @override
   void initState() {
     super.initState();
-    // ถ้ามี progressionImageUrl อยู่แล้วจากการทำงานครั้งก่อน (Continue Work Report)
-    // คุณอาจจะดึงรูปภาพเหล่านั้นมาแสดงที่นี่ได้
-    // ตัวอย่าง:
-    // if (widget.hire.progressionImageUrl != null && widget.hire.progressionImageUrl!.isNotEmpty) {
-    //   // คุณจะต้องแปลง URL เป็น XFile หรือ File เพื่อแสดง
-    //   // ซึ่งอาจจะซับซ้อนและต้องใช้ packages เช่น cached_network_image และ path_provider
-    //   // สำหรับตอนนี้ เราจะละไว้ก่อน
+    // TODO: To display previously uploaded images, fetch them from widget.hire.progressionImageUrls
+    // and use a widget like CachedNetworkImage for efficient display and caching.
+    // For example:
+    // if (widget.hire.progressionImageUrls != null) {
+    //   _preloadedImageUrls = widget.hire.progressionImageUrls!;
     // }
   }
 
+  // Handle picking an image from a given source (camera or gallery).
   Future<void> _pickImageFromSource(ImageSource source) async {
     if (_pickedFiles.length >= 4) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(widget.isEnglish
-              ? 'You can upload a maximum of 4 photos.'
-              : 'สามารถอัปโหลดรูปภาพได้สูงสุด 4 รูป.'),
-        ),
+      _showSnackbar(
+        widget.isEnglish
+            ? 'You can upload a maximum of 4 photos.'
+            : 'สามารถอัปโหลดรูปภาพได้สูงสุด 4 รูป.',
+        Colors.orange,
       );
       return;
     }
@@ -60,18 +64,16 @@ class _WorkProgressScreenState extends State<WorkProgressScreen> {
         });
       }
     } catch (e) {
-      // Handle potential PlatformException (e.g., no camera, permissions not granted)
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(widget.isEnglish
-              ? 'Failed to pick image: ${e.toString()}'
-              : 'ไม่สามารถเลือกรูปภาพได้: ${e.toString()}'),
-          backgroundColor: Colors.red,
-        ),
+      _showSnackbar(
+        widget.isEnglish
+            ? 'Failed to pick image: ${e.toString()}'
+            : 'ไม่สามารถเลือกรูปภาพได้: ${e.toString()}',
+        Colors.red,
       );
     }
   }
 
+  // Show a modal bottom sheet for selecting the image source.
   Future<void> _showImageSourceActionSheet() async {
     await showModalBottomSheet(
       context: context,
@@ -90,7 +92,8 @@ class _WorkProgressScreenState extends State<WorkProgressScreen> {
               ),
               ListTile(
                 leading: const Icon(Icons.photo_library),
-                title: Text(widget.isEnglish ? 'Choose from Gallery' : 'เลือกจากคลังรูปภาพ'),
+                title: Text(
+                    widget.isEnglish ? 'Choose from Gallery' : 'เลือกจากคลังรูปภาพ'),
                 onTap: () {
                   Navigator.pop(context);
                   _pickImageFromSource(ImageSource.gallery);
@@ -103,14 +106,23 @@ class _WorkProgressScreenState extends State<WorkProgressScreen> {
     );
   }
 
+  // Show a snackbar with a given message and color.
+  void _showSnackbar(String message, [Color? color]) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: color,
+      ),
+    );
+  }
+
+  // Upload images and submit the work report.
   Future<void> _uploadImagesAndSubmitReport() async {
     if (_pickedFiles.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(widget.isEnglish
-              ? 'Please add at least one photo before submitting.'
-              : 'โปรดเพิ่มรูปภาพอย่างน้อยหนึ่งรูปก่อนส่ง.'),
-        ),
+      _showSnackbar(
+        widget.isEnglish
+            ? 'Please add at least one photo before submitting.'
+            : 'โปรดเพิ่มรูปภาพอย่างน้อยหนึ่งรูปก่อนส่ง.',
       );
       return;
     }
@@ -120,37 +132,29 @@ class _WorkProgressScreenState extends State<WorkProgressScreen> {
     });
 
     final ImageUploadService imageUploadService = ImageUploadService();
-    String? latestUploadedUrl; // หาก Backend คาดหวังเพียง URL เดียว หรืออัปเดตเรื่อยๆ
-
-    for (XFile file in _pickedFiles) {
-      final String? imageUrl = await imageUploadService.uploadImage(
-        id: widget.hire.hireId!, // ใช้ hireId จาก Hire object
-        imageType: 'hire',
-        imageFile: file,
-      );
-      if (imageUrl != null) {
-        latestUploadedUrl = imageUrl; // เก็บ URL ล่าสุด
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(widget.isEnglish
-                ? 'Failed to upload image: ${file.name}'
-                : 'ไม่สามารถอัปโหลดรูปภาพ: ${file.name}'),
-          ),
-        );
-        setState(() {
-          _isUploading = false;
-        });
-        return; // หยุดการทำงานถ้ามีรูปใดรูปหนึ่งอัปโหลดไม่สำเร็จ
-      }
-    }
-
     final Hirecontroller hireController = Hirecontroller();
+
     try {
-      // สร้าง Hire object ใหม่ที่มีสถานะและ URL รูปภาพที่อัปเดต
+      // แก้ไขการเรียกใช้ฟังก์ชันให้ใช้ named parameters ตามที่ฟังก์ชันกำหนด
+      final List<String>? uploadedUrls = await imageUploadService.uploadImages(
+      id: widget.hire.hireId!,
+      imageFiles: _pickedFiles,
+);
+
+      if (uploadedUrls == null || uploadedUrls.isEmpty) {
+        _showSnackbar(
+          widget.isEnglish
+              ? 'Failed to upload images. Please try again.'
+              : 'ไม่สามารถอัปโหลดรูปภาพได้ โปรดลองอีกครั้ง.',
+          Colors.red,
+        );
+        return;
+      }
+
+      // Update job status with all uploaded image URLs.
       final updatedHire = widget.hire.copyWith(
-        jobStatus: 'pendingapproval', // เปลี่ยนเป็น 'pendingapproval'
-        progressionImageUrl: latestUploadedUrl, // ใช้ URL ล่าสุดที่อัปโหลด
+        jobStatus: 'pendingapproval',
+        progressionImageUrls: uploadedUrls,
       );
 
       final Hire? responseHire = await hireController.updateHire(
@@ -159,41 +163,40 @@ class _WorkProgressScreenState extends State<WorkProgressScreen> {
       );
 
       if (responseHire != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(widget.isEnglish
-                ? 'Work report submitted and job status updated to pending approval!'
-                : 'ส่งรายงานการทำงานและอัปเดตสถานะงานเป็นรอการอนุมัติแล้ว!'),
-            backgroundColor: Colors.green,
-          ),
+        _showSnackbar(
+          widget.isEnglish
+              ? 'Work report submitted and job status updated to pending approval!'
+              : 'ส่งรายงานการทำงานและอัปเดตสถานะงานเป็นรอการอนุมัติแล้ว!',
+          Colors.green,
         );
-        Navigator.pop(context, true); // ส่ง true กลับไปเพื่อรีเฟรชหน้าก่อนหน้า
+        if (mounted) {
+          Navigator.pop(context, true);
+        }
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(widget.isEnglish
-                ? 'Failed to update job status after image upload.'
-                : 'ไม่สามารถอัปเดตสถานะงานหลังจากอัปโหลดรูปภาพ.'),
-            backgroundColor: Colors.red,
-          ),
+        _showSnackbar(
+          widget.isEnglish
+              ? 'Failed to update job status after image upload.'
+              : 'ไม่สามารถอัปเดตสถานะงานหลังจากอัปโหลดรูปภาพ.',
+          Colors.red,
         );
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(widget.isEnglish
-              ? 'Error submitting report: $e'
-              : 'เกิดข้อผิดพลาดในการส่งรายงาน: $e'),
-          backgroundColor: Colors.red,
-        ),
+      _showSnackbar(
+        widget.isEnglish
+            ? 'Error submitting report: $e'
+            : 'เกิดข้อผิดพลาดในการส่งรายงาน: $e',
+        Colors.red,
       );
     } finally {
-      setState(() {
-        _isUploading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isUploading = false;
+        });
+      }
     }
   }
 
+  // Build the image preview list.
   Widget _buildImagePreview() {
     return SizedBox(
       height: 100,
@@ -201,17 +204,31 @@ class _WorkProgressScreenState extends State<WorkProgressScreen> {
         scrollDirection: Axis.horizontal,
         itemCount: _pickedFiles.length,
         itemBuilder: (context, index) {
+          final XFile file = _pickedFiles.elementAt(index);
           return Padding(
             padding: const EdgeInsets.only(right: 8.0),
             child: Stack(
               children: [
                 ClipRRect(
                   borderRadius: BorderRadius.circular(8.0),
-                  child: Image.file(
-                    File(_pickedFiles.elementAt(index).path),
-                    fit: BoxFit.cover,
-                    width: 100,
-                    height: 100,
+                  child: FutureBuilder<Uint8List>(
+                    future: file.readAsBytes(),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.done && snapshot.hasData) {
+                        return Image.memory(
+                          snapshot.data!,
+                          fit: BoxFit.cover,
+                          width: 100,
+                          height: 100,
+                        );
+                      }
+                      return Container(
+                        width: 100,
+                        height: 100,
+                        color: Colors.grey[200],
+                        child: const Center(child: CircularProgressIndicator()),
+                      );
+                    },
                   ),
                 ),
                 Positioned(
@@ -235,9 +252,86 @@ class _WorkProgressScreenState extends State<WorkProgressScreen> {
     );
   }
 
+  // Helper method to get the month name.
+  String _getMonthName(int month, bool isEnglish) {
+    if (isEnglish) {
+      switch (month) {
+        case 1: return 'January';
+        case 2: return 'February';
+        case 3: return 'March';
+        case 4: return 'April';
+        case 5: return 'May';
+        case 6: return 'June';
+        case 7: return 'July';
+        case 8: return 'August';
+        case 9: return 'September';
+        case 10: return 'October';
+        case 11: return 'November';
+        case 12: return 'December';
+        default: return '';
+      }
+    } else {
+      switch (month) {
+        case 1: return 'มกราคม';
+        case 2: return 'กุมภาพันธ์';
+        case 3: return 'มีนาคม';
+        case 4: return 'เมษายน';
+        case 5: return 'พฤษภาคม';
+        case 6: return 'มิถุนายน';
+        case 7: return 'กรกฎาคม';
+        case 8: return 'สิงหาคม';
+        case 9: return 'กันยายน';
+        case 10: return 'ตุลาคม';
+        case 11: return 'พฤศจิกายน';
+        case 12: return 'ธันวาคม';
+        default: return '';
+      }
+    }
+  }
+
+  // Helper method to build a detail card.
+  Widget _buildDetailCard({required String title, required String value}) {
+    return Card(
+      elevation: 0,
+      margin: EdgeInsets.zero,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(15.0),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade100,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 14,
+                color: Colors.grey,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 5),
+            Text(
+              value,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+  
   @override
   Widget build(BuildContext context) {
-    // กำหนดวันที่ในรูปแบบที่อ่านง่าย
     String formattedServiceDate = widget.hire.startDate != null
         ? '${widget.hire.startDate!.day} '
             '${_getMonthName(widget.hire.startDate!.month, widget.isEnglish)} '
@@ -260,7 +354,7 @@ class _WorkProgressScreenState extends State<WorkProgressScreen> {
           IconButton(
             icon: const Icon(Icons.help_outline, color: Colors.black),
             onPressed: () {
-              // TODO: แสดงข้อมูลช่วยเหลือ
+              // Add help logic here
               print('Help button pressed');
             },
           ),
@@ -286,13 +380,13 @@ class _WorkProgressScreenState extends State<WorkProgressScreen> {
                           IconButton(
                             icon: const Icon(Icons.camera_alt_outlined,
                                 color: Colors.red, size: 40),
-                            onPressed: _showImageSourceActionSheet, // เรียกใช้ ActionSheet
+                            onPressed: _showImageSourceActionSheet,
                           ),
                           const SizedBox(height: 10),
                           Text(
                             widget.isEnglish
-                                ? 'Add Photos (0/4)'
-                                : 'เพิ่มรูปภาพ (0/4)',
+                                ? 'Add Photos (${_pickedFiles.length}/4)'
+                                : 'เพิ่มรูปภาพ (${_pickedFiles.length}/4)',
                             style: const TextStyle(
                               color: Colors.red,
                               fontSize: 16,
@@ -306,7 +400,7 @@ class _WorkProgressScreenState extends State<WorkProgressScreen> {
                           Expanded(child: _buildImagePreview()),
                           if (_pickedFiles.length < 4)
                             TextButton.icon(
-                              onPressed: _showImageSourceActionSheet, // เรียกใช้ ActionSheet
+                              onPressed: _showImageSourceActionSheet,
                               icon: const Icon(Icons.add_a_photo,
                                   color: Colors.red),
                               label: Text(
@@ -387,7 +481,7 @@ class _WorkProgressScreenState extends State<WorkProgressScreen> {
         type: BottomNavigationBarType.fixed,
         selectedItemColor: Colors.red,
         unselectedItemColor: Colors.grey,
-        currentIndex: 0, // ควรตั้งค่าให้ถูกต้องตามหน้าปัจจุบัน
+        currentIndex: 0,
         items: [
           BottomNavigationBarItem(
             icon: const Icon(Icons.home),
@@ -407,118 +501,15 @@ class _WorkProgressScreenState extends State<WorkProgressScreen> {
           ),
         ],
         onTap: (index) {
-          // TODO: Implement navigation logic
           print('Tapped item: $index');
         },
       ),
     );
   }
-
-  // Helper function for month name (optional)
-  String _getMonthName(int month, bool isEnglish) {
-    if (isEnglish) {
-      switch (month) {
-        case 1:
-          return 'January';
-        case 2:
-          return 'February';
-        case 3:
-          return 'March';
-        case 4:
-          return 'April';
-        case 5:
-          return 'May';
-        case 6:
-          return 'June';
-        case 7:
-          return 'July';
-        case 8:
-          return 'August';
-        case 9:
-          return 'September';
-        case 10:
-          return 'October';
-        case 11:
-          return 'November';
-        case 12:
-          return 'December';
-        default:
-          return '';
-      }
-    } else {
-      switch (month) {
-        case 1:
-          return 'มกราคม';
-        case 2:
-          return 'กุมภาพันธ์';
-        case 3:
-          return 'มีนาคม';
-        case 4:
-          return 'เมษายน';
-        case 5:
-          return 'พฤษภาคม';
-        case 6:
-          return 'มิถุนายน';
-        case 7:
-          return 'กรกฎาคม';
-        case 8:
-          return 'สิงหาคม';
-        case 9:
-          return 'กันยายน';
-        case 10:
-          return 'ตุลาคม';
-        case 11:
-          return 'พฤศจิกายน';
-        case 12:
-          return 'ธันวาคม';
-        default:
-          return '';
-      }
-    }
-  }
-
-  Widget _buildDetailCard({required String title, required String value}) {
-    return Card(
-      elevation: 0,
-      margin: EdgeInsets.zero,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(15.0),
-        decoration: BoxDecoration(
-          color: Colors.grey.shade100,
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 14,
-                color: Colors.grey,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            const SizedBox(height: 5),
-            Text(
-              value,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: Colors.black87,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }
 
-// Custom Painter สำหรับวาดเส้นประ (DashedBorderPainter)
+// These custom widgets were provided in the original code,
+// so they are included here as they are needed for the screen to render correctly.
 class DashedBorderPainter extends CustomPainter {
   final double strokeWidth;
   final Color color;
@@ -569,7 +560,6 @@ class DashedBorderPainter extends CustomPainter {
   }
 }
 
-// Custom Widget เพื่อให้ใช้งานเส้นประได้ง่ายขึ้น (DashedBorderContainer)
 class DashedBorderContainer extends StatelessWidget {
   final Widget child;
   final double strokeWidth;
@@ -610,3 +600,4 @@ class DashedBorderContainer extends StatelessWidget {
     );
   }
 }
+

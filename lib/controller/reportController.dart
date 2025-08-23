@@ -1,11 +1,15 @@
-// lib/controller/report_controller.dart (หรือ reportcontroller.dart)
+// lib/controller/report_controller.dart
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:maebanjumpen/constant/constant_value.dart';
 import 'package:maebanjumpen/model/report.dart'; // Import Report model
+import 'package:maebanjumpen/model/person.dart'; // Import Person model
+import 'package:maebanjumpen/model/hirer.dart'; // Import Hirer model
+import 'package:maebanjumpen/model/housekeeper.dart'; // Import Housekeeper model
+import 'package:maebanjumpen/model/account_manager.dart'; // Import AccountManager model
+import 'package:maebanjumpen/model/admin.dart'; // Import Admin model
 
 class ReportController { 
-
 
   Future<List<Report>> getAllReport() async {
     var url = Uri.parse('$baseURL/maeban/reports');
@@ -53,7 +57,34 @@ class ReportController {
 
   // แก้ไข updateReport ให้รับ Report object โดยตรง
   Future<Report> updateReport(int id, Report report) async {
+    // ปรับปรุงการส่งข้อมูล JSON เพื่อให้ Spring Boot สามารถ resolve type ได้
     final Map<String, dynamic> reportJson = report.toJson();
+    
+    // Helper function to add DTYPE to PartyRole objects
+    void addType(Map<String, dynamic> partyRoleJson, dynamic partyRoleObject) {
+  if (partyRoleObject is Hirer) {
+    partyRoleJson['type'] = 'hirer';
+  } else if (partyRoleObject is Housekeeper) {
+    partyRoleJson['type'] = 'housekeeper';
+  } else if (partyRoleObject is AccountManager) {
+    partyRoleJson['type'] = 'accountManager';
+  } else if (partyRoleObject is Admin) {
+    partyRoleJson['type'] = 'admin';
+  } else {
+    partyRoleJson['type'] = 'member';
+  }
+}
+
+    if (reportJson['hirer'] != null && report.hirer != null) {
+      addType(reportJson['hirer'], report.hirer);
+    }
+    if (reportJson['housekeeper'] != null && report.housekeeper != null) {
+      addType(reportJson['housekeeper'], report.housekeeper);
+    }
+    if (reportJson['reporter'] != null && report.reporter != null) {
+      addType(reportJson['reporter'], report.reporter);
+    }
+
     var body = json.encode(reportJson);
     var url = Uri.parse('$baseURL/maeban/reports/$id');
     try {

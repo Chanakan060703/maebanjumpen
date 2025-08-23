@@ -435,7 +435,7 @@ class _HireHousekeeperPageState extends State<HireHousekeeperPage> {
       location: location,
       jobStatus:
           'pending', // เปลี่ยนสถานะเริ่มต้นเป็น 'pending' หรือตามที่คุณต้องการ
-      progressionImageUrl:
+      progressionImageUrls:
           null, // เปลี่ยนเป็น null หรือค่าเริ่มต้นที่เหมาะสม
       hirer: widget.user,
       housekeeper: widget.housekeeper,

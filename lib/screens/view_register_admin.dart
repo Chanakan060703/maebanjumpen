@@ -77,15 +77,12 @@ class VerlifyRegisterDetailScreen extends StatelessWidget {
                     // รายละเอียดข้อมูล
                     _buildDetailRow(isEnglish ? 'Account Type' : 'ประเภทบัญชี', 'Housekeeper'),
                     _buildDetailRow(isEnglish ? 'ID' : 'รหัส', 'H${housekeeper.id ?? 'N/A'}'),
-                    _buildDetailRow(isEnglish ? 'Username' : 'ชื่อผู้ใช้', housekeeper.person?.login?.username ?? 'N/A'),
                     _buildDetailRow(isEnglish ? 'First Name' : 'ชื่อ', housekeeper.person?.firstName ?? 'N/A'),
                     _buildDetailRow(isEnglish ? 'Last Name' : 'นามสกุล', housekeeper.person?.lastName ?? 'N/A'),
                     _buildDetailRow(isEnglish ? 'Email' : 'อีเมล', housekeeper.person?.email ?? 'N/A'),
                     _buildDetailRow(isEnglish ? 'Phone' : 'เบอร์โทรศัพท์', housekeeper.person?.phoneNumber ?? 'N/A'),
                     _buildDetailRow(isEnglish ? 'Address' : 'ที่อยู่', housekeeper.person?.address ?? 'N/A'),
                     _buildDetailRow(isEnglish ? 'ID Card Number' : 'เลขบัตรประชาชน', housekeeper.person?.idCardNumber ?? 'N/A'),
-                    _buildDetailRow(isEnglish ? 'Password' : 'รหัสผ่าน', '********'),
-                    _buildDetailRow(isEnglish ? 'Confirm Password' : 'ยืนยันรหัสผ่าน', '********'),
                     const SizedBox(height: 20),
                     // รูปภาพบัตรประชาชนด้านล่าง
                     Text(

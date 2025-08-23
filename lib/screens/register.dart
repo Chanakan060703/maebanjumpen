@@ -7,8 +7,10 @@ import 'package:image_picker/image_picker.dart';
 import 'package:maebanjumpen/constant/constant_value.dart';
 import 'package:maebanjumpen/controller/image_uploadController.dart';
 import 'package:maebanjumpen/model/hirer.dart';
+import 'package:maebanjumpen/model/login.dart';
 import 'package:maebanjumpen/model/person.dart';
 import 'package:maebanjumpen/screens/home_member.dart';
+import 'package:maebanjumpen/screens/login.dart';
 import 'package:maebanjumpen/widgets/register_form.dart';
 
 class RegisterPage extends StatefulWidget {
@@ -164,15 +166,7 @@ class _RegisterPageState extends State<RegisterPage> {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (context) => HomePage(
-              user: Hirer(
-                id: partyRoleId,
-                person: person,
-                balance: 0.0,
-                type: 'hirer', // Set correct type
-              ),
-              isEnglish: isEnglish,
-            ),
+            builder: (context) => LoginPage(),
           ),
         );
       } else {

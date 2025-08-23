@@ -3,9 +3,11 @@
 import 'package:flutter/material.dart';
 import 'package:maebanjumpen/controller/penaltyController.dart';
 import 'package:maebanjumpen/controller/reportController.dart';
+import 'package:maebanjumpen/model/admin.dart';
 import 'package:maebanjumpen/model/report.dart'; // นำเข้า Report model
 import 'package:maebanjumpen/model/penalty.dart'; // นำเข้า Penalty model
-import 'package:intl/intl.dart'; // <--- สำคัญ: นำเข้าแพ็กเกจ intl
+import 'package:intl/intl.dart';
+import 'package:maebanjumpen/screens/home_admin.dart'; // <--- สำคัญ: นำเข้าแพ็กเกจ intl
 
 class PenaltyScreen extends StatefulWidget {
   final Report report; // เพิ่มส่วนนี้เพื่อรับ Object รายงาน
@@ -41,8 +43,10 @@ class _PenaltyScreenState extends State<PenaltyScreen> {
     if (widget.report.penalty?.penaltyDate != null) {
       _selectedPenaltyDate = widget.report.penalty!.penaltyDate;
       // ใช้ DateFormat ในการแสดงวันที่ตาม Locale ที่เลือก
-      _dateController.text =
-          DateFormat('dd/MM/yyyy', localeCode).format(_selectedPenaltyDate!);
+      _dateController.text = DateFormat(
+        'dd/MM/yyyy',
+        localeCode,
+      ).format(_selectedPenaltyDate!);
     }
     // กรอกประเภทบทลงโทษและรายละเอียดล่วงหน้าหากมี
     _selectedPenaltyType = widget.report.penalty?.penaltyType;
@@ -66,7 +70,9 @@ class _PenaltyScreenState extends State<PenaltyScreen> {
       context: context,
       initialDate: _selectedPenaltyDate ?? DateTime.now(),
       firstDate: DateTime(2000), // กำหนด firstDate ให้เหมาะสม
-      lastDate: DateTime(2101), // กำหนด lastDate ให้เหมาะสม (ปี 2101 ก็คือ 2644 พ.ศ.)
+      lastDate: DateTime(
+        2101,
+      ), // กำหนด lastDate ให้เหมาะสม (ปี 2101 ก็คือ 2644 พ.ศ.)
       locale: currentLocale, // กำหนด Locale ตาม isEnglish
       builder: (context, child) {
         return Theme(
@@ -105,9 +111,12 @@ class _PenaltyScreenState extends State<PenaltyScreen> {
         _detailsController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-            content: Text(widget.isEnglish
+          content: Text(
+            widget.isEnglish
                 ? 'Please fill in all penalty details.'
-                : 'กรุณากรอกข้อมูลบทลงโทษให้ครบถ้วน')),
+                : 'กรุณากรอกข้อมูลบทลงโทษให้ครบถ้วน',
+          ),
+        ),
       );
       return;
     }
@@ -118,9 +127,12 @@ class _PenaltyScreenState extends State<PenaltyScreen> {
     if (penaltyDateForBackend == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-            content: Text(widget.isEnglish
+          content: Text(
+            widget.isEnglish
                 ? 'No valid date selected.'
-                : 'ไม่ได้เลือกวันที่ที่ถูกต้อง')),
+                : 'ไม่ได้เลือกวันที่ที่ถูกต้อง',
+          ),
+        ),
       );
       return;
     }
@@ -138,12 +150,15 @@ class _PenaltyScreenState extends State<PenaltyScreen> {
       final createdPenalty = await _penaltyController.addPenalty(
         penaltyToCreate, // ส่ง Penalty object
         widget.report.reportId!.toString(),
-        widget.report.hirer?.id?.toString() ?? '', // ส่ง ID ผู้จ้างเป็น String (แก้ไขให้ไม่เป็น null)
+        widget.report.hirer?.id?.toString() ??
+            '', // ส่ง ID ผู้จ้างเป็น String (แก้ไขให้ไม่เป็น null)
         widget.report.housekeeper?.id?.toString() ??
             '', // ส่ง ID แม่บ้านเป็น String (แก้ไขให้ไม่เป็น null)
       );
 
-      print('สร้างบทลงโทษบน Backend สำเร็จด้วย ID: ${createdPenalty.penaltyId}');
+      print(
+        'สร้างบทลงโทษบน Backend สำเร็จด้วย ID: ${createdPenalty.penaltyId}',
+      );
 
       final updatedReport = Report(
         reportId: widget.report.reportId,
@@ -159,37 +174,58 @@ class _PenaltyScreenState extends State<PenaltyScreen> {
       );
 
       print(
-          'กำลังพยายามอัปเดตสถานะรายงานเป็น resolved และเชื่อมโยง Penalty ID: ${createdPenalty.penaltyId}');
+        'กำลังพยายามอัปเดตสถานะรายงานเป็น resolved และเชื่อมโยง Penalty ID: ${createdPenalty.penaltyId}',
+      );
       // 4. อัปเดตรายงานบน Backend
       // ใช้ลายเซ็น updateReport(int id, Report report) ของ ReportController
       final resultReport = await _reportController.updateReport(
-          widget.report.reportId!, updatedReport);
+        widget.report.reportId!,
+        updatedReport,
+      );
 
       // ตรวจสอบว่าการอัปเดตสำเร็จหรือไม่โดยการยืนยัน Object Report ที่คืนมา
       if (resultReport.reportId != null) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-              content: Text(widget.isEnglish
+            content: Text(
+              widget.isEnglish
                   ? 'Penalty submitted and report updated successfully!'
-                  : 'ส่งบทลงโทษและอัปเดตรายงานสำเร็จ!')),
+                  : 'ส่งบทลงโทษและอัปเดตรายงานสำเร็จ!',
+            ),
+          ),
         );
-        // Pop หน้าจอและส่ง true เพื่อระบุความสำเร็จ
-        Navigator.pop(context, true);
+        // ไปหน้า HomeAdminPage
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(
+            builder:
+                (context) => HomeAdminPage(
+                  user: Admin(),
+                ),
+          ),
+          (route) => false,
+        );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-              content: Text(widget.isEnglish
+            content: Text(
+              widget.isEnglish
                   ? 'Failed to update report after applying penalty.'
-                  : 'ไม่สามารถอัปเดตรายงานหลังจากใช้บทลงโทษได้')),
+                  : 'ไม่สามารถอัปเดตรายงานหลังจากใช้บทลงโทษได้',
+            ),
+          ),
         );
       }
     } catch (e) {
       print("Error submitting penalty: $e");
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-            content: Text(widget.isEnglish
+          content: Text(
+            widget.isEnglish
                 ? 'Error submitting penalty: ${e.toString()}'
-                : 'เกิดข้อผิดพลาดในการส่งบทลงโทษ: ${e.toString()}')),
+                : 'เกิดข้อผิดพลาดในการส่งบทลงโทษ: ${e.toString()}',
+          ),
+        ),
       );
     }
   }
@@ -228,16 +264,19 @@ class _PenaltyScreenState extends State<PenaltyScreen> {
                       ? 'Applying penalty to: ${widget.report.hirer?.person?.firstName ?? widget.report.housekeeper?.person?.firstName ?? 'N/A'} ${widget.report.hirer?.person?.lastName ?? widget.report.housekeeper?.person?.lastName ?? ''}'
                       : 'กำลังใช้บทลงโทษกับ: ${widget.report.hirer?.person?.firstName ?? widget.report.housekeeper?.person?.firstName ?? 'ไม่ระบุ'} ${widget.report.hirer?.person?.lastName ?? widget.report.housekeeper?.person?.lastName ?? ''}',
                   style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.deepOrange),
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.deepOrange,
+                  ),
                   textAlign: TextAlign.center,
                 ),
               ),
             ),
             // ส่วนเลือกประเภทบทลงโทษ
             Text(
-              widget.isEnglish ? 'Select Penalty Type' : 'เลือกประเภทบทลงโทษ', // หัวข้อ
+              widget.isEnglish
+                  ? 'Select Penalty Type'
+                  : 'เลือกประเภทบทลงโทษ', // หัวข้อ
               style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
@@ -248,7 +287,9 @@ class _PenaltyScreenState extends State<PenaltyScreen> {
               children: [
                 Expanded(
                   child: RadioListTile<String>(
-                    title: Text(widget.isEnglish ? 'Ban' : 'แบน'), // "Ban" in Thai
+                    title: Text(
+                      widget.isEnglish ? 'Ban' : 'แบน',
+                    ), // "Ban" in Thai
                     value: 'Ban',
                     groupValue: _selectedPenaltyType,
                     onChanged: (String? value) {
@@ -260,9 +301,9 @@ class _PenaltyScreenState extends State<PenaltyScreen> {
                 ),
                 Expanded(
                   child: RadioListTile<String>(
-                    title: Text(widget.isEnglish
-                        ? 'Account Suspension'
-                        : 'ระงับบัญชี'), // "Suspension of account" in Thai
+                    title: Text(
+                      widget.isEnglish ? 'Account Suspension' : 'ระงับบัญชี',
+                    ), // "Suspension of account" in Thai
                     value: 'Suspension of account',
                     groupValue: _selectedPenaltyType,
                     onChanged: (String? value) {
@@ -292,24 +333,29 @@ class _PenaltyScreenState extends State<PenaltyScreen> {
               readOnly: true, // ทำให้ TextField ไม่สามารถแก้ไขได้โดยตรง
               onTap: () => _selectDate(context), // <--- เพิ่ม onTap ตรงนี้
               decoration: InputDecoration(
-                hintText: widget.isEnglish
-                    ? 'DD/MM/YYYY (AD)'
-                    : 'วว/ดด/ปปปป (พ.ศ.)', // รูปแบบวันที่ DD/MM/YYYY (พ.ศ.)
+                hintText:
+                    widget.isEnglish
+                        ? 'DD/MM/YYYY (AD)'
+                        : 'วว/ดด/ปปปป (พ.ศ.)', // รูปแบบวันที่ DD/MM/YYYY (พ.ศ.)
                 filled: true,
                 fillColor: Colors.white,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
                   borderSide: BorderSide.none, // ไม่มีขอบ
                 ),
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 15, vertical: 15),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 15,
+                  vertical: 15,
+                ),
               ),
             ),
             const SizedBox(height: 20),
 
             // ช่องกรอกรายละเอียดบทลงโทษ
             Text(
-              widget.isEnglish ? 'Penalty Details' : 'รายละเอียดบทลงโทษ', // หัวข้อ
+              widget.isEnglish
+                  ? 'Penalty Details'
+                  : 'รายละเอียดบทลงโทษ', // หัวข้อ
               style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
@@ -321,21 +367,23 @@ class _PenaltyScreenState extends State<PenaltyScreen> {
               controller: _detailsController,
               maxLines: 6, // กำหนดจำนวนบรรทัด
               decoration: InputDecoration(
-                hintText: widget.isEnglish
-                    ? 'Please provide more details about the incident...'
-                    : 'โปรดระบุรายละเอียดเพิ่มเติมเกี่ยวกับเหตุการณ์...', // Placeholder text
+                hintText:
+                    widget.isEnglish
+                        ? 'Please provide more details about the incident...'
+                        : 'โปรดระบุรายละเอียดเพิ่มเติมเกี่ยวกับเหตุการณ์...', // Placeholder text
                 filled: true,
                 fillColor: Colors.white,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
                   borderSide: BorderSide.none, // ไม่มีขอบ
                 ),
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 15, vertical: 15),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 15,
+                  vertical: 15,
+                ),
               ),
             ),
             const SizedBox(height: 40), // เพิ่มระยะห่างก่อนปุ่ม
-
             // ปุ่มส่งบทลงโทษ
             SizedBox(
               width: double.infinity, // ทำให้ปุ่มกว้างเต็มพื้นที่
@@ -349,7 +397,9 @@ class _PenaltyScreenState extends State<PenaltyScreen> {
                   ),
                 ),
                 child: Text(
-                  widget.isEnglish ? 'Submit Penalty' : 'ส่งบทลงโทษ', // ข้อความบนปุ่ม
+                  widget.isEnglish
+                      ? 'Submit Penalty'
+                      : 'ส่งบทลงโทษ', // ข้อความบนปุ่ม
                   style: const TextStyle(
                     fontSize: 18,
                     color: Colors.white,

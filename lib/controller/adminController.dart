@@ -14,24 +14,21 @@ class Admincontroller {
       final response = await http.get(url, headers: headers);
 
       if (response.statusCode == 200) {
-        // ถอดรหัส response body เป็น UTF-8 และแปลงเป็น List ของ Map
         final utf8Body = utf8.decode(response.bodyBytes);
         final List<dynamic> jsonList = json.decode(utf8Body);
 
-        // แปลงแต่ละ Map ใน List ให้เป็น Admin object
         return jsonList.map((json) => Admin.fromJson(json as Map<String, dynamic>)).toList();
       } else {
         print('Error getAllAdmin: Status code: ${response.statusCode}, Body: ${response.body}');
-        return null; // คืนค่า null ในกรณีที่เกิดข้อผิดพลาด
+        return null;
       }
     } catch (e) {
       print('Exception getAllAdmin: $e');
-      return null; // คืนค่า null ในกรณีที่เกิด Exception
+      return null; 
     }
   }
 
-  // เมธอดสำหรับเพิ่ม Admin ใหม่
-  // Endpoint: POST /maeban/admins
+
   Future<Admin?> addAdmin({
     required String email,
     required String firstName,

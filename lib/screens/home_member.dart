@@ -5,6 +5,7 @@ import 'package:maebanjumpen/controller/housekeeperController.dart';
 import 'package:maebanjumpen/controller/memberController.dart';
 import 'package:maebanjumpen/model/hirer.dart';
 import 'package:maebanjumpen/model/housekeeper.dart';
+import 'package:maebanjumpen/model/party_role.dart'; 
 import 'package:maebanjumpen/screens/deposit_member.dart';
 import 'package:maebanjumpen/screens/hirelist_member.dart';
 import 'package:maebanjumpen/screens/notificationScreen.dart';
@@ -21,7 +22,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 class HomePage extends StatefulWidget {
-  final Hirer? user;
+  final PartyRole? user; 
   final bool isEnglish;
 
   const HomePage({super.key, this.user, required this.isEnglish});
@@ -38,7 +39,8 @@ class _HomePageState extends State<HomePage> {
     'balance': true,
     'servicePopularity': true,
   };
-  Hirer? _currentUser;
+  // ⛔️ เปลี่ยนจาก Hirer? เป็น PartyRole?
+  PartyRole? _currentUser;
   String _displayBalance = '0.00';
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
@@ -125,7 +127,7 @@ class _HomePageState extends State<HomePage> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     final memberProvider = Provider.of<MemberProvider>(context, listen: false);
-    _currentUser = memberProvider.currentUser as Hirer?;
+    _currentUser = memberProvider.currentUser;
     _updateBalanceDisplay();
     _fetchInitialData();
   }
@@ -145,28 +147,39 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _updateBalanceDisplay() {
-    _displayBalance = NumberFormat(
-      '#,##0.00',
-    ).format(_currentUser?.balance ?? 0.0);
+    // ✅ ตรวจสอบว่าเป็น Hirer ก่อนเข้าถึง balance
+    if (_currentUser is Hirer) {
+      _displayBalance = NumberFormat(
+        '#,##0.00',
+      ).format((_currentUser as Hirer).balance ?? 0.0);
+    } else {
+      _displayBalance = 'N/A';
+    }
   }
 
   Future<void> _fetchLatestBalance() async {
-    if (!mounted || _currentUser == null || _currentUser!.id == null) return;
+    // ✅ ตรวจสอบว่าเป็น Hirer ก่อนเรียกใช้ฟังก์ชัน
+    if (!mounted || _currentUser == null || !(_currentUser is Hirer) || _currentUser!.id == null) return;
+    final Hirer? currentHirer = _currentUser as Hirer?;
+    
     setState(() {
       isLoading['balance'] = true;
     });
+
     try {
       final MemberController memberController = MemberController();
       final Hirer? latestHirerData = await memberController.getHirerById(
-        _currentUser!.id!.toString(),
+        currentHirer!.id!.toString(),
       );
       if (mounted && latestHirerData != null) {
+        // ✅ อัปเดต currentUser ใน provider ด้วย
+        Provider.of<MemberProvider>(context, listen: false).setUser(latestHirerData);
         setState(() {
           _currentUser = latestHirerData;
           _updateBalanceDisplay();
         });
         print(
-          'HomePage Balance updated successfully to: ${_currentUser!.balance}',
+          'HomePage Balance updated successfully to: ${( _currentUser as Hirer).balance}',
         );
       } else if (mounted) {
         print(
@@ -363,28 +376,29 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     return Consumer<MemberProvider>(
       builder: (context, memberProvider, child) {
-        final loggedInUser = memberProvider.currentUser as Hirer?;
-        final bool isLoggedIn = loggedInUser != null && loggedInUser.id != null;
-        final pages =
-            isLoggedIn
+        final loggedInUser = memberProvider.currentUser;
+        // ✅ ตรวจสอบว่าเป็น Hirer ก่อนใช้ loggedInUser.id
+        final bool isLoggedIn = loggedInUser != null && loggedInUser is Hirer && loggedInUser.id != null; 
+        
+        final pages = isLoggedIn
                 ? [
-                  _buildHomeScreenContent(),
-                  CardpageMember(
-                    user: loggedInUser,
-                    isEnglish: widget.isEnglish,
-                  ),
-                  HireListPage(user: loggedInUser, isEnglish: widget.isEnglish),
-                  ProfileMemberPage(
-                    user: loggedInUser,
-                    isEnglish: widget.isEnglish,
-                  ),
-                ]
+                    _buildHomeScreenContent(),
+                    CardpageMember(
+                      user: loggedInUser as Hirer,
+                      isEnglish: widget.isEnglish,
+                    ),
+                    HireListPage(user: loggedInUser as Hirer, isEnglish: widget.isEnglish),
+                    ProfileMemberPage(
+                      user: loggedInUser as Hirer,
+                      isEnglish: widget.isEnglish,
+                    ),
+                  ]
                 : [
-                  _buildHomeScreenContent(),
-                  const Center(child: Text("Please login to view this page")),
-                  const Center(child: Text("Please login to view this page")),
-                  const Center(child: Text("Please login to view this page")),
-                ];
+                    _buildHomeScreenContent(),
+                    const Center(child: Text("Please login to view this page")),
+                    const Center(child: Text("Please login to view this page")),
+                    const Center(child: Text("Please login to view this page")),
+                  ];
 
         return Scaffold(
           key: _scaffoldKey,
@@ -402,9 +416,9 @@ class _HomePageState extends State<HomePage> {
                     context,
                     listen: false,
                   ).currentUser;
-              final isUserLoggedIn = user != null && user.id != null;
+              final isUserLoggedInAndHirer = user != null && user is Hirer && user.id != null;
 
-              if (index != 0 && !isUserLoggedIn) {
+              if (index != 0 && !isUserLoggedInAndHirer) {
                 // หากไม่ได้ล็อกอินและพยายามไปหน้าอื่นที่ไม่ใช่หน้าหลัก
                 Navigator.push(
                   context,
@@ -478,9 +492,8 @@ class _HomePageState extends State<HomePage> {
                           builder:
                               (context) => SeeAllHousekeeperPage(
                                 isEnglish: widget.isEnglish,
-                                user:
-                                    _currentUser ??
-                                    Hirer(), // Provide a default Hirer if null
+                                // ✅ ส่ง _currentUser เฉพาะเมื่อเป็น Hirer
+                                user: (_currentUser is Hirer && _currentUser != null) ? _currentUser as Hirer : Hirer(), 
                               ),
                         ),
                       );
@@ -525,6 +538,8 @@ class _HomePageState extends State<HomePage> {
   Widget _buildTopBar() {
     final isLoggedIn =
         Provider.of<MemberProvider>(context, listen: false).currentUser != null;
+    final userIsHirer = Provider.of<MemberProvider>(context, listen: false).currentUser is Hirer;
+
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -598,7 +613,8 @@ class _HomePageState extends State<HomePage> {
           ],
         ),
         const SizedBox(height: 8),
-        if (isLoggedIn)
+        // ✅ แสดงยอดเงินเฉพาะเมื่อล็อกอินและเป็น Hirer เท่านั้น
+        if (isLoggedIn && userIsHirer)
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
@@ -606,14 +622,14 @@ class _HomePageState extends State<HomePage> {
               const SizedBox(width: 4),
               isLoading['balance']!
                   ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2.0),
-                  )
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2.0),
+                    )
                   : Text(
-                    "฿$_displayBalance",
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
+                      "฿$_displayBalance",
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
             ],
           ),
       ],
@@ -705,15 +721,16 @@ class _HomePageState extends State<HomePage> {
 
                 return GestureDetector(
                   onTap: () {
+                    // ✅ ส่ง _currentUser ไปตรงๆ
                     Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder:
                             (context) => ViewHousekeeperPage(
-                              housekeeper: hk,
-                              isEnglish: widget.isEnglish,
-                              user: _currentUser ?? Hirer(),
-                            ),
+                                housekeeper: hk,
+                                isEnglish: widget.isEnglish,
+                                user: (_currentUser is Hirer && _currentUser != null) ? _currentUser as Hirer : Hirer(),
+                              ),
                       ),
                     );
                   },
@@ -853,18 +870,18 @@ class _HomePageState extends State<HomePage> {
                     ),
                     isLoading['servicePopularity']!
                         ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2.0),
-                        )
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2.0),
+                          )
                         : Text(
-                          displayRatingText,
-                          style: const TextStyle(
-                            fontSize: 10,
-                            color: Colors.grey,
+                            displayRatingText,
+                            style: const TextStyle(
+                              fontSize: 10,
+                              color: Colors.grey,
+                            ),
+                            textAlign: TextAlign.center,
                           ),
-                          textAlign: TextAlign.center,
-                        ),
                   ],
                 ),
               );

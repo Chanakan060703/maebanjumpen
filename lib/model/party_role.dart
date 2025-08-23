@@ -1,24 +1,20 @@
-// lib/model/party_role.dart
 import 'package:maebanjumpen/model/person.dart';
 
-// ***** สำคัญมาก: Import ทุก Subclass Model จากไดเรกทอรี 'lib/model/' ที่ถูกต้อง *****
-// ตรวจสอบ Path เหล่านี้ให้ถูกต้อง
 import 'package:maebanjumpen/model/member.dart'; // Member extends PartyRole
 import 'package:maebanjumpen/model/hirer.dart'; // Hirer extends Member
 import 'package:maebanjumpen/model/housekeeper.dart'; // Housekeeper extends Member
 import 'package:maebanjumpen/model/admin.dart';
 import 'package:maebanjumpen/model/account_manager.dart';
 
-// คลาส Abstract สำหรับ PartyRole
 abstract class PartyRole {
   final int? id;
   final Person? person;
-  final String? type; // <<< เพิ่ม type field
+  final String? type;
 
   PartyRole({
     this.id,
     this.person,
-    this.type, // <<< เพิ่ม type ใน constructor
+    this.type,
   });
 
   factory PartyRole.fromJson(Map<String, dynamic> json) {

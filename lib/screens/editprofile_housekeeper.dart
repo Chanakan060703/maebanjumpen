@@ -30,7 +30,7 @@ class _EditProfileHousekeeperPageState extends State<EditProfileHousekeeperPage>
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _addressController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _dailyRateController = TextEditingController(); // Added for daily rate
+  final TextEditingController _dailyRateController = TextEditingController();
 
   List<SkillType> _availableSkillTypes = [];
   final Map<SkillType, bool> _housekeeperSkillSelection = {};
@@ -61,7 +61,7 @@ class _EditProfileHousekeeperPageState extends State<EditProfileHousekeeperPage>
     _addressController.text = widget.user.person?.address ?? '';
     _emailController.text = widget.user.person?.email ?? '';
     _currentProfilePictureUrl = widget.user.person?.pictureUrl;
-    _dailyRateController.text = widget.user.dailyRate?.toString() ?? ''; // Initialize daily rate
+    _dailyRateController.text = widget.user.dailyRate?.toString() ?? '';
 
     _initialHousekeeperSkills = List.from(widget.user.housekeeperSkills ?? []);
 
@@ -81,7 +81,6 @@ class _EditProfileHousekeeperPageState extends State<EditProfileHousekeeperPage>
             .toList();
       } else {
         _availableSkillTypes = [];
-        print('No skill types found or failed to load.');
       }
 
       for (var skillType in _availableSkillTypes) {
@@ -117,7 +116,7 @@ class _EditProfileHousekeeperPageState extends State<EditProfileHousekeeperPage>
     _phoneController.dispose();
     _addressController.dispose();
     _emailController.dispose();
-    _dailyRateController.dispose(); // Dispose daily rate controller
+    _dailyRateController.dispose();
     super.dispose();
   }
 
@@ -149,25 +148,20 @@ class _EditProfileHousekeeperPageState extends State<EditProfileHousekeeperPage>
     try {
       String? newProfilePictureUrl = _currentProfilePictureUrl;
 
-      if (_pickedImageFile != null) {
-        if (widget.user.person?.personId != null) {
-          final uploadedUrl = await _imageUploadService.uploadImage(
-            id: widget.user.person!.personId!,
-            imageType: 'person',
-            imageFile: _pickedImageFile!,
-          );
-          if (uploadedUrl != null) {
-            newProfilePictureUrl = uploadedUrl;
-            print('Profile picture uploaded successfully: $newProfilePictureUrl');
-          } else {
-            throw Exception('Failed to upload profile picture.');
-          }
-        } else {
-          throw Exception('Person ID is null. Cannot upload profile picture.');
+      // 1. Upload new profile picture if a new one is picked
+      if (_pickedImageFile != null && widget.user.person?.personId != null) {
+        final uploadedUrl = await _imageUploadService.uploadImage(
+          id: widget.user.person!.personId!,
+          imageType: 'person',
+          imageFile: _pickedImageFile!,
+        );
+        if (uploadedUrl == null) {
+          throw Exception('Failed to upload profile picture.');
         }
+        newProfilePictureUrl = uploadedUrl;
       }
 
-      // สร้าง updatedPerson Object
+      // 2. Prepare the updated Person object
       final updatedPerson = widget.user.person?.copyWith(
         firstName: _firstNameController.text,
         lastName: _lastNameController.text,
@@ -177,70 +171,54 @@ class _EditProfileHousekeeperPageState extends State<EditProfileHousekeeperPage>
         pictureUrl: newProfilePictureUrl,
       );
 
-      // แปลง dailyRate จาก TextField เป็น double
+      // 3. Prepare the updated Housekeeper object with the new daily rate and person
       final double? newDailyRate = double.tryParse(_dailyRateController.text);
-
-      // สร้าง updatedHousekeeper Object โดยใช้ copyWith
-      // จุดสำคัญคือการรวม updatedPerson และ newDailyRate เข้าไปใน Object เดียว
       final updatedHousekeeper = widget.user.copyWith(
         person: updatedPerson,
         dailyRate: newDailyRate,
-        // ไม่ต้องส่ง rating มาจาก client เพราะ backend จะคำนวณเอง
       );
 
-      // เรียกเมธอด updateHousekeeper จาก Housekeepercontroller
-      // โดยส่ง id และ updatedHousekeeper Object ที่เราสร้างขึ้น
+      // 4. Update housekeeper data on the backend
       if (updatedHousekeeper.id != null) {
         await HousekeeperController().updateHousekeeper(
           updatedHousekeeper.id!,
-          updatedHousekeeper, // *** ส่ง Housekeeper Object เต็มๆ ***
+          updatedHousekeeper,
         );
-        print('Housekeeper information updated successfully on backend side!');
-      } else {
-        print('Warning: Cannot update housekeeper information because housekeeper ID is null.');
       }
 
-      // ส่วนการจัดการทักษะแม่บ้าน (Housekeeper Skills) เหมือนเดิม
+      // 5. Manage skills: find skills to add and skills to delete
       final List<HousekeeperSkill> newSelectedSkills = _housekeeperSkillSelection.entries
           .where((entry) => entry.value)
-          .map((entry) => HousekeeperSkill(
-                skillType: entry.key,
-              ))
+          .map((entry) => HousekeeperSkill(skillType: entry.key))
           .toList();
 
-      for (var newSkill in newSelectedSkills) {
-        if (!_initialHousekeeperSkills.any((initialSkill) =>
-                initialSkill.skillType?.skillTypeId == newSkill.skillType?.skillTypeId)) {
-          if (widget.user.id != null && newSkill.skillType?.skillTypeId != null) {
-            var addResponse = await _housekeeperskillController.addHousekeeperskill(
-              widget.user.id!,
-              newSkill.skillType!.skillTypeId!,
-            );
-            if (addResponse['status'] != 'success') {
-              throw Exception('Failed to add skill: ${addResponse['message']}');
-            }
-          }
+      final skillsToAdd = newSelectedSkills.where((newSkill) =>
+          !_initialHousekeeperSkills.any((initialSkill) =>
+              initialSkill.skillType?.skillTypeId == newSkill.skillType?.skillTypeId));
+
+      final skillsToDelete = _initialHousekeeperSkills.where((initialSkill) =>
+          !newSelectedSkills.any((newSkill) =>
+              newSkill.skillType?.skillTypeId == initialSkill.skillType?.skillTypeId));
+
+      // 6. Execute skill changes on the backend
+      // Add new skills
+      for (var skill in skillsToAdd) {
+        if (widget.user.id != null && skill.skillType?.skillTypeId != null) {
+          await _housekeeperskillController.addHousekeeperskill(
+            widget.user.id!,
+            skill.skillType!.skillTypeId!,
+          );
         }
       }
 
-      for (var initialSkill in _initialHousekeeperSkills) {
-        if (!newSelectedSkills.any((newSkill) =>
-                newSkill.skillType?.skillTypeId == initialSkill.skillType?.skillTypeId)) {
-          if (initialSkill.skillId != null) {
-            var deleteResponse = await _housekeeperskillController.deleteHousekeeperskill(
-              initialSkill.skillId!,
-            );
-            if (deleteResponse['status'] != 'success') {
-              throw Exception('Failed to delete skill: ${deleteResponse['message']}');
-            }
-          } else {
-            print(
-                'Warning: Attempted to delete a skill with null skillId: ${initialSkill.skillType?.skillTypeName}');
-          }
+      // Delete removed skills
+      for (var skill in skillsToDelete) {
+        if (skill.skillId != null) {
+          await _housekeeperskillController.deleteHousekeeperskill(skill.skillId!);
         }
       }
 
-      // สร้าง finalUpdatedUser สำหรับส่งกลับไปยังหน้าก่อนหน้า
+      // 7. Prepare the final updated user object to return
       final finalUpdatedUser = updatedHousekeeper.copyWith(
         housekeeperSkills: newSelectedSkills,
       );
