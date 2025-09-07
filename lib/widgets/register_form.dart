@@ -248,7 +248,7 @@ class _RegisterFormState extends State<RegisterForm> {
       return widget.isEnglish ? 'Please enter address' : 'กรุณากรอกที่อยู่';
     }
     final trimmedValue = value.trim();
-    if (!RegExp(r'^[ก-ฮ0-9\s]+$').hasMatch(trimmedValue)) {
+    if (!RegExp(r'^[ก-ฮ0-9\s/.,()-]+$').hasMatch(trimmedValue) && !trimmedValue.contains('หมู่')) {
       return widget.isEnglish
           ? 'Address must contain only Thai letters, numbers, and spaces'
           : 'ที่อยู่ต้องประกอบด้วยตัวอักษรภาษาไทย ตัวเลข หรือช่องว่างเท่านั้น';
@@ -397,8 +397,8 @@ class _RegisterFormState extends State<RegisterForm> {
             prefixIcon: const Icon(Icons.home),
             border: const OutlineInputBorder(),
             hintText: widget.isEnglish 
-                ? 'e.g. House No. 123 Village Sub-district District Province'
-                : 'เช่น เลขที่บ้าน 123 หมู่บ้าน ตำบล อำเภอ จังหวัด',
+                ? 'e.g. House No. 123 Village No. 6 Sub-district District Province'
+                : 'เช่น 212 หมู่บ้าน ตำบล อำเภอ จังหวัด',
           ),
           maxLines: 2,
           validator: _validateAddress,
