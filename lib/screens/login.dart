@@ -30,6 +30,9 @@ class _LoginPageState extends State<LoginPage> {
   bool _obscurePassword = true;
   bool isEnglish = true;
 
+  // เพิ่ม GlobalKey สำหรับ Form widget เพื่อใช้ในการตรวจสอบ
+  final _formKey = GlobalKey<FormState>();
+
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
@@ -101,16 +104,13 @@ class _LoginPageState extends State<LoginPage> {
   final LoginController _loginController = LoginController();
 
   Future<void> _handleLogin() async {
+    // เพิ่มการตรวจสอบความถูกต้องของฟอร์ม
+    if (!_formKey.currentState!.validate()) {
+      return; // ถ้าฟอร์มไม่ถูกต้อง ให้หยุดการทำงาน
+    }
+
     final username = _usernameController.text.trim();
     final password = _passwordController.text.trim();
-
-    if (username.isEmpty || password.isEmpty) {
-      _showErrorDialog(
-        title: isEnglish ? 'Missing Information' : 'ข้อมูลไม่ครบถ้วน',
-        desc: isEnglish ? 'Please enter both username and password.' : 'กรุณากรอกชื่อผู้ใช้และรหัสผ่านให้ครบถ้วน',
-      );
-      return;
-    }
 
     try {
       final partyRole = await _loginController.authenticate(username, password);
@@ -236,135 +236,138 @@ class _LoginPageState extends State<LoginPage> {
           padding: const EdgeInsets.symmetric(horizontal: 30.0),
           child: Center(
             child: SingleChildScrollView(
-              child: Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      ToggleButtons(
-                        isSelected: [isEnglish, !isEnglish],
-                        onPressed: (index) {
-                          setState(() {
-                            isEnglish = index == 0;
-                          });
-                        },
-                        borderRadius: BorderRadius.circular(20),
-                        selectedColor: Colors.white,
-                        fillColor: Colors.red,
-                        color: Colors.black,
-                        borderColor: Colors.transparent,
-                        selectedBorderColor: Colors.transparent,
-                        children: const [
-                          Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 12),
-                            child: Text("ENG"),
+              child: Form( // <-- เพิ่ม Form widget
+                key: _formKey, // <-- กำหนด key ให้กับ Form
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        ToggleButtons(
+                          isSelected: [isEnglish, !isEnglish],
+                          onPressed: (index) {
+                            setState(() {
+                              isEnglish = index == 0;
+                            });
+                          },
+                          borderRadius: BorderRadius.circular(20),
+                          selectedColor: Colors.white,
+                          fillColor: Colors.red,
+                          color: Colors.black,
+                          borderColor: Colors.transparent,
+                          selectedBorderColor: Colors.transparent,
+                          children: const [
+                            Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 12),
+                              child: Text("ENG"),
+                            ),
+                            Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 12),
+                              child: Text("ไทย"),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    Image.asset('assets/images/logo.png', height: 100),
+                    const SizedBox(height: 20),
+                    Text(
+                      isEnglish ? "Maeban Jampen" : "แม่บ้านจำเป็น",
+                      style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 5),
+                    Text(isEnglish ? "Welcome" : "ยินดีต้อนรับ"),
+                    const SizedBox(height: 30),
+                    LoginFormFields(
+                      isEnglish: isEnglish,
+                      obscurePassword: _obscurePassword,
+                      onTogglePassword: () {
+                        setState(() {
+                          _obscurePassword = !_obscurePassword;
+                        });
+                      },
+                      usernameController: _usernameController,
+                      passwordController: _passwordController,
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Checkbox(
+                          value: _rememberMe,
+                          activeColor: const Color(0xFFEB2525),
+                          onChanged: (value) {
+                            setState(() {
+                              _rememberMe = value!;
+                            });
+                          },
+                        ),
+                        Text(isEnglish ? "Remember me" : "จดจำฉันไว้"),
+                        const Spacer(),
+                        TextButton(
+                          onPressed: () {},
+                          child: Text(
+                            isEnglish ? "Forgot Password?" : "ลืมรหัสผ่าน?",
+                            style: const TextStyle(color: Colors.red),
                           ),
-                          Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 12),
-                            child: Text("ไทย"),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 45,
+                      child: ElevatedButton(
+                        onPressed: _handleLogin,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
                           ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-                  Image.asset('assets/images/logo.png', height: 100),
-                  const SizedBox(height: 20),
-                  Text(
-                    isEnglish ? "Maeban Jampen" : "แม่บ้านจำเป็น",
-                    style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 5),
-                  Text(isEnglish ? "Welcome" : "ยินดีต้อนรับ"),
-                  const SizedBox(height: 30),
-                  LoginFormFields(
-                    isEnglish: isEnglish,
-                    obscurePassword: _obscurePassword,
-                    onTogglePassword: () {
-                      setState(() {
-                        _obscurePassword = !_obscurePassword;
-                      });
-                    },
-                    usernameController: _usernameController,
-                    passwordController: _passwordController,
-                  ),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      Checkbox(
-                        value: _rememberMe,
-                        activeColor: const Color(0xFFEB2525),
-                        onChanged: (value) {
-                          setState(() {
-                            _rememberMe = value!;
-                          });
-                        },
-                      ),
-                      Text(isEnglish ? "Remember me" : "จดจำฉันไว้"),
-                      const Spacer(),
-                      TextButton(
-                        onPressed: () {},
+                        ),
                         child: Text(
-                          isEnglish ? "Forgot Password?" : "ลืมรหัสผ่าน?",
-                          style: const TextStyle(color: Colors.red),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 45,
-                    child: ElevatedButton(
-                      onPressed: _handleLogin,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                      child: Text(
-                        isEnglish ? "Login" : "เข้าสู่ระบบ",
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
+                          isEnglish ? "Login" : "เข้าสู่ระบบ",
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        isEnglish
-                            ? "Don't have an account? "
-                            : "ยังไม่มีบัญชี? ",
-                        style: const TextStyle(
-                          color: Colors.black,
-                          fontWeight: FontWeight.normal,
-                        ),
-                      ),
-                      TextButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const RegisterPage(),
-                            ),
-                          );
-                        },
-                        child: Text(
-                          isEnglish ? "Register" : "ลงทะเบียน",
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          isEnglish
+                              ? "Don't have an account? "
+                              : "ยังไม่มีบัญชี? ",
                           style: const TextStyle(
-                            color: Colors.redAccent,
-                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
+                            fontWeight: FontWeight.normal,
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                ],
+                        TextButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const RegisterPage(),
+                              ),
+                            );
+                          },
+                          child: Text(
+                            isEnglish ? "Register" : "ลงทะเบียน",
+                            style: const TextStyle(
+                              color: Colors.redAccent,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
           ),

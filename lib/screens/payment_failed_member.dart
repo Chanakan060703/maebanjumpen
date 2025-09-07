@@ -29,7 +29,7 @@ class PaymentFailedPage extends StatelessWidget {
               ),
               const SizedBox(height: 30),
               Text(
-                isEnglish ? 'Payment Failed!' : 'ชำระเงินไม่สำเร็จ!',
+                isEnglish ? 'Deposit Failed!' : 'เติมเงินไม่สำเร็จ!',
                 style: const TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.bold,

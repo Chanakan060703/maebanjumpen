@@ -36,7 +36,7 @@ class PaymentSuccessfulPage extends StatelessWidget {
               ),
               const SizedBox(height: 30),
               Text(
-                isEnglish ? 'Payment Successful!' : 'ชำระเงินสำเร็จ!', // ข้อความ "Payment Successful!"
+                isEnglish ? 'Deposit Successful!' : 'เติมเงินสำเร็จ!', // ข้อความ "Payment Successful!"
                 style: const TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.bold,
