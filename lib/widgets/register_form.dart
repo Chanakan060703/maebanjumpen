@@ -397,7 +397,7 @@ class _RegisterFormState extends State<RegisterForm> {
             prefixIcon: const Icon(Icons.home),
             border: const OutlineInputBorder(),
             hintText: widget.isEnglish 
-                ? 'e.g., House No. 123, Village, Sub-district, District, Province' 
+                ? 'e.g. House No. 123 Village Sub-district District Province'
                 : 'เช่น เลขที่บ้าน 123 หมู่บ้าน ตำบล อำเภอ จังหวัด',
           ),
           maxLines: 2,

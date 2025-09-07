@@ -37,6 +37,8 @@ class _HireHousekeeperPageState extends State<HireHousekeeperPage> {
 
   // FocusNode สำหรับ TextField
   final FocusNode _phoneFocusNode = FocusNode();
+  final FocusNode _provinceFocusNode = FocusNode();
+  final FocusNode _subdistrictFocusNode = FocusNode();
   final FocusNode _districtFocusNode = FocusNode();
   final FocusNode _villageFocusNode = FocusNode();
   final FocusNode _houseNumberFocusNode = FocusNode();
@@ -47,6 +49,8 @@ class _HireHousekeeperPageState extends State<HireHousekeeperPage> {
 
   // TextEditingController สำหรับ TextField
   final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _subdistrictController = TextEditingController();
+  final TextEditingController _provinceController = TextEditingController();
   final TextEditingController _districtController = TextEditingController();
   final TextEditingController _villageController = TextEditingController();
   final TextEditingController _houseNumberController = TextEditingController();
@@ -74,6 +78,8 @@ class _HireHousekeeperPageState extends State<HireHousekeeperPage> {
   void initState() {
     super.initState();
     _phoneFocusNode.addListener(_handleFocusChange);
+    _provinceFocusNode.addListener(_handleFocusChange);
+    _subdistrictFocusNode.addListener(_handleFocusChange);
     _districtFocusNode.addListener(_handleFocusChange);
     _villageFocusNode.addListener(_handleFocusChange);
     _houseNumberFocusNode.addListener(_handleFocusChange);
@@ -107,14 +113,15 @@ class _HireHousekeeperPageState extends State<HireHousekeeperPage> {
     // คุณอาจต้องปรับ logic ตรงนี้หาก format address จริงๆ ซับซ้อนกว่านี้
     List<String> addressParts =
         (widget.user.person?.address ?? '')
-            .split(',')
+            .split(' ')
             .map((e) => e.trim())
             .toList();
 
-    _districtController.text = addressParts.isNotEmpty ? addressParts[0] : '';
+    _houseNumberController.text = addressParts.isNotEmpty ? addressParts[0] : '';
     _villageController.text = addressParts.length > 1 ? addressParts[1] : '';
-    _houseNumberController.text =
-        addressParts.length > 2 ? addressParts[2] : '';
+    _subdistrictController.text = addressParts.length > 2 ? addressParts[2] : '';
+    _districtController.text = addressParts.length > 3 ? addressParts[3] : '';
+    _provinceController.text = addressParts.length > 4 ? addressParts[4] : '';
   }
 
   // ฟังก์ชันสำหรับเลือกวันที่
@@ -211,6 +218,8 @@ class _HireHousekeeperPageState extends State<HireHousekeeperPage> {
   @override
   void dispose() {
     _phoneFocusNode.removeListener(_handleFocusChange);
+    _provinceFocusNode.removeListener(_handleFocusChange);
+    _subdistrictFocusNode.removeListener(_handleFocusChange);
     _districtFocusNode.removeListener(_handleFocusChange);
     _villageFocusNode.removeListener(_handleFocusChange);
     _houseNumberFocusNode.removeListener(_handleFocusChange);
@@ -219,6 +228,8 @@ class _HireHousekeeperPageState extends State<HireHousekeeperPage> {
     _startTimeFocusNode.removeListener(_handleFocusChange);
     _endTimeFocusNode.removeListener(_handleFocusChange);
 
+    _provinceController.dispose();
+    _subdistrictController.dispose();
     _phoneFocusNode.dispose();
     _districtFocusNode.dispose();
     _villageFocusNode.dispose();
@@ -227,15 +238,6 @@ class _HireHousekeeperPageState extends State<HireHousekeeperPage> {
     _startDateFocusNode.dispose();
     _startTimeFocusNode.dispose();
     _endTimeFocusNode.dispose();
-
-    _phoneController.dispose();
-    _districtController.dispose();
-    _villageController.dispose();
-    _houseNumberController.dispose();
-    _detailWorkController.dispose();
-    _startDateController.dispose();
-    _startTimeController.dispose();
-    _endTimeController.dispose();
     super.dispose();
   }
 
@@ -555,6 +557,8 @@ class _HireHousekeeperPageState extends State<HireHousekeeperPage> {
                           _fillDefaultAddress();
                         } else {
                           _phoneController.clear();
+                          _provinceController.clear();
+                          _subdistrictController.clear();
                           _districtController.clear();
                           _villageController.clear();
                           _houseNumberController.clear();
@@ -756,16 +760,16 @@ class _HireHousekeeperPageState extends State<HireHousekeeperPage> {
                 },
               ),
               const SizedBox(height: 16.0),
-              // ใช้ HireTextFormField สำหรับ District
+              // ใช้ HireTextFormField สำหรับ House Number
               HireTextFormField(
-                controller: _districtController,
-                focusNode: _districtFocusNode,
+                controller: _houseNumberController,
+                focusNode: _houseNumberFocusNode,
                 enabled: !_isDefaultAddress,
-                labelText: widget.isEnglish ? 'District' : 'อำเภอ',
-                hintText: widget.isEnglish ? 'Please enter district' : 'กรุณากรอกอำเภอ',
+                labelText: widget.isEnglish ? 'House Number' : 'เลขที่บ้าน',
+                hintText: widget.isEnglish ? 'Please enter house number' : 'กรุณากรอกเลขที่บ้าน',
                 validator: (value) {
                   if (!_isDefaultAddress && (value == null || value.isEmpty)) {
-                    return widget.isEnglish ? 'Please enter district.' : 'กรุณากรอกอำเภอ';
+                    return widget.isEnglish ? 'Please enter house number.' : 'กรุณากรอกเลขที่บ้าน';
                   }
                   return null;
                 },
@@ -786,16 +790,45 @@ class _HireHousekeeperPageState extends State<HireHousekeeperPage> {
                 },
               ),
               const SizedBox(height: 16.0),
-              // ใช้ HireTextFormField สำหรับ House Number
+              
+              // ใช้ HireTextFormField สำหรับ District
               HireTextFormField(
-                controller: _houseNumberController,
-                focusNode: _houseNumberFocusNode,
+                controller: _subdistrictController,
+                focusNode: _subdistrictFocusNode,
                 enabled: !_isDefaultAddress,
-                labelText: widget.isEnglish ? 'House Number' : 'เลขที่บ้าน',
-                hintText: widget.isEnglish ? 'Please enter house number' : 'กรุณากรอกเลขที่บ้าน',
+                labelText: widget.isEnglish ? 'Subdistrict ' : 'ตำบล',
+                hintText: widget.isEnglish ? 'Please enter Subdistrict ' : 'กรุณากรอกตำบล',
                 validator: (value) {
                   if (!_isDefaultAddress && (value == null || value.isEmpty)) {
-                    return widget.isEnglish ? 'Please enter house number.' : 'กรุณากรอกเลขที่บ้าน';
+                    return widget.isEnglish ? 'Please enter Subdistrict .' : 'กรุณากรอกตำบล';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16.0),
+              HireTextFormField(
+                controller: _districtController,
+                focusNode: _districtFocusNode,
+                enabled: !_isDefaultAddress,
+                labelText: widget.isEnglish ? 'District ' : 'อำเภอ',
+                hintText: widget.isEnglish ? 'Please enter District ' : 'กรุณากรอกอำเภอ',
+                validator: (value) {
+                  if (!_isDefaultAddress && (value == null || value.isEmpty)) {
+                    return widget.isEnglish ? 'Please enter District .' : 'กรุณากรอกอำเภอ';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16.0),
+              HireTextFormField(
+                controller: _provinceController,
+                focusNode: _provinceFocusNode,
+                enabled: !_isDefaultAddress,
+                labelText: widget.isEnglish ? 'Province ' : 'จังหวัด',
+                hintText: widget.isEnglish ? 'Please enter Province ' : 'กรุณากรอกจังหวัด',
+                validator: (value) {
+                  if (!_isDefaultAddress && (value == null || value.isEmpty)) {
+                    return widget.isEnglish ? 'Please enter Province .' : 'กรุณากรอกจังหวัด';
                   }
                   return null;
                 },

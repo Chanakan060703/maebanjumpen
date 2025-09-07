@@ -24,14 +24,17 @@ class EditProfileMemberPage extends StatefulWidget {
 }
 
 class _EditProfileMemberPageState extends State<EditProfileMemberPage> {
+  // Global key for the Form to validate data
+  final _formKey = GlobalKey<FormState>();
+
   late TextEditingController _firstNameController;
   late TextEditingController _lastNameController;
   late TextEditingController _phoneController;
   late TextEditingController _addressController;
   late TextEditingController _emailController;
 
-  File? _imageFile; // เก็บรูปภาพที่เลือกใหม่
-  String? _displayImageUrl; // เก็บ URL รูปภาพที่จะแสดงผลใน CircleAvatar (อาจเป็นรูปเดิม หรือรูปใหม่ที่อัปโหลดแล้ว)
+  File? _imageFile; // Stores the newly selected image
+  String? _displayImageUrl; // Stores the URL of the image to display
 
   final ImagePicker _picker = ImagePicker();
   final ImageUploadService _imageUploadService = ImageUploadService();
@@ -51,7 +54,6 @@ class _EditProfileMemberPageState extends State<EditProfileMemberPage> {
     _emailController =
         TextEditingController(text: widget.user.person?.email ?? '');
 
-    // กำหนด URL รูปภาพเริ่มต้นที่จะแสดงผล
     _displayImageUrl = widget.user.person?.pictureUrl;
   }
 
@@ -65,14 +67,12 @@ class _EditProfileMemberPageState extends State<EditProfileMemberPage> {
     super.dispose();
   }
 
+  // --- Image Handling Functions ---
   Future<void> _pickImage(ImageSource source) async {
     final pickedFile = await _picker.pickImage(source: source);
-
     if (pickedFile != null) {
       setState(() {
         _imageFile = File(pickedFile.path);
-        // เมื่อเลือกรูปใหม่ ให้แสดงรูปที่เลือกทันที แทนที่จะรอการอัปโหลด
-        // ในขั้นตอนนี้ _displayImageUrl ยังไม่จำเป็นต้องอัปเดต เพราะ _imageFile จะถูกใช้โดยตรง
       });
       print('Selected image path: ${pickedFile.path}');
     } else {
@@ -111,10 +111,76 @@ class _EditProfileMemberPageState extends State<EditProfileMemberPage> {
     );
   }
 
+  // --- Validation Functions ---
+  String? _validateFirstName(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return widget.isEnglish ? 'Please enter your Firstname' : 'กรุณากรอกชื่อ';
+    }
+    // Updated to allow spaces and a wider range of characters
+    final trimmedValue = value.trim();
+    if (trimmedValue.length < 2 || trimmedValue.length > 40) {
+      return widget.isEnglish ? 'Firstname must be between 2-40 characters' : 'ชื่อต้องมีความยาวระหว่าง 2-40 ตัวอักษร';
+    }
+    return null;
+  }
+
+  String? _validateLastName(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return widget.isEnglish ? 'Please enter your Lastname' : 'กรุณากรอกนามสกุล';
+    }
+    // Updated to allow spaces and a wider range of characters
+    final trimmedValue = value.trim();
+    if (trimmedValue.length < 2 || trimmedValue.length > 40) {
+      return widget.isEnglish ? 'Lastname must be between 2-40 characters' : 'นามสกุลต้องมีความยาวระหว่าง 2-40 ตัวอักษร';
+    }
+    return null;
+  }
+
+  String? _validatePhoneNumber(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return widget.isEnglish ? 'Please enter your Phone number' : 'กรุณากรอกเบอร์โทรศัพท์';
+    }
+    final trimmedValue = value.trim();
+    if (trimmedValue.contains(' ')) {
+      return widget.isEnglish ? 'Phone number must not contain spaces' : 'เบอร์โทรศัพท์ต้องไม่มีช่องว่าง';
+    }
+    if (trimmedValue.length != 10) {
+      return widget.isEnglish ? 'Phone number must be 10 digits' : 'เบอร์โทรศัพท์ต้องเป็นตัวเลข 10 หลัก';
+    }
+    if (!RegExp(r'^[0-9]+$').hasMatch(trimmedValue)) {
+      return widget.isEnglish ? 'Phone number must contain digits only' : 'เบอร์โทรศัพท์ต้องประกอบด้วยตัวเลขเท่านั้น';
+    }
+    if (!trimmedValue.startsWith('06') && !trimmedValue.startsWith('08') && !trimmedValue.startsWith('09')) {
+      return widget.isEnglish ? 'Phone number must start with 06, 08, or 09' : 'เบอร์โทรศัพท์ต้องขึ้นต้นด้วย 06, 08, หรือ 09';
+    }
+    return null;
+  }
+
+  String? _validateAddress(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return widget.isEnglish ? 'Please enter your Address' : 'กรุณากรอกที่อยู่';
+    }
+    // Removed strict regex validation to allow more characters as requested
+    return null;
+  }
+
+  // --- Save Profile Logic ---
   Future<void> _saveProfile() async {
+    // Validate all fields first
+    // ** Calling _formKey.currentState!.validate() calls the validator of every TextFormField in the Form
+    if (!_formKey.currentState!.validate()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text(widget.isEnglish
+                ? 'Please correct the errors in the form.'
+                : 'กรุณาแก้ไขข้อมูลที่ผิดพลาดในฟอร์ม')),
+      );
+      return;
+    }
+
     String? newPictureUrl = _displayImageUrl;
 
-    // ตรวจสอบว่ามีรูปภาพใหม่ที่เลือกหรือไม่
+    // Check if a new image was selected and upload it
     if (_imageFile != null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -123,7 +189,6 @@ class _EditProfileMemberPageState extends State<EditProfileMemberPage> {
                 : 'กำลังอัปโหลดรูปโปรไฟล์...')),
       );
 
-      // *** ใช้ personId แทน id ของ Hirer ***
       if (widget.user.person?.personId == null) {
         print('Error: Person ID is null. Cannot upload profile picture.');
         ScaffoldMessenger.of(context).showSnackBar(
@@ -136,7 +201,7 @@ class _EditProfileMemberPageState extends State<EditProfileMemberPage> {
       }
 
       String? uploadedUrl = await _imageUploadService.uploadImage(
-        id: widget.user.person!.personId!, // <<< แก้ไขตรงนี้
+        id: widget.user.person!.personId!,
         imageType: 'person',
         imageFile: XFile(_imageFile!.path),
       );
@@ -151,7 +216,7 @@ class _EditProfileMemberPageState extends State<EditProfileMemberPage> {
         );
         setState(() {
           _displayImageUrl = newPictureUrl;
-          _imageFile = null; // เคลียร์ _imageFile หลังจากอัปโหลดสำเร็จ
+          _imageFile = null;
         });
       } else {
         print('Error: Failed to upload profile picture.');
@@ -161,54 +226,46 @@ class _EditProfileMemberPageState extends State<EditProfileMemberPage> {
                   ? 'Failed to upload profile picture.'
                   : 'อัปโหลดรูปโปรไฟล์ไม่สำเร็จ')),
         );
-        // หากอัปโหลดรูปไม่สำเร็จ ไม่ต้องดำเนินการต่อ
-        return; 
+        return;
       }
     }
 
-    // Create the updated Person object
+    // Create the updated Person object with new data
     final Person updatedPerson = Person(
       personId: widget.user.person?.personId,
       firstName: _firstNameController.text,
       lastName: _lastNameController.text,
       phoneNumber: _phoneController.text,
       address: _addressController.text,
-      email: _emailController.text,
-      pictureUrl: newPictureUrl, // ใช้ newPictureUrl ที่อาจมีการอัปเดตแล้ว
-      idCardNumber: widget.user.person?.idCardNumber,
-      accountStatus: widget.user.person?.accountStatus,
-      // ไม่ต้องใส่ login object ที่นี่ เพราะ PersonController.updatePerson ไม่ได้ใช้
+      email: _emailController.text, // Email is read-only but included here
+      pictureUrl: newPictureUrl,
+      idCardNumber: widget.user.person?.idCardNumber, // Keep original ID Card
+      accountStatus: widget.user.person?.accountStatus, // Keep original status
     );
 
     // Call the updatePerson method from PersonController
     try {
-      // Ensure personId is not null before calling updatePerson
       if (updatedPerson.personId != null) {
-        // PersonController.updatePerson ต้องการ Person object โดยตรง
-        // ไม่ใช่แยก parameter ทีละตัว
         final Person? savedPerson = await _personController.updatePerson(
           updatedPerson.personId!,
-          updatedPerson, // ส่ง Person object ที่สร้างไว้
+          updatedPerson,
         );
 
         if (savedPerson != null) {
-          // สร้าง Hirer object ใหม่ด้วยข้อมูล Person ที่อัปเดตแล้ว
           final Hirer updatedHirer = Hirer(
             id: widget.user.id,
-            person: savedPerson, // ใช้ savedPerson ที่ได้จากการอัปเดต
+            person: savedPerson,
             balance: widget.user.balance ?? 0.0,
             type: widget.user.type,
           );
 
           Navigator.pop(context, updatedHirer);
-          print('Profile Saved and returned: ${updatedHirer.person?.firstName}');
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
                 content: Text(
                     widget.isEnglish ? 'Profile saved!' : 'บันทึกโปรไฟล์สำเร็จ!')),
           );
         } else {
-          // กรณีที่ updatePerson คืนค่า null (อาจจะหา Person ไม่เจอ)
           print('Error: Person update returned null.');
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -237,19 +294,16 @@ class _EditProfileMemberPageState extends State<EditProfileMemberPage> {
     }
   }
 
+  // --- Build UI Widget ---
   @override
   Widget build(BuildContext context) {
-    // กำหนด ImageProvider ตามลำดับความสำคัญ:
-    // 1. รูปภาพที่เลือกใหม่ (จาก _imageFile)
-    // 2. รูปภาพจาก Network (จาก _displayImageUrl)
-    // 3. รูปภาพ Default (จาก assets)
     ImageProvider profileImage;
     if (_imageFile != null) {
       profileImage = FileImage(_imageFile!);
     } else if (_displayImageUrl != null && _displayImageUrl!.isNotEmpty) {
       profileImage = NetworkImage(_displayImageUrl!);
     } else {
-      profileImage = const AssetImage('assets/images/default_profile.png'); // แก้ไข path ให้ถูกต้อง
+      profileImage = const AssetImage('assets/images/default_profile.png');
     }
 
     return Scaffold(
@@ -260,7 +314,7 @@ class _EditProfileMemberPageState extends State<EditProfileMemberPage> {
           width: 70.0,
           child: TextButton(
             onPressed: () {
-              Navigator.pop(context); // กลับโดยไม่มีการส่งข้อมูล
+              Navigator.pop(context);
             },
             style: TextButton.styleFrom(
               padding: EdgeInsets.zero,
@@ -290,119 +344,115 @@ class _EditProfileMemberPageState extends State<EditProfileMemberPage> {
           ),
         ],
       ),
+      // ** Fixed: Added Form widget and linked it to _formKey
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Padding(
-              padding: const EdgeInsets.only(bottom: 24.0),
-              child: GestureDetector(
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Profile Photo Section
+              GestureDetector(
                 onTap: () => _showImageSourceActionSheet(context),
-                child: Container(
-                  padding: const EdgeInsets.all(16.0),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(10.0),
-                  ),
-                  child: Column(
-                    children: [
-                      Stack(
-                        alignment: Alignment.bottomRight,
-                        children: [
-                          CircleAvatar(
-                            radius: 60.0,
-                            backgroundImage: profileImage, // <--- ใช้ profileImage ที่กำหนดไว้
+                child: Column(
+                  children: [
+                    Stack(
+                      alignment: Alignment.bottomRight,
+                      children: [
+                        CircleAvatar(
+                          radius: 60.0,
+                          backgroundImage: profileImage,
+                        ),
+                        Container(
+                          decoration: const BoxDecoration(
+                            color: Colors.red,
+                            shape: BoxShape.circle,
                           ),
-                          Container(
-                            decoration: const BoxDecoration(
-                              color: Colors.red,
-                              shape: BoxShape.circle,
-                            ),
-                            padding: const EdgeInsets.all(8.0),
-                            child: const Icon(
-                              Icons.camera_alt,
-                              color: Colors.white,
-                              size: 20.0,
-                            ),
+                          padding: const EdgeInsets.all(8.0),
+                          child: const Icon(
+                            Icons.camera_alt,
+                            color: Colors.white,
+                            size: 20.0,
                           ),
-                        ],
-                      ),
-                      const SizedBox(height: 8.0),
-                      Text(
-                        widget.isEnglish
-                            ? 'Change Profile Photo'
-                            : 'เปลี่ยนรูปโปรไฟล์',
-                        style: const TextStyle(color: Colors.red, fontSize: 14.0),
-                      ),
-                    ],
-                  ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8.0),
+                    Text(
+                      widget.isEnglish ? 'Change Profile Photo' : 'เปลี่ยนรูปโปรไฟล์',
+                      style: const TextStyle(color: Colors.red, fontSize: 14.0),
+                    ),
+                  ],
                 ),
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.only(bottom: 16.0),
-              child: _buildTextField(
+              const SizedBox(height: 24.0),
+              
+              // Firstname Field
+              _buildTextFormField(
                 controller: _firstNameController,
                 labelText: widget.isEnglish ? 'Firstname' : 'ชื่อ',
-                hintText:
-                    widget.isEnglish ? 'Please enter your Firstname' : 'กรุณากรอกชื่อของคุณ',
+                hintText: widget.isEnglish ? 'Please enter your Firstname' : 'กรุณากรอกชื่อของคุณ',
+                validator: _validateFirstName,
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.only(bottom: 16.0),
-              child: _buildTextField(
+              const SizedBox(height: 16.0),
+              
+              // Lastname Field
+              _buildTextFormField(
                 controller: _lastNameController,
                 labelText: widget.isEnglish ? 'Lastname' : 'นามสกุล',
-                hintText:
-                    widget.isEnglish ? 'Please enter your Lastname' : 'กรุณากรอกนามสกุลของคุณ',
+                hintText: widget.isEnglish ? 'Please enter your Lastname' : 'กรุณากรอกนามสกุลของคุณ',
+                validator: _validateLastName,
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.only(bottom: 16.0),
-              child: _buildTextField(
+              const SizedBox(height: 16.0),
+              
+              // Phone Number Field
+              _buildTextFormField(
                 controller: _phoneController,
                 labelText: widget.isEnglish ? 'Phone' : 'เบอร์โทรศัพท์',
-                hintText:
-                    widget.isEnglish ? 'Please enter your Phone' : 'กรุณากรอกเบอร์โทรศัพท์ของคุณ',
+                hintText: widget.isEnglish ? 'Please enter your Phone' : 'กรุณากรอกเบอร์โทรศัพท์ของคุณ',
                 keyboardType: TextInputType.phone,
+                validator: _validatePhoneNumber,
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.only(bottom: 16.0),
-              child: _buildTextField(
+              const SizedBox(height: 16.0),
+              
+              // Address Field
+              _buildTextFormField(
                 controller: _addressController,
                 labelText: widget.isEnglish ? 'Address' : 'ที่อยู่',
-                hintText:
-                    widget.isEnglish ? 'Please enter your Address' : 'กรุณากรอกที่อยู่ของคุณ',
+                hintText: widget.isEnglish ? 'Please enter your Address' : 'กรุณากรอกที่อยู่ของคุณ',
                 maxLines: 3,
+                validator: _validateAddress,
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.only(bottom: 24.0),
-              child: _buildTextField(
+              const SizedBox(height: 16.0),
+              
+              // Email Field (Read-only)
+              _buildTextFormField(
                 controller: _emailController,
                 labelText: widget.isEnglish ? 'Email' : 'อีเมล',
-                hintText:
-                    widget.isEnglish ? 'Please enter your Email' : 'กรุณากรอกอีเมลของคุณ',
+                hintText: widget.isEnglish ? 'Please enter your Email' : 'กรุณากรอกอีเมลของคุณ',
                 keyboardType: TextInputType.emailAddress,
                 readOnly: true,
               ),
-            ),
-            ElevatedButton(
-              onPressed: _saveProfile,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-                padding: const EdgeInsets.symmetric(vertical: 16.0),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8.0),
+              const SizedBox(height: 24.0),
+              
+              // Confirm Button
+              ElevatedButton(
+                onPressed: _saveProfile,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  padding: const EdgeInsets.symmetric(vertical: 16.0),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8.0),
+                  ),
+                ),
+                child: Text(
+                  widget.isEnglish ? 'Confirm' : 'ยืนยัน',
+                  style: const TextStyle(color: Colors.white, fontSize: 16.0),
                 ),
               ),
-              child: Text(
-                widget.isEnglish ? 'Confirm' : 'ยืนยัน',
-                style: const TextStyle(color: Colors.white, fontSize: 16.0),
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
       bottomNavigationBar: BottomNavigationBar(
@@ -442,32 +492,31 @@ class _EditProfileMemberPageState extends State<EditProfileMemberPage> {
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(
-                  builder: (context) =>
-                      CardpageMember(user: user, isEnglish: isEnglish)),
+                  builder: (context) => CardpageMember(user: user, isEnglish: isEnglish)),
             );
           } else if (index == 2) {
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(
-                  builder: (context) =>
-                      HireListPage(user: user, isEnglish: isEnglish)),
+                  builder: (context) => HireListPage(user: user, isEnglish: isEnglish)),
             );
           } else if (index == 3) {
-            // ในกรณีที่ต้องการกลับไปหน้า ProfileMemberPage ให้ส่งข้อมูลกลับไปด้วย
-            Navigator.pop(context, widget.user); // ส่งข้อมูลเดิมกลับไป หากไม่มีการ Save
+            Navigator.pop(context, widget.user);
           }
         },
       ),
     );
   }
 
-  Widget _buildTextField({
+  // Helper widget for form fields (changed from TextField to TextFormField)
+  Widget _buildTextFormField({
     required TextEditingController controller,
     required String labelText,
     String? hintText,
     TextInputType? keyboardType,
     int? maxLines = 1,
     bool readOnly = false,
+    String? Function(String?)? validator,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -477,7 +526,7 @@ class _EditProfileMemberPageState extends State<EditProfileMemberPage> {
           style: const TextStyle(fontSize: 16.0, fontWeight: FontWeight.w500),
         ),
         const SizedBox(height: 8.0),
-        TextField(
+        TextFormField(
           controller: controller,
           keyboardType: keyboardType,
           maxLines: maxLines,
@@ -489,6 +538,8 @@ class _EditProfileMemberPageState extends State<EditProfileMemberPage> {
               borderSide: BorderSide(color: Colors.red),
             ),
           ),
+          // ** Pass the received validator to TextFormField
+          validator: validator,
         ),
       ],
     );
