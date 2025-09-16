@@ -90,7 +90,7 @@ class _VerlifyRegisterScreenState extends State<VerlifyRegisterScreen> {
                         await Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => VerlifyRegisterDetailScreen(
+                            builder: (context) => VerifyRegisterDetailScreen(
                               housekeeper: housekeeper,
                               isEnglish: widget.isEnglish,
                             ),

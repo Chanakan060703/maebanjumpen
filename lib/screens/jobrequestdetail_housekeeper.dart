@@ -222,7 +222,7 @@ class _JobRequestDetailsPageState extends State<JobRequestDetailsPage> {
                                     color: Colors.grey, size: 14.0),
                                 const SizedBox(width: 4.0),
                                 Text(
-                                  _currentHire.location ??
+                                  _currentHire.location??
                                       (widget.isEnglish ? 'No address provided' : 'ไม่มีที่อยู่'),
                                   style: const TextStyle(fontSize: 12.0),
                                 ),

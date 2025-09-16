@@ -17,11 +17,11 @@ dependencies:
   flutter_localizations:
     sdk: flutter
   flutter_svg: ^2.0.7
-  # Removed flutter_local_notifications and timezone
   shared_preferences: ^2.2.3
   uuid: ^4.5.1
-  awesome_notifications: ^0.10.1 # *** UPDATED THIS VERSION ***
+  awesome_notifications: ^0.10.1
   timezone: ^0.10.1
+  url_launcher: ^6.1.10
 
 dev_dependencies:
   flutter_test:

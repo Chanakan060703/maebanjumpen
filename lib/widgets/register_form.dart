@@ -162,11 +162,13 @@ class _RegisterFormState extends State<RegisterForm> {
           ? 'First name must be between 2 and 40 characters'
           : 'ชื่อต้องมีความยาวระหว่าง 2-40 ตัวอักษร';
     }
-    if (!RegExp(r'^[a-zA-Zก-ฮ]+$').hasMatch(trimmedValue)) {
-      return widget.isEnglish
-          ? 'First name must contain only Thai or English letters'
-          : 'ชื่อต้องประกอบด้วยตัวอักษรภาษาไทยหรือภาษาอังกฤษเท่านั้น';
-    }
+    
+if (!RegExp(r'^[a-zA-Zก-๙\s]+$').hasMatch(trimmedValue)) {
+  return widget.isEnglish
+      ? 'First name must contain only Thai or English letters'
+      : 'ชื่อต้องประกอบด้วยตัวอักษรภาษาไทยหรืออังกฤษเท่านั้น';
+}
+
     return null;
   }
 
@@ -181,11 +183,11 @@ class _RegisterFormState extends State<RegisterForm> {
           ? 'Last name must be between 2 and 40 characters'
           : 'นามสกุลต้องมีความยาวระหว่าง 2-40 ตัวอักษร';
     }
-    if (!RegExp(r'^[a-zA-Zก-ฮ]+$').hasMatch(trimmedValue)) {
-      return widget.isEnglish
-          ? 'Last name must contain only Thai or English letters'
-          : 'นามสกุลต้องประกอบด้วยตัวอักษรภาษาไทยหรือภาษาอังกฤษเท่านั้น';
-    }
+if (!RegExp(r'^[a-zA-Zก-๙\s]+$').hasMatch(trimmedValue)) {
+  return widget.isEnglish
+      ? 'Last name must contain only Thai or English letters'
+      : 'นามสกุลต้องประกอบด้วยตัวอักษรภาษาไทยหรืออังกฤษเท่านั้น';
+}
     return null;
   }
 
@@ -248,7 +250,7 @@ class _RegisterFormState extends State<RegisterForm> {
       return widget.isEnglish ? 'Please enter address' : 'กรุณากรอกที่อยู่';
     }
     final trimmedValue = value.trim();
-    if (!RegExp(r'^[ก-ฮ0-9\s/.,()-]+$').hasMatch(trimmedValue) && !trimmedValue.contains('หมู่')) {
+    if (!RegExp(r'^[a-zA-Zก-๙\s/.,()-]+$').hasMatch(trimmedValue) && !trimmedValue.contains('หมู่')) {
       return widget.isEnglish
           ? 'Address must contain only Thai letters, numbers, and spaces'
           : 'ที่อยู่ต้องประกอบด้วยตัวอักษรภาษาไทย ตัวเลข หรือช่องว่างเท่านั้น';

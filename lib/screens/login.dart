@@ -130,7 +130,7 @@ class _LoginPageState extends State<LoginPage> {
 
       await _saveRememberMeCredentials();
 
-      if (partyRole is Member && partyRole.person?.accountStatus != 'active') {
+      if (partyRole is Member && partyRole.person?.accountStatus != 'active' && partyRole.person?.accountStatus != "Active") {
         final penaltyType = partyRole.person?.accountStatus;
         String penaltyMessage = '';
 
