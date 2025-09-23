@@ -1,5 +1,3 @@
-// lib/screens/view_detail_report_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:maebanjumpen/model/admin.dart';
 import 'package:maebanjumpen/model/report.dart';
@@ -10,9 +8,10 @@ import 'package:maebanjumpen/model/party_role.dart';
 import 'package:maebanjumpen/screens/penalty_admin.dart';
 import 'package:maebanjumpen/styles/report_titles.dart';
 
+// ViewDetailReportScreen: หน้าจอแสดงรายละเอียดของรายงาน
 class ViewDetailReportScreen extends StatelessWidget {
   final Report report;
-  final bool isEnglish; // ตัวแปรสำหรับเลือกภาษา
+  final bool isEnglish; // ตัวแปรสำหรับเลือกภาษา (ควรเปลี่ยนเป็นระบบ Localization ในอนาคต)
 
   const ViewDetailReportScreen({
     super.key,
@@ -26,7 +25,7 @@ class ViewDetailReportScreen extends StatelessWidget {
   }
 
   // Helper เพื่อดึง Person ของผู้ถูกรายงาน (Reported Party)
-  // จะเลือก Hirer หรือ Housekeeper ที่ไม่ใช่ผู้รายงาน
+  // Logic: หา Party ที่ไม่ใช่ผู้รายงาน
   Person? _getReportedPartyPerson(Report report) {
     final reporterPersonId = report.reporter?.person?.personId;
 
@@ -39,24 +38,8 @@ class ViewDetailReportScreen extends StatelessWidget {
       return report.housekeeper!.person;
     }
 
-    // กรณีที่ hirer/housekeeper มีเพียงคนเดียวและอาจจะเป็นผู้รายงานด้วย
-    // หรือเป็นกรณีที่ซับซ้อน เช่น admin เป็นผู้รายงาน และทั้ง hirer/housekeeper ก็ไม่ใช่ผู้ถูกรายงาน
-    // สำหรับตอนนี้ ถ้าหาไม่เจอจากเงื่อนไขด้านบน จะคืนค่า null
+    // กรณีที่ไม่สามารถระบุผู้ถูกรายงานได้
     return null;
-  }
-
-  // Helper เพื่อกำหนดสีตามสถานะรายงาน (คงไว้เป็นภาษาอังกฤษในโค้ดเพื่อความสอดคล้อง)
-  Color _getStatusColor(String status) {
-    switch (status.toLowerCase()) {
-      case 'pending':
-        return Colors.orange;
-      case 'resolved':
-        return Colors.green;
-      case 'blocked':
-        return Colors.red;
-      default:
-        return Colors.grey;
-    }
   }
 
   // Helper เพื่อแปลสถานะรายงาน
@@ -236,7 +219,8 @@ class ViewDetailReportScreen extends StatelessWidget {
                         final result = await Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => PenaltyScreen(report: report, isEnglish: isEnglish,),
+                            builder: (context) => PenaltyScreen(
+                                report: report, isEnglish: isEnglish),
                           ),
                         );
 
@@ -248,10 +232,8 @@ class ViewDetailReportScreen extends StatelessWidget {
                                     ? 'Penalty Submitted Successfully!'
                                     : 'ส่งการลงโทษสำเร็จ!')),
                           );
-                          // หากต้องการให้หน้านี้อัปเดตข้อมูลหลังจากกลับมา สามารถเรียก setState หรือโหลดข้อมูลใหม่ได้
-                          // แต่เนื่องจากเป็น StatelessWidget, คุณอาจต้องใช้ Provider, Riverpod, BLoC หรือ callback
-                          // เพื่อสื่อสารการเปลี่ยนแปลงสถานะรายงานหากต้องการอัปเดต UI บนหน้านี้โดยไม่ต้อง pop และ push ใหม่ทั้งหมด
-                          // สำหรับตอนนี้จะแสดงแค่ SnackBar
+                          // หมายเหตุ: การอัปเดตสถานะรายงานบนหน้านี้ ควรใช้ State Management
+                          // เช่น Provider, Riverpod, BLoC เพื่อให้ UI อัปเดตอัตโนมัติ
                         }
                       }
                     : null, // ถ้าสถานะไม่ใช่ 'pending' ปุ่มจะถูกปิดใช้งาน
@@ -337,8 +319,7 @@ class ViewDetailReportScreen extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(20.0),
         child: Column(
-          crossAxisAlignment:
-              CrossAxisAlignment.center, // จัดให้อยู่ตรงกลางแนวนอนใน Card
+          crossAxisAlignment: CrossAxisAlignment.center, // จัดให้อยู่ตรงกลางแนวนอนใน Card
           children: [
             Text(
               title,
@@ -350,7 +331,7 @@ class ViewDetailReportScreen extends StatelessWidget {
             ),
             const SizedBox(height: 15),
             CircleAvatar(
-              radius: 40, // ลดขนาดลงเล็กน้อย
+              radius: 40,
               backgroundImage: profileImageUrl.startsWith('http')
                   ? NetworkImage(profileImageUrl) as ImageProvider
                   : AssetImage(profileImageUrl),
@@ -382,7 +363,11 @@ class ViewDetailReportScreen extends StatelessWidget {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildInfoRow(Icons.email_outlined, 'อีเมล', email, isEnglish),
+                _buildInfoRow(
+                    Icons.email_outlined,
+                    isEnglish ? 'Email' : 'อีเมล',
+                    email,
+                    isEnglish),
                 _buildInfoRow(
                     Icons.phone_outlined,
                     isEnglish ? 'Phone' : 'เบอร์โทรศัพท์',

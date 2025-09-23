@@ -1,18 +1,17 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
-import 'package:maebanjumpen/model/hirer.dart';
+import 'package:maebanjumpen/constant/constant_value.dart';
 import 'package:maebanjumpen/model/hire.dart';
 import 'package:maebanjumpen/model/housekeeper.dart';
+import 'package:maebanjumpen/model/hirer.dart';
 import 'package:maebanjumpen/screens/deposit_member.dart';
 import 'package:maebanjumpen/screens/hirelist_member.dart';
 import 'package:maebanjumpen/screens/home_member.dart';
 import 'package:maebanjumpen/screens/profile_member.dart';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
-import 'package:maebanjumpen/constant/constant_value.dart';
 import 'package:maebanjumpen/styles/hire_form_styles.dart';
 import 'package:maebanjumpen/widgets/hire_dropdown_form_field.dart';
-
 
 class HireHousekeeperPage extends StatefulWidget {
   final Hirer user;
@@ -35,7 +34,6 @@ class _HireHousekeeperPageState extends State<HireHousekeeperPage> {
 
   bool _isDefaultAddress = false;
 
-  // FocusNode สำหรับ TextField
   final FocusNode _phoneFocusNode = FocusNode();
   final FocusNode _provinceFocusNode = FocusNode();
   final FocusNode _subdistrictFocusNode = FocusNode();
@@ -47,7 +45,6 @@ class _HireHousekeeperPageState extends State<HireHousekeeperPage> {
   final FocusNode _startTimeFocusNode = FocusNode();
   final FocusNode _endTimeFocusNode = FocusNode();
 
-  // TextEditingController สำหรับ TextField
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _subdistrictController = TextEditingController();
   final TextEditingController _provinceController = TextEditingController();
@@ -59,20 +56,17 @@ class _HireHousekeeperPageState extends State<HireHousekeeperPage> {
   final TextEditingController _startTimeController = TextEditingController();
   final TextEditingController _endTimeController = TextEditingController();
 
-  // ตัวแปรสำหรับเก็บค่าที่ผู้ใช้เลือก
   DateTime? _selectedStartDate;
   TimeOfDay? _selectedStartTime;
   TimeOfDay? _selectedEndTime;
 
-  // เพิ่มสำหรับ Hire Name (จาก Dropdown)
   String? _selectedHireName;
 
-  // เพิ่มสำหรับบริการเพิ่มเติม
   final Map<String, bool> _selectedAdditionalServices = {};
   double _totalPaymentAmount = 0.0;
-  final double _servicePricePerItem = 100.0; // ราคาบริการเพิ่มเติมต่อรายการ
+  final double _servicePricePerItem = 100.0;
 
-  final _formKey = GlobalKey<FormState>(); // Key สำหรับ Form Validation
+  final _formKey = GlobalKey<FormState>();
 
   @override
   void initState() {
@@ -88,34 +82,28 @@ class _HireHousekeeperPageState extends State<HireHousekeeperPage> {
     _startTimeFocusNode.addListener(_handleFocusChange);
     _endTimeFocusNode.addListener(_handleFocusChange);
 
-    // Initialize additional services from housekeeper skills if available
     if (widget.housekeeper.housekeeperSkills != null) {
       for (var skill in widget.housekeeper.housekeeperSkills!) {
-        // ใช้ชื่อทักษะภาษาอังกฤษจาก Backend เป็น Key
         _selectedAdditionalServices[skill.skillType?.skillTypeName ?? ""] = false;
       }
     }
 
-    // ตรวจสอบว่ามีที่อยู่เริ่มต้นหรือไม่
-    _isDefaultAddress =
-        widget.user.person?.address != null &&
+    _isDefaultAddress = widget.user.person?.address != null &&
         (widget.user.person?.address?.isNotEmpty ?? false) &&
-        (widget.user.person?.phoneNumber?.isNotEmpty ?? false); // ตรวจสอบเบอร์โทรด้วย
+        (widget.user.person?.phoneNumber?.isNotEmpty ?? false);
+
     if (_isDefaultAddress) {
       _fillDefaultAddress();
     }
-    _calculateTotalPayment(); // คำนวณยอดรวมเริ่มต้น
+    _calculateTotalPayment();
   }
 
   void _fillDefaultAddress() {
     _phoneController.text = widget.user.person?.phoneNumber ?? '';
-    // สมมติว่าที่อยู่เริ่มต้นถูกจัดเก็บในรูปแบบ "อำเภอ, หมู่บ้าน, เลขที่บ้าน"
-    // คุณอาจต้องปรับ logic ตรงนี้หาก format address จริงๆ ซับซ้อนกว่านี้
-    List<String> addressParts =
-        (widget.user.person?.address ?? '')
-            .split(' ')
-            .map((e) => e.trim())
-            .toList();
+    List<String> addressParts = (widget.user.person?.address ?? '')
+        .split(' ')
+        .map((e) => e.trim())
+        .toList();
 
     _houseNumberController.text = addressParts.isNotEmpty ? addressParts[0] : '';
     _villageController.text = addressParts.length > 1 ? addressParts[1] : '';
@@ -124,7 +112,6 @@ class _HireHousekeeperPageState extends State<HireHousekeeperPage> {
     _provinceController.text = addressParts.length > 4 ? addressParts[4] : '';
   }
 
-  // ฟังก์ชันสำหรับเลือกวันที่
   Future<void> _selectDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
       context: context,
@@ -135,13 +122,13 @@ class _HireHousekeeperPageState extends State<HireHousekeeperPage> {
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: const ColorScheme.light(
-              primary: Colors.red, // header background color
-              onPrimary: Colors.white, // header text color
-              onSurface: Colors.black, // body text color
+              primary: Colors.red,
+              onPrimary: Colors.white,
+              onSurface: Colors.black,
             ),
             textButtonTheme: TextButtonThemeData(
               style: TextButton.styleFrom(
-                foregroundColor: Colors.red, // button text color
+                foregroundColor: Colors.red,
               ),
             ),
           ),
@@ -154,30 +141,47 @@ class _HireHousekeeperPageState extends State<HireHousekeeperPage> {
         _selectedStartDate = picked;
         _startDateController.text = DateFormat(
           'dd/MM/yyyy',
-        ).format(picked); // จัดรูปแบบวันที่ให้เป็น dd/MM/yyyy
+        ).format(picked);
+
+        // รีเซ็ตค่าเวลาเมื่อเลือกวันที่ใหม่
+        _selectedStartTime = null;
+        _startTimeController.clear();
+        _selectedEndTime = null;
+        _endTimeController.clear();
+        _calculateTotalPayment();
       });
     }
   }
 
-  // ฟังก์ชันสำหรับเลือกเวลา
   Future<void> _selectTime(BuildContext context, bool isStartTime) async {
+    // เพิ่มการตรวจสอบว่าเลือกวันที่แล้วหรือยัง
+    if (_selectedStartDate == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            widget.isEnglish ? 'Please select a date first.' : 'กรุณาเลือกวันที่ก่อน',
+          ),
+        ),
+      );
+      return;
+    }
+
+    final now = DateTime.now();
     final TimeOfDay? picked = await showTimePicker(
       context: context,
       initialTime:
-          isStartTime
-              ? (_selectedStartTime ?? TimeOfDay.now())
-              : (_selectedEndTime ?? TimeOfDay.now()),
+          isStartTime ? (_selectedStartTime ?? TimeOfDay.now()) : (_selectedEndTime ?? TimeOfDay.now()),
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: const ColorScheme.light(
-              primary: Colors.red, // header background color
-              onPrimary: Colors.white, // header text color
-              onSurface: Colors.black, // body text color
+              primary: Colors.red,
+              onPrimary: Colors.white,
+              onSurface: Colors.black,
             ),
             textButtonTheme: TextButtonThemeData(
               style: TextButton.styleFrom(
-                foregroundColor: Colors.red, // button text color
+                foregroundColor: Colors.red,
               ),
             ),
           ),
@@ -185,7 +189,28 @@ class _HireHousekeeperPageState extends State<HireHousekeeperPage> {
         );
       },
     );
+
     if (picked != null) {
+      final selectedDateTime = DateTime(
+        _selectedStartDate!.year,
+        _selectedStartDate!.month,
+        _selectedStartDate!.day,
+        picked.hour,
+        picked.minute,
+      );
+
+      // ตรวจสอบว่าเวลาที่เลือกย้อนหลังหรือไม่ (เฉพาะเวลาเริ่มต้น)
+      if (isStartTime && selectedDateTime.isBefore(now)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              widget.isEnglish ? 'Start time cannot be in the past.' : 'เวลาเริ่มต้นไม่สามารถย้อนหลังได้',
+            ),
+          ),
+        );
+        return;
+      }
+
       setState(() {
         if (isStartTime) {
           _selectedStartTime = picked;
@@ -194,15 +219,13 @@ class _HireHousekeeperPageState extends State<HireHousekeeperPage> {
           _selectedEndTime = picked;
           _endTimeController.text = picked.format(context);
         }
+        _calculateTotalPayment();
       });
     }
   }
 
-  // ฟังก์ชันสำหรับคำนวณยอดรวมการชำระเงิน
   void _calculateTotalPayment() {
-    double? basePrice =
-        widget.housekeeper.dailyRate; // เริ่มต้นด้วย dailyRate ของแม่บ้าน
-
+    double? basePrice = widget.housekeeper.dailyRate;
     double additionalServiceCost = 0.0;
     _selectedAdditionalServices.forEach((service, isSelected) {
       if (isSelected) {
@@ -217,6 +240,18 @@ class _HireHousekeeperPageState extends State<HireHousekeeperPage> {
 
   @override
   void dispose() {
+    // Dispose controllers and focus nodes
+    _phoneController.dispose();
+    _subdistrictController.dispose();
+    _provinceController.dispose();
+    _districtController.dispose();
+    _villageController.dispose();
+    _houseNumberController.dispose();
+    _detailWorkController.dispose();
+    _startDateController.dispose();
+    _startTimeController.dispose();
+    _endTimeController.dispose();
+
     _phoneFocusNode.removeListener(_handleFocusChange);
     _provinceFocusNode.removeListener(_handleFocusChange);
     _subdistrictFocusNode.removeListener(_handleFocusChange);
@@ -228,9 +263,9 @@ class _HireHousekeeperPageState extends State<HireHousekeeperPage> {
     _startTimeFocusNode.removeListener(_handleFocusChange);
     _endTimeFocusNode.removeListener(_handleFocusChange);
 
-    _provinceController.dispose();
-    _subdistrictController.dispose();
     _phoneFocusNode.dispose();
+    _provinceFocusNode.dispose();
+    _subdistrictFocusNode.dispose();
     _districtFocusNode.dispose();
     _villageFocusNode.dispose();
     _houseNumberFocusNode.dispose();
@@ -243,6 +278,146 @@ class _HireHousekeeperPageState extends State<HireHousekeeperPage> {
 
   void _handleFocusChange() {
     setState(() {});
+  }
+
+  Future<void> _createAndSaveHire() async {
+    String? phoneNumber;
+    String? location;
+    String hireName;
+    String hireDetail;
+
+    phoneNumber = _isDefaultAddress ? (widget.user.person?.phoneNumber ?? '') : _phoneController.text;
+
+    location = _isDefaultAddress
+        ? (widget.user.person?.address ?? '')
+        : '${_districtController.text}, ${_villageController.text}, ${_houseNumberController.text}';
+
+    hireName = _selectedHireName ?? '';
+
+    hireDetail = _detailWorkController.text;
+    List<String> additionalServiceNames = _selectedAdditionalServices.entries
+        .where((entry) => entry.value)
+        .map((entry) => SkillTranslator.getLocalizedSkillName(entry.key, widget.isEnglish))
+        .toList();
+
+    if (additionalServiceNames.isNotEmpty) {
+      hireDetail +=
+          (hireDetail.isNotEmpty ? '\n' : '') +
+              (widget.isEnglish ? 'Additional Services: ' : 'บริการเพิ่มเติม: ') +
+              additionalServiceNames.join(', ');
+    }
+
+    String? formattedStartTime;
+    if (_selectedStartTime != null) {
+      formattedStartTime = '${_selectedStartTime!.hour.toString().padLeft(2, '0')}:${_selectedStartTime!.minute.toString().padLeft(2, '0')}';
+    }
+
+    String? formattedEndTime;
+    if (_selectedEndTime != null) {
+      formattedEndTime = '${_selectedEndTime!.hour.toString().padLeft(2, '0')}:${_selectedEndTime!.minute.toString().padLeft(2, '0')}';
+    }
+
+    DateTime? fullStartDate;
+    if (_selectedStartDate != null) {
+      fullStartDate = DateTime(
+        _selectedStartDate!.year,
+        _selectedStartDate!.month,
+        _selectedStartDate!.day,
+        _selectedStartTime?.hour ?? 0,
+        _selectedStartTime?.minute ?? 0,
+      );
+    }
+
+    if (fullStartDate == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              widget.isEnglish ? 'Please select a start date.' : 'กรุณาเลือกวันที่เริ่มงาน',
+            ),
+          ),
+        );
+      }
+      return;
+    }
+
+    final newHire = Hire(
+      hireName: hireName,
+      hireDetail: hireDetail,
+      paymentAmount: _totalPaymentAmount,
+      hireDate: DateTime.now(),
+      startDate: fullStartDate,
+      startTime: formattedStartTime ?? '',
+      endTime: formattedEndTime ?? '',
+      location: location,
+      jobStatus: 'pending',
+      progressionImageUrls: null,
+      hirer: widget.user,
+      housekeeper: widget.housekeeper,
+    );
+
+    print('New Hire created: ${newHire.toJson()}');
+
+    try {
+      final response = await http.post(
+        Uri.parse('$baseURL/maeban/hires'), // << แก้ไขตามโค้ดต้นฉบับ
+        headers: <String, String>{
+          'Content-Type': 'application/json; charset=UTF-8',
+        },
+        body: jsonEncode(newHire.toJson()),
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        print('Hire saved successfully!');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              widget.isEnglish ? 'Hire request sent successfully!' : 'ส่งคำขอจ้างสำเร็จ!',
+            ),
+          ),
+        );
+      } else {
+        print('Failed to save hire. Status code: ${response.statusCode}');
+        print('Request body sent: ${jsonEncode(newHire.toJson())}');
+        print('Response body: ${response.body}');
+        String errorMessage = widget.isEnglish ? 'Unknown error occurred.' : 'เกิดข้อผิดพลาดไม่ทราบสาเหตุ';
+        try {
+          if (response.body.isNotEmpty) {
+            final responseJson = jsonDecode(response.body);
+            if (responseJson is Map && responseJson.containsKey('error')) {
+              errorMessage = responseJson['error'];
+            } else {
+              errorMessage = response.body;
+            }
+          }
+        } catch (e) {
+          errorMessage = response.body;
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              widget.isEnglish ? 'Failed to send hire request: $errorMessage' : 'ส่งคำขอจ้างไม่สำเร็จ: $errorMessage',
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      print('Error saving hire: $e');
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            widget.isEnglish ? 'Network error or unable to connect to server.' : 'ข้อผิดพลาดเครือข่าย หรือไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้',
+          ),
+        ),
+      );
+    }
   }
 
   void _showConfirmationDialog() {
@@ -312,12 +487,11 @@ class _HireHousekeeperPageState extends State<HireHousekeeperPage> {
                       showDialog(
                         context: currentContext,
                         barrierDismissible: false,
-                        builder:
-                            (context) => const Center(
-                              child: CircularProgressIndicator(
-                                color: Colors.red,
-                              ),
-                            ),
+                        builder: (context) => const Center(
+                          child: CircularProgressIndicator(
+                            color: Colors.red,
+                          ),
+                        ),
                       );
 
                       await _createAndSaveHire();
@@ -330,11 +504,10 @@ class _HireHousekeeperPageState extends State<HireHousekeeperPage> {
                         Navigator.pushAndRemoveUntil(
                           currentContext,
                           MaterialPageRoute(
-                            builder:
-                                (context) => HireListPage(
-                                  isEnglish: widget.isEnglish,
-                                  user: widget.user,
-                                ),
+                            builder: (context) => HireListPage(
+                              isEnglish: widget.isEnglish,
+                              user: widget.user,
+                            ),
                           ),
                           (Route<dynamic> route) => route.isFirst,
                         );
@@ -353,167 +526,6 @@ class _HireHousekeeperPageState extends State<HireHousekeeperPage> {
         );
       },
     );
-  }
-
-  Future<void> _createAndSaveHire() async {
-    String? phoneNumber;
-    String? location;
-    String hireName;
-    String hireDetail;
-
-    phoneNumber =
-        _isDefaultAddress
-            ? (widget.user.person?.phoneNumber ?? '')
-            : _phoneController.text;
-
-    location =
-        _isDefaultAddress
-            ? (widget.user.person?.address ?? '')
-            : '${_districtController.text}, ${_villageController.text}, ${_houseNumberController.text}';
-
-    hireName = _selectedHireName ?? ''; // ใช้ค่าจาก Dropdown
-
-    // รวมรายละเอียดงานจาก _detailWorkController และบริการเพิ่มเติมที่เลือก
-    hireDetail = _detailWorkController.text;
-    List<String> additionalServiceNames =
-        _selectedAdditionalServices.entries
-            .where((entry) => entry.value)
-            .map((entry) => SkillTranslator.getLocalizedSkillName(entry.key, widget.isEnglish)) // แปลชื่อบริการเพิ่มเติม
-            .toList();
-
-    if (additionalServiceNames.isNotEmpty) {
-      hireDetail +=
-          (hireDetail.isNotEmpty ? '\n' : '') +
-          (widget.isEnglish ? 'Additional Services: ' : 'บริการเพิ่มเติม: ') +
-          additionalServiceNames.join(', ');
-    }
-
-    String? formattedStartTime;
-    if (_selectedStartTime != null) {
-      formattedStartTime =
-          '${_selectedStartTime!.hour.toString().padLeft(2, '0')}:${_selectedStartTime!.minute.toString().padLeft(2, '0')}';
-    }
-
-    String? formattedEndTime;
-    if (_selectedEndTime != null) {
-      formattedEndTime =
-          '${_selectedEndTime!.hour.toString().padLeft(2, '0')}:${_selectedEndTime!.minute.toString().padLeft(2, '0')}';
-    }
-
-    DateTime? fullStartDate;
-    if (_selectedStartDate != null) {
-      fullStartDate = DateTime(
-        _selectedStartDate!.year,
-        _selectedStartDate!.month,
-        _selectedStartDate!.day,
-        _selectedStartTime?.hour ?? 0,
-        _selectedStartTime?.minute ?? 0,
-      );
-    }
-
-    if (fullStartDate == null) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              widget.isEnglish
-                  ? 'Please select a start date.'
-                  : 'กรุณาเลือกวันที่เริ่มงาน',
-            ),
-          ),
-        );
-      }
-      return;
-    }
-
-    final newHire = Hire(
-      hireName: hireName,
-      hireDetail: hireDetail,
-      paymentAmount: _totalPaymentAmount, // ใช้ยอดรวมที่คำนวณไว้
-      hireDate: DateTime.now(),
-      startDate: fullStartDate,
-      startTime: formattedStartTime ?? '',
-      endTime: formattedEndTime ?? '',
-      location: location,
-      jobStatus:
-          'pending', // เปลี่ยนสถานะเริ่มต้นเป็น 'pending' หรือตามที่คุณต้องการ
-      progressionImageUrls:
-          null, // เปลี่ยนเป็น null หรือค่าเริ่มต้นที่เหมาะสม
-      hirer: widget.user,
-      housekeeper: widget.housekeeper,
-    );
-
-    print('New Hire created: ${newHire.toJson()}');
-
-    try {
-      final response = await http.post(
-        Uri.parse('$baseURL/maeban/hires'), // <<< แก้ไขตรงนี้: ลบ "/maeban" ซ้ำ
-        headers: <String, String>{
-          'Content-Type': 'application/json; charset=UTF-8',
-        },
-        body: jsonEncode(newHire.toJson()),
-      );
-
-      if (!mounted) {
-        return;
-      }
-
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        print('Hire saved successfully!');
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              widget.isEnglish
-                  ? 'Hire request sent successfully!'
-                  : 'ส่งคำขอจ้างสำเร็จ!',
-            ),
-          ),
-        );
-      } else {
-        print('Failed to save hire. Status code: ${response.statusCode}');
-        print('Request body sent: ${jsonEncode(newHire.toJson())}');
-        print('Response body: ${response.body}');
-        String errorMessage =
-            widget.isEnglish
-                ? 'Unknown error occurred.'
-                : 'เกิดข้อผิดพลาดไม่ทราบสาเหตุ';
-        try {
-          if (response.body.isNotEmpty) {
-            final responseJson = jsonDecode(response.body);
-            if (responseJson is Map && responseJson.containsKey('error')) {
-              errorMessage = responseJson['error'];
-            } else {
-              errorMessage = response.body;
-            }
-          }
-        } catch (e) {
-          errorMessage = response.body;
-        }
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              widget.isEnglish
-                  ? 'Failed to send hire request: $errorMessage'
-                  : 'ส่งคำขอจ้างไม่สำเร็จ: $errorMessage',
-            ),
-          ),
-        );
-      }
-    } catch (e) {
-      print('Error saving hire: $e');
-      if (!mounted) {
-        return;
-      }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            widget.isEnglish
-                ? 'Network error or unable to connect to server.'
-                : 'ข้อผิดพลาดเครือข่าย หรือไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้',
-          ),
-        ),
-      );
-    }
   }
 
   @override
@@ -562,19 +574,18 @@ class _HireHousekeeperPageState extends State<HireHousekeeperPage> {
                           _districtController.clear();
                           _villageController.clear();
                           _houseNumberController.clear();
-                          _selectedHireName = null; // เคลียร์ค่าที่เลือกใน Dropdown
+                          _selectedHireName = null;
                           _startDateController.clear();
                           _startTimeController.clear();
                           _endTimeController.clear();
                           _selectedStartDate = null;
                           _selectedStartTime = null;
                           _selectedEndTime = null;
-                          // เคลียร์การเลือกบริการเพิ่มเติมทั้งหมด
                           _selectedAdditionalServices.updateAll(
                             (key, value) => false,
                           );
                         }
-                        _calculateTotalPayment(); // คำนวณยอดรวมใหม่
+                        _calculateTotalPayment();
                       });
                     },
                   ),
@@ -589,21 +600,21 @@ class _HireHousekeeperPageState extends State<HireHousekeeperPage> {
                 ],
               ),
               const SizedBox(height: 16.0),
-              // ใช้ HireDropdownFormField
               HireDropdownFormField<String>(
                 value: _selectedHireName,
                 labelText: widget.isEnglish ? 'Hire Name/Main Service' : 'ชื่อการจ้างงาน/บริการหลัก',
                 hintText: widget.isEnglish ? 'Select main service' : 'เลือกบริการหลัก',
                 items: widget.housekeeper.housekeeperSkills?.map((skill) {
-                  return DropdownMenuItem<String>(
-                    value: skill.skillType?.skillTypeName ?? "",
-                    child: Text(SkillTranslator.getLocalizedSkillName(skill.skillType?.skillTypeName, widget.isEnglish)),
-                  );
-                }).toList() ?? [],
+                      return DropdownMenuItem<String>(
+                        value: skill.skillType?.skillTypeName ?? "",
+                        child: Text(SkillTranslator.getLocalizedSkillName(skill.skillType?.skillTypeName, widget.isEnglish)),
+                      );
+                    }).toList() ??
+                    [],
                 onChanged: (String? newValue) {
                   setState(() {
                     _selectedHireName = newValue;
-                    _calculateTotalPayment(); // คำนวณยอดรวมใหม่เมื่อเลือกบริการหลัก
+                    _calculateTotalPayment();
                   });
                 },
                 validator: (value) {
@@ -621,13 +632,11 @@ class _HireHousekeeperPageState extends State<HireHousekeeperPage> {
                 style: HireFormStyles.labelTextStyle(context),
               ),
               const SizedBox(height: 8.0),
-              // สร้าง CheckboxListTile สำหรับบริการเพิ่มเติม
               if (widget.housekeeper.housekeeperSkills != null &&
                   widget.housekeeper.housekeeperSkills!.isNotEmpty)
                 ..._selectedAdditionalServices.keys.map((serviceName) {
-                  // กรองไม่ให้บริการหลักที่เลือกไปแล้วมาแสดงซ้ำในบริการเสริม
                   if (serviceName == _selectedHireName) {
-                    return const SizedBox.shrink(); // ซ่อนรายการนี้
+                    return const SizedBox.shrink();
                   }
                   return HireCheckboxListTile(
                     title: SkillTranslator.getLocalizedSkillName(serviceName, widget.isEnglish),
@@ -635,7 +644,7 @@ class _HireHousekeeperPageState extends State<HireHousekeeperPage> {
                     onChanged: (bool? value) {
                       setState(() {
                         _selectedAdditionalServices[serviceName] = value!;
-                        _calculateTotalPayment(); // คำนวณยอดรวมใหม่เมื่อเลือกบริการเสริม
+                        _calculateTotalPayment();
                       });
                     },
                   );
@@ -672,14 +681,14 @@ class _HireHousekeeperPageState extends State<HireHousekeeperPage> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      NumberFormat.currency(locale: widget.isEnglish ? 'en_US' : 'th_TH', symbol: '฿').format(_totalPaymentAmount),
+                      NumberFormat.currency(locale: widget.isEnglish ? 'en_US' : 'th_TH', symbol: '฿')
+                          .format(_totalPaymentAmount),
                       style: HireFormStyles.totalPaymentAmountStyle,
                     ),
                   ],
                 ),
               ),
               const SizedBox(height: 16.0),
-              // ใช้ HireTextFormField สำหรับ Start Date
               HireTextFormField(
                 controller: _startDateController,
                 focusNode: _startDateFocusNode,
@@ -696,7 +705,6 @@ class _HireHousekeeperPageState extends State<HireHousekeeperPage> {
                 },
               ),
               const SizedBox(height: 16.0),
-              // ใช้ HireTextFormField สำหรับ Start Time
               HireTextFormField(
                 controller: _startTimeController,
                 focusNode: _startTimeFocusNode,
@@ -713,7 +721,6 @@ class _HireHousekeeperPageState extends State<HireHousekeeperPage> {
                 },
               ),
               const SizedBox(height: 16.0),
-              // ใช้ HireTextFormField สำหรับ End Time
               HireTextFormField(
                 controller: _endTimeController,
                 focusNode: _endTimeFocusNode,
@@ -727,12 +734,8 @@ class _HireHousekeeperPageState extends State<HireHousekeeperPage> {
                     return widget.isEnglish ? 'Please select an end time.' : 'กรุณาเลือกเวลาสิ้นสุดงาน';
                   }
                   if (_selectedStartTime != null && _selectedEndTime != null) {
-                    final startDateTime = DateTime(
-                      2000, 1, 1, _selectedStartTime!.hour, _selectedStartTime!.minute,
-                    );
-                    final endDateTime = DateTime(
-                      2000, 1, 1, _selectedEndTime!.hour, _selectedEndTime!.minute,
-                    );
+                    final startDateTime = DateTime(2000, 1, 1, _selectedStartTime!.hour, _selectedStartTime!.minute);
+                    final endDateTime = DateTime(2000, 1, 1, _selectedEndTime!.hour, _selectedEndTime!.minute);
                     if (endDateTime.isBefore(startDateTime)) {
                       return widget.isEnglish ? 'End time must be after start time.' : 'เวลาสิ้นสุดต้องมากกว่าเวลาเริ่มงาน';
                     }
@@ -741,7 +744,6 @@ class _HireHousekeeperPageState extends State<HireHousekeeperPage> {
                 },
               ),
               const SizedBox(height: 16.0),
-              // ใช้ HireTextFormField สำหรับ Phone Number
               HireTextFormField(
                 controller: _phoneController,
                 focusNode: _phoneFocusNode,
@@ -760,7 +762,6 @@ class _HireHousekeeperPageState extends State<HireHousekeeperPage> {
                 },
               ),
               const SizedBox(height: 16.0),
-              // ใช้ HireTextFormField สำหรับ House Number
               HireTextFormField(
                 controller: _houseNumberController,
                 focusNode: _houseNumberFocusNode,
@@ -775,7 +776,6 @@ class _HireHousekeeperPageState extends State<HireHousekeeperPage> {
                 },
               ),
               const SizedBox(height: 16.0),
-              // ใช้ HireTextFormField สำหรับ Village
               HireTextFormField(
                 controller: _villageController,
                 focusNode: _villageFocusNode,
@@ -790,8 +790,6 @@ class _HireHousekeeperPageState extends State<HireHousekeeperPage> {
                 },
               ),
               const SizedBox(height: 16.0),
-              
-              // ใช้ HireTextFormField สำหรับ District
               HireTextFormField(
                 controller: _subdistrictController,
                 focusNode: _subdistrictFocusNode,
@@ -834,7 +832,6 @@ class _HireHousekeeperPageState extends State<HireHousekeeperPage> {
                 },
               ),
               const SizedBox(height: 16.0),
-              // ใช้ HireTextFormField สำหรับ Job Details
               HireTextFormField(
                 controller: _detailWorkController,
                 focusNode: _detailWorkFocusNode,
@@ -889,14 +886,14 @@ class _HireHousekeeperPageState extends State<HireHousekeeperPage> {
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(
-                builder: (context) => CardpageMember( // เปลี่ยนเป็น DepositMemberPage
+                builder: (context) => CardpageMember(
                   user: widget.user,
                   isEnglish: widget.isEnglish,
                 ),
               ),
             );
           } else if (index == 2) {
-            // อยู่ในหน้านี้แล้ว ไม่ต้องทำอะไร
+            // Do nothing, already on this page
           } else if (index == 3) {
             Navigator.pushReplacement(
               context,

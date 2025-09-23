@@ -168,14 +168,6 @@ class _SeeAllHousekeeperPageState extends State<SeeAllHousekeeperPage> {
                   ),
                   contentPadding: EdgeInsets.zero,
                 ),
-                // ไม่ต้องใช้ onChanged ตรงนี้แล้ว เพราะ _searchController.addListener จัดการแล้ว
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.only(right: 16),
-              child: Badge(
-                label: const Text('3'), // สามารถเปลี่ยนเป็นตัวเลข notifications จริงๆ ได้
-                child: const Icon(Icons.notifications),
               ),
             ),
           ],

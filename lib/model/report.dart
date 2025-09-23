@@ -16,6 +16,7 @@ class Report {
   final PartyRole? hirer; // เปลี่ยนเป็น PartyRole? ตามที่ต้องการ
   final PartyRole? housekeeper; // เปลี่ยนเป็น PartyRole? ตามที่ต้องการ
   final Penalty? penalty;
+  final int? reportCount;
 
   Report({
     this.reportId,
@@ -27,6 +28,7 @@ class Report {
     this.hirer,
     this.housekeeper,
     this.penalty,
+    this.reportCount,
   });
 
   factory Report.fromJson(Map<String, dynamic> json) {

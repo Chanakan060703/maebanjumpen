@@ -398,8 +398,8 @@ class _EditProfileHousekeeperPageState extends State<EditProfileHousekeeperPage>
                     ),
                     child: _buildTextField(
                       controller: _dailyRateController,
-                      labelText: widget.isEnglish ? 'Daily Rate' : 'ค่าจ้างรายวัน',
-                      hintText: widget.isEnglish ? 'Please enter your daily rate' : 'โปรดป้อนค่าจ้างรายวันของคุณ',
+                      labelText: widget.isEnglish ? 'Job Rate' : 'ค่าจ้างต่องาน',
+                      hintText: widget.isEnglish ? 'Please enter your job rate' : 'โปรดป้อนค่าจ้างรายวันของคุณ',
                       keyboardType: TextInputType.number,
                     ),
                   ),

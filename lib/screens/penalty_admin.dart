@@ -1,22 +1,21 @@
-// lib/screens/penalty_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:maebanjumpen/controller/penaltyController.dart';
 import 'package:maebanjumpen/controller/reportController.dart';
 import 'package:maebanjumpen/model/admin.dart';
-import 'package:maebanjumpen/model/report.dart'; // นำเข้า Report model
-import 'package:maebanjumpen/model/penalty.dart'; // นำเข้า Penalty model
+import 'package:maebanjumpen/model/report.dart';
+import 'package:maebanjumpen/model/penalty.dart';
 import 'package:intl/intl.dart';
-import 'package:maebanjumpen/screens/home_admin.dart'; // <--- สำคัญ: นำเข้าแพ็กเกจ intl
+import 'package:maebanjumpen/screens/home_admin.dart';
+import 'package:maebanjumpen/model/person.dart';
 
 class PenaltyScreen extends StatefulWidget {
-  final Report report; // เพิ่มส่วนนี้เพื่อรับ Object รายงาน
-  final bool isEnglish; // เพิ่มตัวแปร isEnglish
+  final Report report;
+  final bool isEnglish;
 
   const PenaltyScreen({
     super.key,
-    required this.report, // ทำให้เป็น Required
-    required this.isEnglish, // ทำให้เป็น Required
+    required this.report,
+    required this.isEnglish,
   });
 
   @override
@@ -36,19 +35,15 @@ class _PenaltyScreenState extends State<PenaltyScreen> {
   @override
   void initState() {
     super.initState();
-    // ใช้ isEnglish เพื่อกำหนด Locale สำหรับ DateFormat
     final String localeCode = widget.isEnglish ? 'en_US' : 'th_TH';
 
-    // กรอกวันที่ล่วงหน้าหากมีบทลงโทษอยู่แล้วในรายงาน
     if (widget.report.penalty?.penaltyDate != null) {
       _selectedPenaltyDate = widget.report.penalty!.penaltyDate;
-      // ใช้ DateFormat ในการแสดงวันที่ตาม Locale ที่เลือก
       _dateController.text = DateFormat(
         'dd/MM/yyyy',
         localeCode,
       ).format(_selectedPenaltyDate!);
     }
-    // กรอกประเภทบทลงโทษและรายละเอียดล่วงหน้าหากมี
     _selectedPenaltyType = widget.report.penalty?.penaltyType;
     _detailsController.text = widget.report.penalty?.penaltyDetail ?? '';
   }
@@ -61,30 +56,28 @@ class _PenaltyScreenState extends State<PenaltyScreen> {
   }
 
   Future<void> _selectDate(BuildContext context) async {
-    // ใช้ isEnglish เพื่อกำหนด Locale สำหรับ DatePicker
     final Locale currentLocale =
         widget.isEnglish ? const Locale('en', 'US') : const Locale('th', 'TH');
 
-    // ใช้ _selectedPenaltyDate เป็น initialDate
     final DateTime? picked = await showDatePicker(
       context: context,
       initialDate: _selectedPenaltyDate ?? DateTime.now(),
-      firstDate: DateTime(2000), // กำหนด firstDate ให้เหมาะสม
+      firstDate: DateTime(2000),
       lastDate: DateTime(
         2101,
-      ), // กำหนด lastDate ให้เหมาะสม (ปี 2101 ก็คือ 2644 พ.ศ.)
-      locale: currentLocale, // กำหนด Locale ตาม isEnglish
+      ),
+      locale: currentLocale,
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: const ColorScheme.light(
-              primary: Colors.red, // สีหลักของ DatePicker (ส่วนหัว)
-              onPrimary: Colors.white, // สีข้อความบนสีหลัก
-              onSurface: Colors.black, // สีข้อความบนพื้นผิว (วันที่/เดือน/ปี)
+              primary: Colors.red,
+              onPrimary: Colors.white,
+              onSurface: Colors.black,
             ),
             textButtonTheme: TextButtonThemeData(
               style: TextButton.styleFrom(
-                foregroundColor: Colors.red, // สีข้อความปุ่ม (CANCEL, OK)
+                foregroundColor: Colors.red,
               ),
             ),
           ),
@@ -96,10 +89,9 @@ class _PenaltyScreenState extends State<PenaltyScreen> {
     if (picked != null && picked != _selectedPenaltyDate) {
       setState(() {
         _selectedPenaltyDate = picked;
-        // จัดรูปแบบวันที่โดยใช้ Locale ตาม isEnglish
         _dateController.text = DateFormat(
           'dd/MM/yyyy',
-          currentLocale.toLanguageTag(), // ใช้ toLanguageTag()
+          currentLocale.toLanguageTag(),
         ).format(picked);
       });
     }
@@ -121,7 +113,6 @@ class _PenaltyScreenState extends State<PenaltyScreen> {
       return;
     }
 
-    // วันที่ที่ใช้ส่งไป Backend ควรเป็นคริสต์ศักราช
     DateTime? penaltyDateForBackend = _selectedPenaltyDate;
 
     if (penaltyDateForBackend == null) {
@@ -137,23 +128,45 @@ class _PenaltyScreenState extends State<PenaltyScreen> {
       return;
     }
 
+    String? reporterId = widget.report.reporter?.id?.toString();
+    String? hirerId = widget.report.hirer?.id?.toString();
+    String? housekeeperId = widget.report.housekeeper?.id?.toString();
+
+    String? targetHirerId;
+    String? targetHousekeeperId;
+
+    if (reporterId == hirerId) {
+      targetHousekeeperId = housekeeperId;
+    } else if (reporterId == housekeeperId) {
+      targetHirerId = hirerId;
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            widget.isEnglish
+                ? 'Unable to determine the user to apply penalty to.'
+                : 'ไม่สามารถระบุผู้ใช้ที่ต้องการลงโทษได้',
+          ),
+        ),
+      );
+      return;
+    }
+
     try {
-      // 1. สร้าง Object Penalty ใหม่เพื่อส่งไปยัง Backend
       final penaltyToCreate = Penalty(
         penaltyType: _selectedPenaltyType,
         penaltyDetail: _detailsController.text,
-        penaltyDate: penaltyDateForBackend, // ใช้ DateTime ที่เป็นคริสต์ศักราช
-        penaltyStatus: 'อนุมัติ', // ตั้งสถานะบทลงโทษเป็น อนุมัติ
+        penaltyDate: penaltyDateForBackend,
+        penaltyStatus: 'อนุมัติ',
       );
 
       print('กำลังพยายามเพิ่มบทลงโทษไปยัง Backend...');
+      
       final createdPenalty = await _penaltyController.addPenalty(
-        penaltyToCreate, // ส่ง Penalty object
+        penaltyToCreate,
         widget.report.reportId!.toString(),
-        widget.report.hirer?.id?.toString() ??
-            '', // ส่ง ID ผู้จ้างเป็น String (แก้ไขให้ไม่เป็น null)
-        widget.report.housekeeper?.id?.toString() ??
-            '', // ส่ง ID แม่บ้านเป็น String (แก้ไขให้ไม่เป็น null)
+        targetHirerId,
+        targetHousekeeperId,
       );
 
       print(
@@ -165,25 +178,22 @@ class _PenaltyScreenState extends State<PenaltyScreen> {
         reportTitle: widget.report.reportTitle,
         reportMessage: widget.report.reportMessage,
         reportDate: widget.report.reportDate,
-        reportStatus:
-            'resolved', // ตั้งสถานะรายงานเป็น 'resolved' หลังจากใช้บทลงโทษ
+        reportStatus: 'resolved', 
         reporter: widget.report.reporter,
         hirer: widget.report.hirer,
         housekeeper: widget.report.housekeeper,
-        penalty: createdPenalty, // กำหนดบทลงโทษที่สร้างขึ้นใหม่ (พร้อม ID)
+        penalty: createdPenalty, 
       );
 
       print(
         'กำลังพยายามอัปเดตสถานะรายงานเป็น resolved และเชื่อมโยง Penalty ID: ${createdPenalty.penaltyId}',
       );
-      // 4. อัปเดตรายงานบน Backend
-      // ใช้ลายเซ็น updateReport(int id, Report report) ของ ReportController
+      
       final resultReport = await _reportController.updateReport(
         widget.report.reportId!,
         updatedReport,
       );
 
-      // ตรวจสอบว่าการอัปเดตสำเร็จหรือไม่โดยการยืนยัน Object Report ที่คืนมา
       if (resultReport.reportId != null) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -194,14 +204,12 @@ class _PenaltyScreenState extends State<PenaltyScreen> {
             ),
           ),
         );
-        // ไปหน้า HomeAdminPage
         Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(
-            builder:
-                (context) => HomeAdminPage(
-                  user: Admin(),
-                ),
+            builder: (context) => HomeAdminPage(
+              user: Admin(),
+            ),
           ),
           (route) => false,
         );
@@ -232,17 +240,24 @@ class _PenaltyScreenState extends State<PenaltyScreen> {
 
   @override
   Widget build(BuildContext context) {
+    Person? reportedPerson;
+    if (widget.report.reporter?.id == widget.report.hirer?.id) {
+      reportedPerson = widget.report.housekeeper?.person;
+    } else {
+      reportedPerson = widget.report.hirer?.person;
+    }
+
     return Scaffold(
-      backgroundColor: Colors.grey[50], // สีพื้นหลังอ่อนๆ
+      backgroundColor: Colors.grey[50],
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios, color: Colors.black),
           onPressed: () {
-            Navigator.pop(context); // ตัวอย่าง: ปิดหน้าปัจจุบัน
+            Navigator.pop(context);
           },
         ),
         title: Text(
-          widget.isEnglish ? 'Penalty' : 'บทลงโทษ', // ชื่อ Title
+          widget.isEnglish ? 'Penalty' : 'บทลงโทษ',
           style: const TextStyle(color: Colors.black),
         ),
         backgroundColor: Colors.white,
@@ -254,15 +269,14 @@ class _PenaltyScreenState extends State<PenaltyScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ส่วนแสดงชื่อบุคคลที่ถูกรายงานที่ด้านบน
             Align(
               alignment: Alignment.center,
               child: Padding(
                 padding: const EdgeInsets.only(bottom: 20.0),
                 child: Text(
                   widget.isEnglish
-                      ? 'Applying penalty to: ${widget.report.hirer?.person?.firstName ?? widget.report.housekeeper?.person?.firstName ?? 'N/A'} ${widget.report.hirer?.person?.lastName ?? widget.report.housekeeper?.person?.lastName ?? ''}'
-                      : 'กำลังใช้บทลงโทษกับ: ${widget.report.hirer?.person?.firstName ?? widget.report.housekeeper?.person?.firstName ?? 'ไม่ระบุ'} ${widget.report.hirer?.person?.lastName ?? widget.report.housekeeper?.person?.lastName ?? ''}',
+                      ? 'Applying penalty to: ${reportedPerson?.firstName ?? 'N/A'} ${reportedPerson?.lastName ?? ''}'
+                      : 'กำลังใช้บทลงโทษกับ: ${reportedPerson?.firstName ?? 'ไม่ระบุ'} ${reportedPerson?.lastName ?? ''}',
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -272,11 +286,10 @@ class _PenaltyScreenState extends State<PenaltyScreen> {
                 ),
               ),
             ),
-            // ส่วนเลือกประเภทบทลงโทษ
             Text(
               widget.isEnglish
                   ? 'Select Penalty Type'
-                  : 'เลือกประเภทบทลงโทษ', // หัวข้อ
+                  : 'เลือกประเภทบทลงโทษ',
               style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
@@ -289,7 +302,7 @@ class _PenaltyScreenState extends State<PenaltyScreen> {
                   child: RadioListTile<String>(
                     title: Text(
                       widget.isEnglish ? 'Ban' : 'แบน',
-                    ), // "Ban" in Thai
+                    ),
                     value: 'Ban',
                     groupValue: _selectedPenaltyType,
                     onChanged: (String? value) {
@@ -303,7 +316,7 @@ class _PenaltyScreenState extends State<PenaltyScreen> {
                   child: RadioListTile<String>(
                     title: Text(
                       widget.isEnglish ? 'Account Suspension' : 'ระงับบัญชี',
-                    ), // "Suspension of account" in Thai
+                    ),
                     value: 'Suspension of account',
                     groupValue: _selectedPenaltyType,
                     onChanged: (String? value) {
@@ -316,10 +329,8 @@ class _PenaltyScreenState extends State<PenaltyScreen> {
               ],
             ),
             const SizedBox(height: 20),
-
-            // ช่องกรอกวันที่บทลงโทษ
             Text(
-              widget.isEnglish ? 'Penalty Date' : 'วันที่ลงโทษ', // หัวข้อ
+              widget.isEnglish ? 'Penalty Date' : 'วันที่ลงโทษ',
               style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
@@ -327,21 +338,18 @@ class _PenaltyScreenState extends State<PenaltyScreen> {
               ),
             ),
             const SizedBox(height: 10),
-            // <--- เปลี่ยนจาก GestureDetector ครอบ TextField เป็น TextField ที่มี onTap โดยตรง
             TextField(
               controller: _dateController,
-              readOnly: true, // ทำให้ TextField ไม่สามารถแก้ไขได้โดยตรง
-              onTap: () => _selectDate(context), // <--- เพิ่ม onTap ตรงนี้
+              readOnly: true,
+              onTap: () => _selectDate(context),
               decoration: InputDecoration(
                 hintText:
-                    widget.isEnglish
-                        ? 'DD/MM/YYYY (AD)'
-                        : 'วว/ดด/ปปปป (พ.ศ.)', // รูปแบบวันที่ DD/MM/YYYY (พ.ศ.)
+                    widget.isEnglish ? 'DD/MM/YYYY (AD)' : 'วว/ดด/ปปปป (พ.ศ.)',
                 filled: true,
                 fillColor: Colors.white,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide.none, // ไม่มีขอบ
+                  borderSide: BorderSide.none,
                 ),
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: 15,
@@ -350,12 +358,10 @@ class _PenaltyScreenState extends State<PenaltyScreen> {
               ),
             ),
             const SizedBox(height: 20),
-
-            // ช่องกรอกรายละเอียดบทลงโทษ
             Text(
               widget.isEnglish
                   ? 'Penalty Details'
-                  : 'รายละเอียดบทลงโทษ', // หัวข้อ
+                  : 'รายละเอียดบทลงโทษ',
               style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
@@ -365,17 +371,15 @@ class _PenaltyScreenState extends State<PenaltyScreen> {
             const SizedBox(height: 10),
             TextField(
               controller: _detailsController,
-              maxLines: 6, // กำหนดจำนวนบรรทัด
+              maxLines: 6,
               decoration: InputDecoration(
                 hintText:
-                    widget.isEnglish
-                        ? 'Please provide more details about the incident...'
-                        : 'โปรดระบุรายละเอียดเพิ่มเติมเกี่ยวกับเหตุการณ์...', // Placeholder text
+                    widget.isEnglish ? 'Please provide more details about the incident...' : 'โปรดระบุรายละเอียดเพิ่มเติมเกี่ยวกับเหตุการณ์...',
                 filled: true,
                 fillColor: Colors.white,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide.none, // ไม่มีขอบ
+                  borderSide: BorderSide.none,
                 ),
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: 15,
@@ -383,23 +387,22 @@ class _PenaltyScreenState extends State<PenaltyScreen> {
                 ),
               ),
             ),
-            const SizedBox(height: 40), // เพิ่มระยะห่างก่อนปุ่ม
-            // ปุ่มส่งบทลงโทษ
+            const SizedBox(height: 40),
             SizedBox(
-              width: double.infinity, // ทำให้ปุ่มกว้างเต็มพื้นที่
-              height: 50, // กำหนดความสูงของปุ่ม
+              width: double.infinity,
+              height: 50,
               child: ElevatedButton(
-                onPressed: _submitPenalty, // เรียกใช้เมธอดส่งข้อมูล
+                onPressed: _submitPenalty,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red, // สีปุ่ม
+                  backgroundColor: Colors.red,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10), // ขอบมน
+                    borderRadius: BorderRadius.circular(10),
                   ),
                 ),
                 child: Text(
                   widget.isEnglish
                       ? 'Submit Penalty'
-                      : 'ส่งบทลงโทษ', // ข้อความบนปุ่ม
+                      : 'ส่งบทลงโทษ',
                   style: const TextStyle(
                     fontSize: 18,
                     color: Colors.white,
@@ -408,7 +411,7 @@ class _PenaltyScreenState extends State<PenaltyScreen> {
                 ),
               ),
             ),
-            const SizedBox(height: 20), // ระยะห่างด้านล่างสุด
+            const SizedBox(height: 20),
           ],
         ),
       ),
