@@ -60,6 +60,7 @@ flutter pub get
 # Run the app on an emulator or real device
 flutter run
 
+```
 📱 How It Works
 1️⃣ Sign Up / Log In → Create an account & log in securely.
 2️⃣ Browse Services → Search housekeepers by location, rating, and availability.
