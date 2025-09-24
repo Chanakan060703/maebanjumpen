@@ -1,5 +1,10 @@
 # 🏠 Maebanjumpen – Housekeeper Hiring Platform  
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Flutter](https://img.shields.io/badge/Mobile-Flutter-blue?logo=flutter)](https://flutter.dev)
+[![Spring Boot](https://img.shields.io/badge/Backend-SpringBoot-darkgreen?logo=springboot)](https://spring.io/projects/spring-boot)
+[![MySQL](https://img.shields.io/badge/Database-MySQL-blue?logo=mysql)](https://www.mysql.com/)  
+
 > A **housekeeper hiring platform** that lets users search, hire, and manage housekeeper services — all from a mobile app.  
 > Built as a **full-stack project** with Flutter + Spring Boot + MySQL. 🚀  
 
@@ -56,12 +61,11 @@ flutter pub get
 flutter run
 
 📱 How It Works
---
 1️⃣ Sign Up / Log In → Create an account & log in securely.
 2️⃣ Browse Services → Search housekeepers by location, rating, and availability.
 3️⃣ Book a Service → Select a date & time, then send a request.
 4️⃣ Track Status → Monitor your bookings (Pending → Confirmed → Completed).
---
+
 📂 Project Structure
 maebanjumpen/
 ├── lib/                 # Flutter app source code
@@ -74,12 +78,12 @@ maebanjumpen-intellij-API/
 ├── src/main/java/       # Spring Boot API code
 ├── src/main/resources/  # Config files (application.properties)
 └── pom.xml              # Maven dependencies
---
-🔗 Related Repositories
 
-📱 Mobile App Code
+## 🔗 Related Repositories  
 
-🖥 Backend API Code
+[![📱 Mobile App Code](https://img.shields.io/badge/📱_Mobile_App_Code-0A66C2?style=for-the-badge&logo=github&logoColor=white)](https://github.com/Chanakan060703/maebanjumpen)  
+[![🖥 Backend API Code](https://img.shields.io/badge/🖥_Backend_API_Code-4CAF50?style=for-the-badge&logo=github&logoColor=white)](https://github.com/Chanakan060703/maebanjumpen-intellij-API)
+
 
 🤝 Contributing
 
