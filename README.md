@@ -102,4 +102,4 @@ Licensed under the MIT License – see the LICENSE
 👤 Chanakan Kongyen
 📧 Chonakankongyen@gmail.com
 
-[![💻 GitHub Profile](https://github.com/Chanakan060703)
+[💻 GitHub Profile](https://github.com/Chanakan060703)
