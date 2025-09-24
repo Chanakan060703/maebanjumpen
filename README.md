@@ -1,117 +1,95 @@
-# Maebanjumpen
+🏠 Maebanjumpen – Housekeeper Hiring Platform
 
-Maebanjumpen is a simple to-do list application built as a full-stack project. It allows users to manage their tasks efficiently with features like adding, deleting, and filtering tasks. The application is designed to be responsive and user-friendly.
+Maebanjumpen is a housekeeper hiring platform that enables users to search, hire, and manage housekeeper services through a mobile app, powered by a secure backend API.
+Built as a full-stack project, it showcases mobile app development, backend API creation, and database integration.
 
----
+✨ Key Features
 
-## Key Features
+🔍 Search & Browse Housekeepers: View available housekeepers with profiles and ratings.
 
-- **Add and Delete Tasks:** Easily create new tasks and remove completed or unnecessary ones.
-- **Mark Tasks as Completed:** Keep track of your progress by marking tasks as done.
-- **Filter Tasks by Status:** View tasks based on their status (all, active, or completed).
-- **Responsive Design:** Optimized for both desktop and mobile devices.
+📝 Booking & Hiring: Request services and schedule housekeeper visits.
 
----
+🔑 Authentication & Authorization: Role-based access for users and admins.
 
-## Technology Stack
+📊 Manage Requests: Track status of bookings (pending, confirmed, completed).
 
-### Front-end
-- flutter
-- React
-- JavaScript
-- CSS
+📱 Responsive & User-Friendly: Optimized mobile experience built with Flutter.
 
-### Back-end
-- Node.js
-- Express.js
+🛠 Technology Stack
+Mobile App	Backend	Database	Tools
+Flutter (Dart)	Spring Boot (Java)	MySQL	Postman, GitHub, VS Code, IntelliJ IDEA
+🚀 How to Run
+Prerequisites
 
-### Database
-- MongoDB
+Ensure you have installed:
 
----
+Flutter SDK → flutter.dev
 
-## How to Run (Manual)
+Java (JDK 17+) → Oracle
 
-### Prerequisites
-Ensure the following are installed on your system:
-- **Node.js** (https://nodejs.org/)
-- **npm** (comes with Node.js)
-- **MongoDB** (https://www.mongodb.com/)
+MySQL Server → MySQL
 
-### Installation
-1. Clone the repository:
-   ```bash
-   git clone [your-repo-url]
-   ```
-2. Navigate to the project folder:
-   ```bash
-   cd [project-folder]
-   ```
-3. Install the dependencies:
-   ```bash
-   npm install
-   ```
+Backend Setup
+# Clone the backend repository
+git clone https://github.com/Chanakan060703/maebanjumpen-intellij-API
+cd maebanjumpen-intellij-API
 
-### Running the Server
-1. Start the back-end server:
-   ```bash
-   npm start
-   ```
+# Configure application.properties for your MySQL credentials
+# Then run Spring Boot application
+./mvnw spring-boot:run
 
-### Running the Client
-1. Navigate to the `client` folder:
-   ```bash
-   cd client
-   ```
-2. Install the client dependencies:
-   ```bash
-   npm install
-   ```
-3. Start the front-end application:
-   ```bash
-   npm start
-   ```
+Mobile App Setup
+# Clone the mobile app repository
+git clone https://github.com/Chanakan060703/maebanjumpen
+cd maebanjumpen
 
----
+# Install Flutter dependencies
+flutter pub get
 
-## How to Use
+# Run the app on emulator or device
+flutter run
 
-1. **Add a Task:**
-   - Enter the task name in the input field and click the "Add" button.
-2. **Mark as Completed:**
-   - Click the checkbox next to a task to mark it as completed.
-3. **Delete a Task:**
-   - Click the "Delete" button next to a task to remove it.
-4. **Filter Tasks:**
-   - Use the filter options (All, Active, Completed) to view tasks based on their status.
+📱 How It Works
 
----
+Sign Up / Log In → Users create an account and log in securely.
 
-## Project Structure
+Browse Services → Search for housekeepers by location, rating, or availability.
 
-```
-project-folder/
-├── client/                # Front-end code
-├── server/                # Back-end code
-├── package.json           # Project metadata and dependencies
-├── README.md              # Project documentation
-└── .gitignore             # Files to ignore in version control
-```
+Book a Service → Select preferred date and time, then send a request.
 
----
+Track Status → View pending, confirmed, or completed services in real-time.
 
-## Contributing
+📂 Project Structure
+maebanjumpen/
+├── lib/                 # Flutter app source code
+├── android/             # Android-specific files
+├── ios/                 # iOS-specific files
+├── pubspec.yaml         # Flutter dependencies
+└── README.md            # Project documentation
 
-Contributions are welcome! Please fork the repository and submit a pull request.
+maebanjumpen-intellij-API/
+├── src/main/java/       # Spring Boot API code
+├── src/main/resources/  # Config files (application.properties)
+└── pom.xml              # Maven dependencies
 
----
+🔗 Related Repositories
 
-## License
+📱 Mobile App Code: Maebanjumpen Mobile
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+🖥 Backend API Code: Maebanjumpen API
 
----
+🤝 Contributing
 
-## Contact
+Contributions are welcome! Feel free to fork the repository, create a feature branch, and submit a pull request.
 
-For any questions or feedback, please contact the project maintainer at [your-email@example.com].
+📜 License
+
+This project is licensed under the MIT License – see the LICENSE
+ file for details.
+
+📬 Contact
+
+👤 Chanakan Kongyen
+📧 Chonakankongyen@gmail.com
+
+💻 GitHub Profile
