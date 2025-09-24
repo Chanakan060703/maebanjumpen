@@ -1,44 +1,50 @@
-🏠 Maebanjumpen – Housekeeper Hiring Platform
+# 🏠 Maebanjumpen – Housekeeper Hiring Platform  
 
-Maebanjumpen is a housekeeper hiring platform that enables users to search, hire, and manage housekeeper services through a mobile app, powered by a secure backend API.
-Built as a full-stack project, it showcases mobile app development, backend API creation, and database integration.
+> A **housekeeper hiring platform** that lets users search, hire, and manage housekeeper services — all from a mobile app.  
+> Built as a **full-stack project** with Flutter + Spring Boot + MySQL. 🚀  
 
-✨ Key Features
+---
 
-🔍 Search & Browse Housekeepers: View available housekeepers with profiles and ratings.
+## ✨ Key Features  
 
-📝 Booking & Hiring: Request services and schedule housekeeper visits.
+- 🔍 **Search & Browse Housekeepers** – View profiles, ratings, and availability.  
+- 📝 **Booking & Hiring** – Schedule and confirm housekeeper services with ease.  
+- 🔑 **Authentication & Authorization** – Secure login & role-based access for users/admins.  
+- 📊 **Request Management** – Track booking status (Pending ✅ Confirmed ✅ Completed).  
+- 📱 **Mobile-First Design** – Fully optimized for mobile experience using Flutter.  
 
-🔑 Authentication & Authorization: Role-based access for users and admins.
+---
 
-📊 Manage Requests: Track status of bookings (pending, confirmed, completed).
+## 🛠 Technology Stack  
 
-📱 Responsive & User-Friendly: Optimized mobile experience built with Flutter.
+| **Mobile App** | **Backend** | **Database** | **Tools** |
+| :------------- | :--------- | :----------- | :------- |
+| 🎯 Flutter (Dart) | ☕ Spring Boot (Java) | 🗄 MySQL | 🛠 Postman · GitHub · VS Code · IntelliJ IDEA |
 
-🛠 Technology Stack
-Mobile App	Backend	Database	Tools
-Flutter (Dart)	Spring Boot (Java)	MySQL	Postman, GitHub, VS Code, IntelliJ IDEA
-🚀 How to Run
-Prerequisites
+---
 
-Ensure you have installed:
+## 🚀 Getting Started  
 
-Flutter SDK → flutter.dev
+### ✅ Prerequisites  
 
-Java (JDK 17+) → Oracle
+- [Flutter SDK](https://flutter.dev)  
+- [Java JDK 17+](https://www.oracle.com/java/technologies/javase/jdk17-archive-downloads.html)  
+- [MySQL Server](https://dev.mysql.com/downloads/)  
 
-MySQL Server → MySQL
+---
 
-Backend Setup
+### 🔧 Backend Setup  
+
 # Clone the backend repository
 git clone https://github.com/Chanakan060703/maebanjumpen-intellij-API
 cd maebanjumpen-intellij-API
 
-# Configure application.properties for your MySQL credentials
-# Then run Spring Boot application
+# Configure application.properties with your MySQL credentials
+# Run the Spring Boot application
 ./mvnw spring-boot:run
-
-Mobile App Setup
+📱 Mobile App Setup
+bash
+คัดลอกโค้ด
 # Clone the mobile app repository
 git clone https://github.com/Chanakan060703/maebanjumpen
 cd maebanjumpen
@@ -46,20 +52,17 @@ cd maebanjumpen
 # Install Flutter dependencies
 flutter pub get
 
-# Run the app on emulator or device
+# Run the app on an emulator or real device
 flutter run
-
 📱 How It Works
-
-Sign Up / Log In → Users create an account and log in securely.
-
-Browse Services → Search for housekeepers by location, rating, or availability.
-
-Book a Service → Select preferred date and time, then send a request.
-
-Track Status → View pending, confirmed, or completed services in real-time.
+1️⃣ Sign Up / Log In → Create an account & log in securely.
+2️⃣ Browse Services → Search housekeepers by location, rating, and availability.
+3️⃣ Book a Service → Select a date & time, then send a request.
+4️⃣ Track Status → Monitor your bookings (Pending → Confirmed → Completed).
 
 📂 Project Structure
+bash
+คัดลอกโค้ด
 maebanjumpen/
 ├── lib/                 # Flutter app source code
 ├── android/             # Android-specific files
@@ -71,25 +74,27 @@ maebanjumpen-intellij-API/
 ├── src/main/java/       # Spring Boot API code
 ├── src/main/resources/  # Config files (application.properties)
 └── pom.xml              # Maven dependencies
-
 🔗 Related Repositories
 
-📱 Mobile App Code: Maebanjumpen Mobile
-
-🖥 Backend API Code: Maebanjumpen API
 
 🤝 Contributing
-
-Contributions are welcome! Feel free to fork the repository, create a feature branch, and submit a pull request.
+Contributions are welcome!
+Fork the repo, create a feature branch, and submit a pull request.
 
 📜 License
-
-This project is licensed under the MIT License – see the LICENSE
- file for details.
+Licensed under the MIT License – see the LICENSE file for details.
 
 📬 Contact
-
 👤 Chanakan Kongyen
 📧 Chonakankongyen@gmail.com
-
 💻 GitHub Profile
+
+
+
+
+
+
+
+
+
+ถาม ChatGPT
