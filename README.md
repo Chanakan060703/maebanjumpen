@@ -35,6 +35,7 @@
 
 ### 🔧 Backend Setup  
 
+```bash
 # Clone the backend repository
 git clone https://github.com/Chanakan060703/maebanjumpen-intellij-API
 cd maebanjumpen-intellij-API
@@ -88,13 +89,3 @@ Licensed under the MIT License – see the LICENSE file for details.
 👤 Chanakan Kongyen
 📧 Chonakankongyen@gmail.com
 💻 GitHub Profile
-
-
-
-
-
-
-
-
-
-ถาม ChatGPT
