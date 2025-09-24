@@ -60,15 +60,14 @@ flutter pub get
 # Run the app on an emulator or real device
 flutter run
 
-```
----
-##📱 How It Works
+
+📱 How It Works
 1️⃣ Sign Up / Log In → Create an account & log in securely.
 2️⃣ Browse Services → Search housekeepers by location, rating, and availability.
 3️⃣ Book a Service → Select a date & time, then send a request.
 4️⃣ Track Status → Monitor your bookings (Pending → Confirmed → Completed).
----
-##📂 Project Structure
+
+📂 Project Structure
 maebanjumpen/
 ├── lib/                 # Flutter app source code
 ├── android/             # Android-specific files
@@ -81,25 +80,25 @@ maebanjumpen-intellij-API/
 ├── src/main/resources/  # Config files (application.properties)
 └── pom.xml              # Maven dependencies
 
----
-## 🔗 Related Repositories  
+
+🔗 Related Repositories  
 
 [![🖥 Backend API Code](https://img.shields.io/badge/🖥_Backend_API_Code-4CAF50?style=for-the-badge&logo=github&logoColor=white)](https://github.com/Chanakan060703/maebanjumpen-intellij-API)
 
----
-##🤝 Contributing
+
+🤝 Contributing
 
 Contributions are welcome!
 Fork the repo, create a feature branch, and submit a pull request.
----
+
 ##📜 License
 
 Licensed under the MIT License – see the LICENSE
  file for details.
----
-##📬 Contact
+
+📬 Contact
 
 👤 Chanakan Kongyen
 📧 Chonakankongyen@gmail.com
 
-[![💻 GitHub Profile](https://github.com/Chanakan060703)
+-[💻 GitHub Profile](https://github.com/Chanakan060703)
