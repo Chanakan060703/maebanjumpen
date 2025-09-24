@@ -75,7 +75,8 @@ maebanjumpen-intellij-API/
 ├── src/main/resources/  # Config files (application.properties)
 └── pom.xml              # Maven dependencies
 🔗 Related Repositories
-
+https://github.com/Chanakan060703/maebanjumpen
+https://github.com/Chanakan060703/maebanjumpen-intellij-API
 
 🤝 Contributing
 Contributions are welcome!
