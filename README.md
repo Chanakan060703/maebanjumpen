@@ -16,6 +16,7 @@ Maebanjumpen is a simple to-do list application built as a full-stack project. I
 ## Technology Stack
 
 ### Front-end
+- flutter
 - React
 - JavaScript
 - CSS
