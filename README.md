@@ -84,7 +84,6 @@ maebanjumpen-intellij-API/
 ---
 ## 🔗 Related Repositories  
 
-[![📱 Mobile App Code](https://img.shields.io/badge/📱_Mobile_App_Code-0A66C2?style=for-the-badge&logo=github&logoColor=white)](https://github.com/Chanakan060703/maebanjumpen)  
 [![🖥 Backend API Code](https://img.shields.io/badge/🖥_Backend_API_Code-4CAF50?style=for-the-badge&logo=github&logoColor=white)](https://github.com/Chanakan060703/maebanjumpen-intellij-API)
 
 ---
@@ -103,4 +102,4 @@ Licensed under the MIT License – see the LICENSE
 👤 Chanakan Kongyen
 📧 Chonakankongyen@gmail.com
 
-💻 GitHub Profile
+[![💻 GitHub Profile](https://github.com/Chanakan060703)
