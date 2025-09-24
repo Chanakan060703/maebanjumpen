@@ -62,8 +62,7 @@ flutter run
 4️⃣ Track Status → Monitor your bookings (Pending → Confirmed → Completed).
 
 📂 Project Structure
-bash
-คัดลอกโค้ด
+
 maebanjumpen/
 ├── lib/                 # Flutter app source code
 ├── android/             # Android-specific files
