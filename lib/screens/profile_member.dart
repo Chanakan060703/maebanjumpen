@@ -256,28 +256,7 @@ class _ProfileMemberPageState extends State<ProfileMemberPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    widget.isEnglish ? 'Social Media' : 'โซเชียลมีเดีย',
-                    style: const TextStyle(
-                      fontSize: 18.0,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const SizedBox(height: 12.0),
-                  _buildSocialMediaRow(
-                    'Facebook',
-                    'facebook.com/johndoe',
-                    'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b8/2021_Facebook_icon.svg/800px-2021_Facebook_icon.svg.png',
-                    widget.isEnglish,
-                  ),
-                  const SizedBox(height: 8.0),
-                  _buildSocialMediaRow(
-                    'Line',
-                    '@johndoe',
-                    'https://upload.wikimedia.org/wikipedia/commons/2/2e/LINE_New_App_Icon_%282020-12%29.png',
-                    widget.isEnglish,
-                    backgroundColor: Colors.green[100],
-                  ),
+        
                 ],
               ),
             ),

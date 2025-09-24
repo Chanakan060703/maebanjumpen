@@ -84,7 +84,11 @@ class _LoginPageState extends State<LoginPage> {
         child: const Icon(Icons.close_rounded, color: Colors.red, size: 40),
       ),
       title: title ?? (isEnglish ? 'Oops!' : 'เกิดข้อผิดพลาด'),
-      desc: desc ?? (isEnglish ? 'Please enter both email and password.' : 'กรุณากรอกอีเมลและรหัสผ่านให้ครบถ้วน'),
+      desc:
+          desc ??
+          (isEnglish
+              ? 'Please enter both email and password.'
+              : 'กรุณากรอกอีเมลและรหัสผ่านให้ครบถ้วน'),
       btnOkText: isEnglish ? 'OK' : 'ตกลง',
       btnOkOnPress: () {},
       btnOkColor: Colors.redAccent,
@@ -120,41 +124,57 @@ class _LoginPageState extends State<LoginPage> {
       if (partyRole == null) {
         _showErrorDialog(
           title: isEnglish ? 'Login Failed' : 'เข้าสู่ระบบล้มเหลว',
-          desc: isEnglish ? 'Invalid username or password.' : 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง',
+          desc:
+              isEnglish
+                  ? 'Invalid username or password.'
+                  : 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง',
         );
         return;
       }
 
-      final memberProvider = Provider.of<MemberProvider>(context, listen: false);
+      final memberProvider = Provider.of<MemberProvider>(
+        context,
+        listen: false,
+      );
       memberProvider.setUser(partyRole);
 
       await _saveRememberMeCredentials();
 
-      if (partyRole is Member && partyRole.person?.accountStatus != 'active' && partyRole.person?.accountStatus != "Active") {
+      if (partyRole is Member &&
+          partyRole.person?.accountStatus != 'active' &&
+          partyRole.person?.accountStatus != "Active") {
         final penaltyType = partyRole.person?.accountStatus;
         String penaltyMessage = '';
 
         if (partyRole.person?.personId != null) {
-          final Penalty? penalty = await _loginController.getPenaltyByPersonId(partyRole.person!.personId!);
+          final Penalty? penalty = await _loginController.getPenaltyByPersonId(
+            partyRole.person!.personId!,
+          );
 
           if (!mounted) return;
 
           if (penalty != null && penalty.penaltyDate != null) {
-            final dateFormat = DateFormat('d MMMM y', isEnglish ? 'en_US' : 'th_TH');
+            final dateFormat = DateFormat(
+              'd MMMM y',
+              isEnglish ? 'en_US' : 'th_TH',
+            );
             final formattedDate = dateFormat.format(penalty.penaltyDate!);
 
-            penaltyMessage = isEnglish
-                ? 'Your account is currently $penaltyType until $formattedDate. Please contact support for more information.'
-                : 'บัญชีของคุณถูก $penaltyType ถึงวันที่ $formattedDate โปรดติดต่อฝ่ายสนับสนุนสำหรับข้อมูลเพิ่มเติม';
+            penaltyMessage =
+                isEnglish
+                    ? 'Your account is currently $penaltyType until $formattedDate.'
+                    : 'บัญชีของคุณถูก $penaltyType ถึงวันที่ $formattedDate';
           } else {
-            penaltyMessage = isEnglish
-                ? 'Your account is currently $penaltyType. Please contact support for more information.'
-                : 'บัญชีของคุณถูก $penaltyType โปรดติดต่อฝ่ายสนับสนุนสำหรับข้อมูลเพิ่มเติม';
+            penaltyMessage =
+                isEnglish
+                    ? 'Your account is currently $penaltyType.'
+                    : 'บัญชีของคุณถูก $penaltyType ';
           }
         } else {
-          penaltyMessage = isEnglish
-              ? 'Your account is currently $penaltyType. Please contact support for more information.'
-              : 'บัญชีของคุณถูก $penaltyType โปรดติดต่อฝ่ายสนับสนุนสำหรับข้อมูลเพิ่มเติม';
+          penaltyMessage =
+              isEnglish
+                  ? 'Your account is currently $penaltyType.'
+                  : 'บัญชีของคุณถูก $penaltyType ';
         }
 
         _showErrorDialog(
@@ -163,7 +183,7 @@ class _LoginPageState extends State<LoginPage> {
         );
         return;
       }
-      
+
       if (!mounted) return;
 
       if (partyRole is Housekeeper) {
@@ -171,19 +191,27 @@ class _LoginPageState extends State<LoginPage> {
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
-              builder: (context) => HousekeeperPage(user: partyRole, isEnglish: isEnglish),
+              builder:
+                  (context) =>
+                      HousekeeperPage(user: partyRole, isEnglish: isEnglish),
             ),
           );
         } else if (partyRole.statusVerify == 'not verified') {
           _showErrorDialog(
             title: isEnglish ? 'Account Under Review' : 'บัญชีกำลังตรวจสอบ',
-            desc: isEnglish ? 'Your account is currently under review. Please wait for verification.' : 'บัญชีของคุณกำลังตรวจสอบ โปรดรอการยืนยัน',
+            desc:
+                isEnglish
+                    ? 'Your account is currently under review. Please wait for verification.'
+                    : 'บัญชีของคุณกำลังตรวจสอบ โปรดรอการยืนยัน',
           );
           return;
         } else {
           _showErrorDialog(
             title: isEnglish ? 'Verification Required' : 'ต้องมีการยืนยัน',
-            desc: isEnglish ? 'Your housekeeper account needs verification. Please contact support.' : 'บัญชีแม่บ้านของคุณต้องได้รับการยืนยัน โปรดติดต่อฝ่ายสนับสนุน',
+            desc:
+                isEnglish
+                    ? 'Your housekeeper account needs verification.'
+                    : 'บัญชีแม่บ้านของคุณต้องได้รับการยืนยัน ',
           );
           return;
         }
@@ -191,38 +219,63 @@ class _LoginPageState extends State<LoginPage> {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (context) => HomePage(user: partyRole, isEnglish: isEnglish),
+            builder:
+                (context) => HomePage(user: partyRole, isEnglish: isEnglish),
           ),
         );
       } else if (partyRole is Admin) {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (context) => HomeAdminPage(user: partyRole as Admin, isEnglish: isEnglish),
+            builder:
+                (context) => HomeAdminPage(
+                  user: partyRole as Admin,
+                  isEnglish: isEnglish,
+                ),
           ),
         );
       } else if (partyRole is AccountManager) {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (context) => AccountManagerPage(user: partyRole as AccountManager, isEnglish: isEnglish),
+            builder:
+                (context) => AccountManagerPage(
+                  user: partyRole as AccountManager,
+                  isEnglish: isEnglish,
+                ),
           ),
         );
       } else {
         _showErrorDialog(
           title: isEnglish ? 'Unknown User Type' : 'ประเภทผู้ใช้ไม่รู้จัก',
-          desc: isEnglish ? 'Could not determine user role. Please try again.' : 'ไม่สามารถระบุบทบาทผู้ใช้ได้ กรุณาลองใหม่',
+          desc:
+              isEnglish
+                  ? 'Could not determine user role. Please try again.'
+                  : 'ไม่สามารถระบุบทบาทผู้ใช้ได้ กรุณาลองใหม่',
         );
       }
     } catch (e) {
       print("Error during login: $e");
       if (mounted) {
-        _showErrorDialog(
-          title: isEnglish ? 'Login Error' : 'เกิดข้อผิดพลาดในการเข้าสู่ระบบ',
-          desc: isEnglish
-              ? 'An unexpected error occurred. Please try again. Error: ${e.toString()}'
-              : 'เกิดข้อผิดพลาดที่ไม่คาดคิด กรุณาลองใหม่ ข้อผิดพลาด: ${e.toString()}',
-        );
+        // ตรวจสอบข้อผิดพลาดที่มาจากเซิร์ฟเวอร์ (เช่น Invalid username/password)
+        if (e.toString().contains('401')) {
+          _showErrorDialog(
+            title: isEnglish ? 'Login Failed' : 'เข้าสู่ระบบล้มเหลว',
+            desc:
+                isEnglish
+                    ? 'Invalid username or password.'
+                    : 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง',
+          );
+        } else {
+          // สำหรับข้อผิดพลาดอื่น ๆ ที่ไม่เกี่ยวข้องกับการล็อกอิน
+          _showErrorDialog(
+            title: isEnglish ? 'Login Error' : 'เกิดข้อผิดพลาดในการเข้าสู่ระบบ',
+            desc:
+                isEnglish
+                    ? 'An unexpected error occurred. Please try again.'
+                    : 'เกิดข้อผิดพลาดที่ไม่คาดคิด กรุณาลองใหม่',
+          );
+        }
       }
     }
   }
@@ -236,7 +289,8 @@ class _LoginPageState extends State<LoginPage> {
           padding: const EdgeInsets.symmetric(horizontal: 30.0),
           child: Center(
             child: SingleChildScrollView(
-              child: Form( // <-- เพิ่ม Form widget
+              child: Form(
+                // <-- เพิ่ม Form widget
                 key: _formKey, // <-- กำหนด key ให้กับ Form
                 child: Column(
                   children: [
@@ -274,7 +328,10 @@ class _LoginPageState extends State<LoginPage> {
                     const SizedBox(height: 20),
                     Text(
                       isEnglish ? "Maeban Jampen" : "แม่บ้านจำเป็น",
-                      style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+                      style: const TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 5),
                     Text(isEnglish ? "Welcome" : "ยินดีต้อนรับ"),

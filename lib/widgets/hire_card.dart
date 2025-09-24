@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:maebanjumpen/model/hire.dart';
 import 'package:maebanjumpen/model/hirer.dart';
 import 'package:maebanjumpen/model/person.dart';
-import 'package:maebanjumpen/screens/finishjob_member.dart'; // Assuming this is VerifyJobPage
+import 'package:maebanjumpen/screens/finishjob_member.dart';
 import 'package:maebanjumpen/screens/report_member.dart';
 import 'package:maebanjumpen/screens/reviewhousekeeper_member.dart';
 
@@ -19,7 +19,7 @@ class JobCard extends StatelessWidget {
   final bool showVerifyButton;
   final bool showReportButton;
   final bool showReviewButton;
-  final bool showViewReviewButton; // Added for viewing review
+  final bool showViewReviewButton;
   final bool showCancelButton;
   final bool isEnglish;
   final VoidCallback? onTap;
@@ -32,7 +32,7 @@ class JobCard extends StatelessWidget {
   final VoidCallback? onReportPressed;
   final VoidCallback? onReviewPressed;
   final VoidCallback? onCancelPressed;
-  final VoidCallback? onViewReviewPressed; // Callback for viewing review
+  final VoidCallback? onViewReviewPressed;
 
   const JobCard({
     super.key,
@@ -48,7 +48,7 @@ class JobCard extends StatelessWidget {
     this.showVerifyButton = false,
     this.showReportButton = false,
     this.showReviewButton = false,
-    this.showViewReviewButton = false, // Default to false
+    this.showViewReviewButton = false,
     this.showCancelButton = false,
     required this.isEnglish,
     this.onTap,
@@ -59,17 +59,13 @@ class JobCard extends StatelessWidget {
     this.onReportPressed,
     this.onReviewPressed,
     this.onCancelPressed,
-    this.onViewReviewPressed, // Initialize the new callback
+    this.onViewReviewPressed,
   });
 
-  // Helper function to get the correct ImageProvider
   ImageProvider _getProfileImage(String? url) {
-    if (url != null &&
-        url.isNotEmpty &&
-        (url.startsWith('http://') || url.startsWith('https://'))) {
+    if (url != null && url.isNotEmpty && (url.startsWith('http://') || url.startsWith('https://'))) {
       return NetworkImage(url);
     }
-    // Fallback to a local asset image if URL is null, empty, or not a valid URL
     return const AssetImage('assets/profile.jpg');
   }
 
@@ -173,7 +169,7 @@ class JobCard extends StatelessWidget {
               if (showVerifyButton ||
                   showReportButton ||
                   showReviewButton ||
-                  showViewReviewButton || // Include this
+                  showViewReviewButton ||
                   showCancelButton)
                 Padding(
                   padding: const EdgeInsets.only(top: 16.0),
@@ -184,15 +180,11 @@ class JobCard extends StatelessWidget {
                         ElevatedButton(
                           onPressed: () async {
                             if (hirerUser == null) {
-                              debugPrint(
-                                'Error: hirerUser is null for VerifyJobPage',
-                              );
+                              debugPrint('Error: hirerUser is null for VerifyJobPage');
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
                                   content: Text(
-                                    isEnglish
-                                        ? 'User data missing.'
-                                        : 'ข้อมูลผู้ใช้ไม่สมบูรณ์',
+                                    isEnglish ? 'User data missing.' : 'ข้อมูลผู้ใช้ไม่สมบูรณ์',
                                   ),
                                 ),
                               );
@@ -210,9 +202,7 @@ class JobCard extends StatelessWidget {
                             );
 
                             if (updatedHire != null && updatedHire is Hire) {
-                              debugPrint(
-                                'Hire job status updated to: ${updatedHire.jobStatus}',
-                              );
+                              debugPrint('Hire job status updated to: ${updatedHire.jobStatus}');
                               onVerifyPressed?.call();
                             }
                           },
@@ -230,26 +220,18 @@ class JobCard extends StatelessWidget {
                             ),
                           ),
                         ),
-                      if (showVerifyButton &&
-                          (showReportButton ||
-                              showReviewButton ||
-                              showViewReviewButton || // Check for this too
-                              showCancelButton))
+                      if (showVerifyButton && (showReportButton || showReviewButton || showViewReviewButton || showCancelButton))
                         const SizedBox(width: 8),
-
+                      
                       if (showReportButton)
                         ElevatedButton(
                           onPressed: () {
                             if (hirerUser == null) {
-                              debugPrint(
-                                'Error: hirerUser is null for ReportPage',
-                              );
+                              debugPrint('Error: hirerUser is null for ReportPage');
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
                                   content: Text(
-                                    isEnglish
-                                        ? 'User data missing for report.'
-                                        : 'ข้อมูลผู้ใช้ไม่สมบูรณ์สำหรับการรายงาน',
+                                    isEnglish ? 'User data missing for report.' : 'ข้อมูลผู้ใช้ไม่สมบูรณ์สำหรับการรายงาน',
                                   ),
                                 ),
                               );
@@ -262,7 +244,6 @@ class JobCard extends StatelessWidget {
                                   hire: hire,
                                   isEnglish: isEnglish,
                                   hirerUser: hirerUser!,
-                                  userPerson: userPerson,
                                 ),
                               ),
                             );
@@ -282,25 +263,18 @@ class JobCard extends StatelessWidget {
                             ),
                           ),
                         ),
-                      if (showReportButton &&
-                          (showReviewButton ||
-                              showViewReviewButton || // Check for this too
-                              showCancelButton))
+                      if (showReportButton && (showReviewButton || showViewReviewButton || showCancelButton))
                         const SizedBox(width: 8),
 
                       if (showReviewButton)
                         ElevatedButton(
                           onPressed: () {
                             if (hirerUser == null) {
-                              debugPrint(
-                                'Error: hirerUser is null for ReviewHousekeeperPage',
-                              );
+                              debugPrint('Error: hirerUser is null for ReviewHousekeeperPage');
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
                                   content: Text(
-                                    isEnglish
-                                        ? 'User data missing.'
-                                        : 'ข้อมูลผู้ใช้ไม่สมบูรณ์',
+                                    isEnglish ? 'User data missing.' : 'ข้อมูลผู้ใช้ไม่สมบูรณ์',
                                   ),
                                 ),
                               );
@@ -332,16 +306,15 @@ class JobCard extends StatelessWidget {
                             ),
                           ),
                         ),
-                      if (showReviewButton &&
-                          (showViewReviewButton || showCancelButton))
+                      if (showReviewButton && (showViewReviewButton || showCancelButton))
                         const SizedBox(width: 8),
 
                       // New: View Review Button
                       if (showViewReviewButton)
                         ElevatedButton(
-                          onPressed: onViewReviewPressed, // Use the new callback
+                          onPressed: onViewReviewPressed,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.grey, // Neutral color
+                            backgroundColor: Colors.grey,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(8),
                             ),
@@ -361,7 +334,6 @@ class JobCard extends StatelessWidget {
                         ElevatedButton(
                           onPressed: () {
                             onCancelPressed?.call();
-                            // Removed SnackBar here as navigation is likely to follow
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.red,

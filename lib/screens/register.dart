@@ -12,6 +12,7 @@ import 'package:maebanjumpen/model/person.dart';
 import 'package:maebanjumpen/screens/home_member.dart';
 import 'package:maebanjumpen/screens/login.dart';
 import 'package:maebanjumpen/widgets/register_form.dart';
+import 'package:awesome_dialog/awesome_dialog.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -36,7 +37,7 @@ class _RegisterPageState extends State<RegisterPage> {
   String idCardNumber = '';
   String phoneNumber = '';
   String address = '';
-  String accountStatus = 'active'; // Default status for new accounts
+  String accountStatus = 'active';
 
   Future<void> _pickImage() async {
     final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
@@ -49,6 +50,37 @@ class _RegisterPageState extends State<RegisterPage> {
 
   void _goBackToLogin() {
     Navigator.pop(context);
+  }
+  
+  void _showErrorDialog({String? title, String? desc}) {
+    if (!mounted) return;
+
+    AwesomeDialog(
+      context: context,
+      dialogType: DialogType.noHeader,
+      animType: AnimType.bottomSlide,
+      customHeader: CircleAvatar(
+        backgroundColor: Colors.red.shade100,
+        radius: 40,
+        child: const Icon(Icons.close_rounded, color: Colors.red, size: 40),
+      ),
+      title: title ?? (isEnglish ? 'Oops!' : 'เกิดข้อผิดพลาด'),
+      desc: desc ??
+          (isEnglish ? 'An unexpected error occurred.' : 'เกิดข้อผิดพลาดที่ไม่คาดคิด'),
+      btnOkText: isEnglish ? 'OK' : 'ตกลง',
+      btnOkOnPress: () {},
+      btnOkColor: Colors.redAccent,
+      titleTextStyle: const TextStyle(
+        fontSize: 22,
+        fontWeight: FontWeight.bold,
+        color: Colors.red,
+      ),
+      descTextStyle: const TextStyle(fontSize: 16),
+      buttonsTextStyle: const TextStyle(
+        fontWeight: FontWeight.bold,
+        color: Colors.white,
+      ),
+    ).show();
   }
 
   Future<void> _registerUser() async {
@@ -64,17 +96,13 @@ class _RegisterPageState extends State<RegisterPage> {
     try {
       // 1. สร้างข้อมูล Login
       final loginResponse = await http.post(
-        Uri.parse('$baseURL/maeban/login'), // Assuming this is for creating login credentials
+        Uri.parse('$baseURL/maeban/login'),
         headers: headers,
         body: json.encode({
           'username': username,
           'password': password,
         }),
       );
-
-      if (loginResponse.statusCode != 200) {
-        throw Exception('Failed to create login: ${loginResponse.body}');
-      }
 
       // 2. สร้าง Object Person
       final personResponse = await http.post(
@@ -87,7 +115,7 @@ class _RegisterPageState extends State<RegisterPage> {
           'idCardNumber': idCardNumber,
           'phoneNumber': phoneNumber,
           'address': address,
-          'pictureUrl': null, // Will be updated if a profile picture is added later
+          'pictureUrl': null,
           'accountStatus': accountStatus,
           'login': {
             'username': username,
@@ -103,14 +131,12 @@ class _RegisterPageState extends State<RegisterPage> {
       final person = Person.fromJson(json.decode(personResponse.body));
 
       // 3. สร้าง Party Role (Hirer หรือ Housekeeper)
-      // Note: Backend's Member class is abstract, so 'type' should map to Hirer or Housekeeper.
-      // Your backend @JsonSubTypes configuration handles 'member' type mapping to 'hirer'.
       final partyRoleResponse = await http.post(
         Uri.parse('$baseURL/maeban/party-roles'),
         headers: headers,
         body: json.encode({
           'person_id': person.personId,
-          'type': selectedAccountType == 'Member' ? 'hirer' : 'housekeeper', // Ensure type matches backend's @JsonSubTypes
+          'type': selectedAccountType == 'Member' ? 'hirer' : 'housekeeper',
         }),
       );
 
@@ -123,7 +149,7 @@ class _RegisterPageState extends State<RegisterPage> {
       final partyRoleData = json.decode(partyRoleResponse.body);
       final int partyRoleId = partyRoleData['id'];
 
-      String? finalPhotoVerifyUrl; // Variable to store the uploaded image URL
+      String? finalPhotoVerifyUrl;
 
       // 4. อัปโหลดรูปภาพ (เฉพาะ Housekeeper และถ้ามีการเลือกรูปภาพ)
       if (selectedAccountType == 'Housekeeper') {
@@ -131,38 +157,30 @@ class _RegisterPageState extends State<RegisterPage> {
           final imageUploadService = ImageUploadService();
           String? uploadedImageUrl = await imageUploadService.uploadImage(
             id: partyRoleId,
-            imageType: 'housekeeper', // Corresponds to folder name 'verify_photos' on backend if logic is there
+            imageType: 'housekeeper',
             imageFile: XFile(_selectedImage!.path),
           );
 
           if (uploadedImageUrl != null) {
-            finalPhotoVerifyUrl = uploadedImageUrl; // Store the received full URL!
-            print('Uploaded Housekeeper photo URL: $finalPhotoVerifyUrl'); // Debugging
+            finalPhotoVerifyUrl = uploadedImageUrl;
+            print('Uploaded Housekeeper photo URL: $finalPhotoVerifyUrl');
           } else {
             print('Warning: Failed to upload housekeeper verification image.');
-            // Consider throwing an exception here if verification photo is strictly required
           }
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                isEnglish
-                    ? 'Housekeeper registration requires a verification photo.'
-                    : 'การสมัครแม่บ้านต้องอัปโหลดรูปยืนยันตัวตน',
-              ),
-              backgroundColor: Colors.orange,
-            ),
+          _showErrorDialog(
+            title: isEnglish ? 'Image Required' : 'ต้องมีการอัปโหลดรูปภาพ',
+            desc: isEnglish ? 'Housekeeper registration requires a verification photo.' : 'การสมัครแม่บ้านต้องอัปโหลดรูปยืนยันตัวตน',
           );
           setState(() {
             isLoading = false;
           });
-          return; // Stop registration process if image is missing for housekeeper
+          return;
         }
       }
 
       // 5. เปลี่ยนเส้นทางตามประเภทบัญชี
       if (selectedAccountType == 'Member') {
-        // Redirect to Home page for Member
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
@@ -170,15 +188,7 @@ class _RegisterPageState extends State<RegisterPage> {
           ),
         );
       } else {
-        // For Housekeeper, navigate back to Login page and show a message
-        // No need to pass housekeeper object to VerlifyRegisterDetailScreen here,
-        // as that screen is for Admin to review.
-
-        // Pop current RegisterPage off the stack to go back to LoginPage
-        // Assumes RegisterPage was pushed from LoginPage.
         Navigator.pop(context);
-
-        // Show a SnackBar notification
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
@@ -186,30 +196,26 @@ class _RegisterPageState extends State<RegisterPage> {
                   ? 'Your housekeeper application is being processed and awaits admin approval. Please log in after approval.'
                   : 'การสมัครแม่บ้านของคุณอยู่ระหว่างรอการอนุมัติจากผู้ดูแลระบบ โปรดเข้าสู่ระบบหลังจากได้รับการอนุมัติ',
             ),
-            duration: const Duration(seconds: 5), // Show for a longer duration
-            backgroundColor: Colors.blue, // A more neutral success/info color
+            duration: const Duration(seconds: 5),
+            backgroundColor: Colors.blue,
           ),
         );
-
-        // If RegisterPage is not necessarily pushed from LoginPage,
-        // you might use pushReplacement to LoginPage like this:
-        /*
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => LoginPage()),
-        );
-        */
       }
     } catch (e) {
       print('Registration error: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            '${isEnglish ? 'Registration failed' : 'การสมัครสมาชิกล้มเหลว'}: ${e.toString().split(':').last.trim()}',
-          ),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (e.toString().contains('/maeban/persons')) {
+          _showErrorDialog(
+          title: isEnglish ? 'Registration Failed' : 'การสมัครสมาชิกล้มเหลว',
+          desc: isEnglish ? 'Username already exists. Please choose another one.' : 'ข้อมูลชื่อผู้ใช้ซ้ำ กรุณากรอกใหม่อีกครั้ง',
+        );
+      } else {
+        _showErrorDialog(
+          title: isEnglish ? 'Registration Failed' : 'การสมัครสมาชิกล้มเหลว',
+          desc: isEnglish
+              ? 'An unexpected error occurred. Please try again later.'
+              : 'เกิดข้อผิดพลาดที่ไม่คาดคิด กรุณาลองใหม่อีกครั้งในภายหลัง',
+        );
+      }
     } finally {
       setState(() {
         isLoading = false;
@@ -240,7 +246,7 @@ class _RegisterPageState extends State<RegisterPage> {
           setState(() {
             selectedAccountType = type;
             if (type == 'Member') {
-              _selectedImage = null; // Clear image if switching to Member
+              _selectedImage = null;
             }
           });
         },
@@ -363,7 +369,7 @@ class _RegisterPageState extends State<RegisterPage> {
                       onPasswordChanged: (value) => password = value,
                       onConfirmPasswordChanged: (
                         value,
-                      ) {}, // Handle confirm password validation in RegisterForm itself
+                      ) {},
                       onFirstNameChanged: (value) => firstName = value,
                       onLastNameChanged: (value) => lastName = value,
                       onIdCardChanged: (value) => idCardNumber = value,

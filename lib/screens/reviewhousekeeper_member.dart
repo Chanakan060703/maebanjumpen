@@ -7,14 +7,11 @@ import 'package:maebanjumpen/model/review.dart';
 import 'package:maebanjumpen/model/hire.dart';
 import 'package:maebanjumpen/model/hirer.dart';
 import 'package:maebanjumpen/screens/hirelist_member.dart';
-
 import 'package:maebanjumpen/screens/home_member.dart';
 import 'package:maebanjumpen/screens/deposit_member.dart';
 import 'package:maebanjumpen/screens/profile_member.dart';
-
 import 'package:http/http.dart' as http;
 import 'package:maebanjumpen/constant/constant_value.dart';
-
 
 class ReviewHousekeeperPage extends StatefulWidget {
   final Hire hire;
@@ -35,30 +32,32 @@ class ReviewHousekeeperPage extends StatefulWidget {
 class _ReviewHousekeeperPageState extends State<ReviewHousekeeperPage> {
   int _rating = 0;
   final TextEditingController _reviewTextController = TextEditingController();
-  final int _selectedIndex = 2; // กำหนดค่าเริ่มต้นให้เป็น Index ของ HireList (Booking)
+  final int _selectedIndex = 2;
   bool _isLoading = false;
 
   late final String _housekeeperName;
-  late final String? _housekeeperImage; // เปลี่ยนเป็น String? เพื่อเก็บ URL
+  late final String? _housekeeperImage;
   late final String _hireId;
   late final DateTime _hireDate;
   late final String _hireName;
 
   final Reviewcontroller _reviewApi = Reviewcontroller();
-  final Hirecontroller _hireApi = Hirecontroller(); // ไม่ได้ใช้งานในโค้ดนี้ แต่เก็บไว้เผื่อ
+  final Hirecontroller _hireApi = Hirecontroller();
 
   @override
   void initState() {
     super.initState();
     final hire = widget.hire;
 
-    // เพิ่ม ? ให้ person ด้วย เพื่อป้องกัน null safety
-    _housekeeperName = hire.housekeeper?.person?.firstName ?? (widget.isEnglish ? 'N/A' : 'ไม่ระบุ');
-    // ดึง URL รูปภาพจาก model โดยตรง และเพิ่ม ? ให้ person ด้วย
+    _housekeeperName =
+        hire.housekeeper?.person?.firstName ??
+        (widget.isEnglish ? 'N/A' : 'ไม่ระบุ');
     _housekeeperImage = hire.housekeeper?.person?.pictureUrl;
     _hireId = hire.hireId?.toString() ?? '0';
     _hireDate = hire.startDate ?? DateTime.now();
-    _hireName = hire.hireName ?? (widget.isEnglish ? 'No Service Name' : 'ไม่มีชื่องาน');
+    _hireName =
+        hire.hireName ??
+        (widget.isEnglish ? 'No Service Name' : 'ไม่มีชื่องาน');
   }
 
   @override
@@ -87,60 +86,73 @@ class _ReviewHousekeeperPageState extends State<ReviewHousekeeperPage> {
   }
 
   void _showSnackbar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _submitReview() async {
-  if (!_canSubmit) {
-    _showSnackbar(widget.isEnglish ? 'Please rate and write a review.' : 'โปรดให้คะแนนและเขียนรีวิวก่อนส่ง');
-    return;
-  }
-
-  FocusScope.of(context).unfocus();
-  setState(() => _isLoading = true);
-
-  try {
-    final now = DateTime.now();
-    final String reviewDateTime = now.toIso8601String();
-    final int? hireId = int.tryParse(_hireId);
-
-    if (hireId == null) {
-      throw Exception(widget.isEnglish ? 'Invalid hireId: $_hireId' : 'รหัสการจ้างไม่ถูกต้อง: $_hireId');
+    if (!_canSubmit) {
+      _showSnackbar(
+        widget.isEnglish
+            ? 'Please rate and write a review.'
+            : 'โปรดให้คะแนนและเขียนรีวิวก่อนส่ง',
+      );
+      return;
     }
 
-    final response = await _reviewApi.addReview(
-      reviewMessage: _reviewTextController.text.trim(),
-      reviewDate: reviewDateTime,
-      score: _rating,
-      hireId: hireId,
-    );
+    FocusScope.of(context).unfocus();
+    setState(() => _isLoading = true);
 
-    // --- เริ่มต้นการจัดการ error ที่ดีขึ้น ---
-    if (response['statusCode'] == 409) {
-      _showSnackbar(widget.isEnglish ? 'This job has already been reviewed.' : 'งานนี้ถูกรีวิวไปแล้ว');
-    } else if (response.containsKey('reviewId')) {
-      _showSnackbar(widget.isEnglish ? 'Review submitted successfully!' : 'ส่งรีวิวเรียบร้อยแล้ว!');
-      if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => HireListPage(user: widget.user, isEnglish: widget.isEnglish)),
+    try {
+      final now = DateTime.now();
+      final String reviewDateTime = now.toIso8601String();
+      final int? hireId = int.tryParse(_hireId);
+
+      if (hireId == null) {
+        throw Exception(
+          widget.isEnglish
+              ? 'Invalid hireId: $_hireId'
+              : 'รหัสการจ้างไม่ถูกต้อง: $_hireId',
         );
       }
-    } else {
-      // เกิดข้อผิดพลาดทั่วไป ใช้ข้อความที่ Controller ให้มา
-      _showSnackbar(widget.isEnglish ? 'Failed to submit review: ${response['message'] ?? 'Unknown error'}' : 'ส่งรีวิวไม่สำเร็จ: ${response['message'] ?? 'เกิดข้อผิดพลาดไม่ทราบสาเหตุ'}');
-    }
-    // --- สิ้นสุดการจัดการ error ที่ดีขึ้น ---
 
-  } catch (e) {
-    debugPrint('Error submitting review: $e');
-    _showSnackbar(widget.isEnglish ? 'An error occurred: $e' : 'เกิดข้อผิดพลาด: $e');
-  } finally {
-    if (mounted) {
-      setState(() => _isLoading = false);
+      final response = await _reviewApi.addReview(
+        reviewMessage: _reviewTextController.text.trim(),
+        reviewDate: reviewDateTime,
+        score: _rating,
+        hireId: hireId,
+      );
+
+      if (response.containsKey('reviewId')) {
+        _showSnackbar(
+          widget.isEnglish
+              ? 'Review submitted successfully!'
+              : 'ส่งรีวิวเรียบร้อยแล้ว!',
+        );
+        if (mounted) {
+          // ส่งค่า true กลับไปเมื่อรีวิวสำเร็จ
+          // เพื่อแจ้งให้หน้า HireListPage โหลดข้อมูลใหม่
+          Navigator.pop(context, true); 
+        }
+      } else {
+        _showSnackbar(
+          widget.isEnglish
+              ? 'Failed to submit review: ${response['message'] ?? 'Unknown error'}'
+              : 'ส่งรีวิวไม่สำเร็จ: ${response['message'] ?? 'เกิดข้อผิดพลาดไม่ทราบสาเหตุ'}',
+        );
+      }
+    } catch (e) {
+      debugPrint('Error submitting review: $e');
+      _showSnackbar(
+        widget.isEnglish ? 'An error occurred: $e' : 'เกิดข้อผิดพลาด: $e',
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
-}
 
   void _onItemTapped(int index) {
     final user = widget.user;
@@ -148,7 +160,7 @@ class _ReviewHousekeeperPageState extends State<ReviewHousekeeperPage> {
     final pages = [
       HomePage(user: user, isEnglish: isEnglish),
       CardpageMember(user: user, isEnglish: isEnglish),
-      HireListPage(user: user, isEnglish: isEnglish),
+      HireListPage(user: user, isEnglish: isEnglish,),
       ProfileMemberPage(user: user, isEnglish: isEnglish),
     ];
 
@@ -172,29 +184,38 @@ class _ReviewHousekeeperPageState extends State<ReviewHousekeeperPage> {
   AppBar _buildAppBar() {
     return AppBar(
       backgroundColor: Colors.white,
-        elevation: 0.5,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.red),
-        onPressed: () => Navigator.pop(context),
+      elevation: 0.5,
+      leading: IconButton(
+        icon: const Icon(Icons.arrow_back, color: Colors.red),
+        onPressed: () {
+          // ส่งค่า true กลับไปเมื่อผู้ใช้กดปุ่มย้อนกลับ
+          // ซึ่งจะกระตุ้นให้หน้าก่อนหน้า (HireListPage) โหลดข้อมูลใหม่
+          Navigator.pop(context, true); 
+        },
       ),
       title: Text(
         widget.isEnglish ? 'Review Housekeeper' : 'รีวิวแม่บ้าน',
-        style: const TextStyle(color: Colors.black, fontSize: 18, fontWeight: FontWeight.w500),
+        style: const TextStyle(
+          color: Colors.black,
+          fontSize: 18,
+          fontWeight: FontWeight.w500,
+        ),
       ),
       centerTitle: true,
     );
   }
 
   Widget _buildReviewBody() {
-    // ตรวจสอบและเลือก ImageProvider ที่เหมาะสม
     ImageProvider housekeeperImageProvider;
     if (_housekeeperImage != null &&
-        _housekeeperImage.isNotEmpty &&
-        (_housekeeperImage.startsWith('http://') || _housekeeperImage.startsWith('https://'))) {
-      housekeeperImageProvider = NetworkImage(_housekeeperImage);
+        _housekeeperImage!.isNotEmpty &&
+        (_housekeeperImage!.startsWith('http://') ||
+            _housekeeperImage!.startsWith('https://'))) {
+      housekeeperImageProvider = NetworkImage(_housekeeperImage!);
     } else {
-      // Fallback to a local asset image if URL is null, empty, or not a valid URL
-      housekeeperImageProvider = const AssetImage('assets/placeholder_housekeeper.png');
+      housekeeperImageProvider = const AssetImage(
+        'assets/placeholder_housekeeper.png',
+      );
     }
 
     return SingleChildScrollView(
@@ -202,7 +223,9 @@ class _ReviewHousekeeperPageState extends State<ReviewHousekeeperPage> {
       child: Column(
         children: [
           Text(
-            widget.isEnglish ? 'Rate Your Experience' : 'ให้คะแนนประสบการณ์ของคุณ',
+            widget.isEnglish
+                ? 'Rate Your Experience'
+                : 'ให้คะแนนประสบการณ์ของคุณ',
             style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 16),
@@ -242,7 +265,11 @@ class _ReviewHousekeeperPageState extends State<ReviewHousekeeperPage> {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.calendar_today_outlined, color: Colors.red, size: 16),
+              const Icon(
+                Icons.calendar_today_outlined,
+                color: Colors.red,
+                size: 16,
+              ),
               const SizedBox(width: 4),
               Text(
                 '${_formatDate(_hireDate)} • ${widget.hire.startTime ?? ''} - ${widget.hire.endTime ?? ''}',
@@ -271,8 +298,13 @@ class _ReviewHousekeeperPageState extends State<ReviewHousekeeperPage> {
             textInputAction: TextInputAction.newline,
             enabled: !_isLoading,
             decoration: InputDecoration(
-              hintText: widget.isEnglish ? 'Write your review...' : 'เขียนรีวิวของคุณ...',
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+              hintText:
+                  widget.isEnglish
+                      ? 'Write your review...'
+                      : 'เขียนรีวิวของคุณ...',
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
             onChanged: (_) => setState(() {}),
           ),
@@ -284,23 +316,32 @@ class _ReviewHousekeeperPageState extends State<ReviewHousekeeperPage> {
               onPressed: _canSubmit ? _submitReview : null,
               style: ElevatedButton.styleFrom(
                 backgroundColor: _canSubmit ? Colors.red : Colors.grey,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
               ),
-              child: _isLoading
-                  ? const SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: CircularProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                        strokeWidth: 2.5,
-                      ),
-                    )
-                  : Text(
-                      widget.isEnglish ? 'Submit Review' : 'ส่งรีวิว',
-                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.white),
-                    ),
+              child:
+                  _isLoading
+                      ? const SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
+                            strokeWidth: 2.5,
+                          ),
+                        )
+                      : Text(
+                          widget.isEnglish ? 'Submit Review' : 'ส่งรีวิว',
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
             ),
-          )
+          ),
         ],
       ),
     );

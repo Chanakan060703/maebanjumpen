@@ -13,6 +13,7 @@ import 'package:maebanjumpen/screens/profile_member.dart';
 import 'package:maebanjumpen/styles/hire_form_styles.dart';
 import 'package:maebanjumpen/widgets/hire_dropdown_form_field.dart';
 
+
 class HireHousekeeperPage extends StatefulWidget {
   final Hirer user;
   final Housekeeper housekeeper;
@@ -30,7 +31,7 @@ class HireHousekeeperPage extends StatefulWidget {
 }
 
 class _HireHousekeeperPageState extends State<HireHousekeeperPage> {
-  int _currentIndex = 2; // Index สำหรับ BottomNavigationBar
+  int _currentIndex = 2; // Index for BottomNavigationBar
 
   bool _isDefaultAddress = false;
 
@@ -43,7 +44,7 @@ class _HireHousekeeperPageState extends State<HireHousekeeperPage> {
   final FocusNode _detailWorkFocusNode = FocusNode();
   final FocusNode _startDateFocusNode = FocusNode();
   final FocusNode _startTimeFocusNode = FocusNode();
-  final FocusNode _endTimeFocusNode = FocusNode();
+  // final FocusNode _endTimeFocusNode = FocusNode(); // **ลบออก**
 
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _subdistrictController = TextEditingController();
@@ -54,17 +55,17 @@ class _HireHousekeeperPageState extends State<HireHousekeeperPage> {
   final TextEditingController _detailWorkController = TextEditingController();
   final TextEditingController _startDateController = TextEditingController();
   final TextEditingController _startTimeController = TextEditingController();
-  final TextEditingController _endTimeController = TextEditingController();
+  // final TextEditingController _endTimeController = TextEditingController(); // **ลบออก**
 
   DateTime? _selectedStartDate;
   TimeOfDay? _selectedStartTime;
-  TimeOfDay? _selectedEndTime;
+  // TimeOfDay? _selectedEndTime; // **ลบออก**
 
   String? _selectedHireName;
 
   final Map<String, bool> _selectedAdditionalServices = {};
   double _totalPaymentAmount = 0.0;
-  final double _servicePricePerItem = 100.0;
+  // final double _servicePricePerItem = 100.0; // **ลบออก**
 
   final _formKey = GlobalKey<FormState>();
 
@@ -80,7 +81,7 @@ class _HireHousekeeperPageState extends State<HireHousekeeperPage> {
     _detailWorkFocusNode.addListener(_handleFocusChange);
     _startDateFocusNode.addListener(_handleFocusChange);
     _startTimeFocusNode.addListener(_handleFocusChange);
-    _endTimeFocusNode.addListener(_handleFocusChange);
+    // _endTimeFocusNode.addListener(_handleFocusChange); // **ลบออก**
 
     if (widget.housekeeper.housekeeperSkills != null) {
       for (var skill in widget.housekeeper.housekeeperSkills!) {
@@ -146,31 +147,32 @@ class _HireHousekeeperPageState extends State<HireHousekeeperPage> {
         // รีเซ็ตค่าเวลาเมื่อเลือกวันที่ใหม่
         _selectedStartTime = null;
         _startTimeController.clear();
-        _selectedEndTime = null;
-        _endTimeController.clear();
+        // _selectedEndTime = null; // **ลบออก**
+        // _endTimeController.clear(); // **ลบออก**
         _calculateTotalPayment();
       });
     }
   }
 
-  Future<void> _selectTime(BuildContext context, bool isStartTime) async {
+  Future<void> _selectTime(BuildContext context) async {
     // เพิ่มการตรวจสอบว่าเลือกวันที่แล้วหรือยัง
     if (_selectedStartDate == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            widget.isEnglish ? 'Please select a date first.' : 'กรุณาเลือกวันที่ก่อน',
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              widget.isEnglish ? 'Please select a date first.' : 'กรุณาเลือกวันที่ก่อน',
+            ),
           ),
-        ),
-      );
+        );
+      }
       return;
     }
 
     final now = DateTime.now();
     final TimeOfDay? picked = await showTimePicker(
       context: context,
-      initialTime:
-          isStartTime ? (_selectedStartTime ?? TimeOfDay.now()) : (_selectedEndTime ?? TimeOfDay.now()),
+      initialTime: (_selectedStartTime ?? TimeOfDay.now()),
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
@@ -200,25 +202,22 @@ class _HireHousekeeperPageState extends State<HireHousekeeperPage> {
       );
 
       // ตรวจสอบว่าเวลาที่เลือกย้อนหลังหรือไม่ (เฉพาะเวลาเริ่มต้น)
-      if (isStartTime && selectedDateTime.isBefore(now)) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              widget.isEnglish ? 'Start time cannot be in the past.' : 'เวลาเริ่มต้นไม่สามารถย้อนหลังได้',
+      if (selectedDateTime.isBefore(now)) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                widget.isEnglish ? 'Start time cannot be in the past.' : 'เวลาเริ่มต้นไม่สามารถย้อนหลังได้',
+              ),
             ),
-          ),
-        );
+          );
+        }
         return;
       }
 
       setState(() {
-        if (isStartTime) {
-          _selectedStartTime = picked;
-          _startTimeController.text = picked.format(context);
-        } else {
-          _selectedEndTime = picked;
-          _endTimeController.text = picked.format(context);
-        }
+        _selectedStartTime = picked;
+        _startTimeController.text = picked.format(context);
         _calculateTotalPayment();
       });
     }
@@ -229,7 +228,8 @@ class _HireHousekeeperPageState extends State<HireHousekeeperPage> {
     double additionalServiceCost = 0.0;
     _selectedAdditionalServices.forEach((service, isSelected) {
       if (isSelected) {
-        additionalServiceCost += _servicePricePerItem;
+        // **แก้ไข: ราคาบริการเสริมเท่ากับ dailyRate**
+        additionalServiceCost += (widget.housekeeper.dailyRate ?? 0.0);
       }
     });
 
@@ -250,7 +250,7 @@ class _HireHousekeeperPageState extends State<HireHousekeeperPage> {
     _detailWorkController.dispose();
     _startDateController.dispose();
     _startTimeController.dispose();
-    _endTimeController.dispose();
+    // _endTimeController.dispose(); // **ลบออก**
 
     _phoneFocusNode.removeListener(_handleFocusChange);
     _provinceFocusNode.removeListener(_handleFocusChange);
@@ -261,7 +261,7 @@ class _HireHousekeeperPageState extends State<HireHousekeeperPage> {
     _detailWorkFocusNode.removeListener(_handleFocusChange);
     _startDateFocusNode.removeListener(_handleFocusChange);
     _startTimeFocusNode.removeListener(_handleFocusChange);
-    _endTimeFocusNode.removeListener(_handleFocusChange);
+    // _endTimeFocusNode.removeListener(_handleFocusChange); // **ลบออก**
 
     _phoneFocusNode.dispose();
     _provinceFocusNode.dispose();
@@ -272,7 +272,7 @@ class _HireHousekeeperPageState extends State<HireHousekeeperPage> {
     _detailWorkFocusNode.dispose();
     _startDateFocusNode.dispose();
     _startTimeFocusNode.dispose();
-    _endTimeFocusNode.dispose();
+    // _endTimeFocusNode.dispose(); // **ลบออก**
     super.dispose();
   }
 
@@ -312,10 +312,10 @@ class _HireHousekeeperPageState extends State<HireHousekeeperPage> {
       formattedStartTime = '${_selectedStartTime!.hour.toString().padLeft(2, '0')}:${_selectedStartTime!.minute.toString().padLeft(2, '0')}';
     }
 
-    String? formattedEndTime;
-    if (_selectedEndTime != null) {
-      formattedEndTime = '${_selectedEndTime!.hour.toString().padLeft(2, '0')}:${_selectedEndTime!.minute.toString().padLeft(2, '0')}';
-    }
+    // String? formattedEndTime; // **ลบออก**
+    // if (_selectedEndTime != null) {
+    //   formattedEndTime = '${_selectedEndTime!.hour.toString().padLeft(2, '0')}:${_selectedEndTime!.minute.toString().padLeft(2, '0')}';
+    // }
 
     DateTime? fullStartDate;
     if (_selectedStartDate != null) {
@@ -348,7 +348,7 @@ class _HireHousekeeperPageState extends State<HireHousekeeperPage> {
       hireDate: DateTime.now(),
       startDate: fullStartDate,
       startTime: formattedStartTime ?? '',
-      endTime: formattedEndTime ?? '',
+      endTime: '', // **แก้ไข: กำหนดเป็นค่าว่างแทน**
       location: location,
       jobStatus: 'pending',
       progressionImageUrls: null,
@@ -422,6 +422,28 @@ class _HireHousekeeperPageState extends State<HireHousekeeperPage> {
 
   void _showConfirmationDialog() {
     if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    // **เพิ่ม: ตรวจสอบยอดเงินคงเหลือ**
+    if (_totalPaymentAmount > (widget.user.balance ?? 0.0)) {
+      showDialog(
+        context: context,
+        builder: (BuildContext dialogContext) {
+          return AlertDialog(
+            title: Text(widget.isEnglish ? 'Insufficient Balance' : 'ยอดเงินไม่เพียงพอ'),
+            content: Text(widget.isEnglish ? 'Your balance is not enough to make this payment.' : 'ยอดเงินคงเหลือของคุณไม่เพียงพอ'),
+            actions: <Widget>[
+              TextButton(
+                onPressed: () {
+                  Navigator.of(dialogContext).pop();
+                },
+                child: Text(widget.isEnglish ? 'OK' : 'ตกลง'),
+              ),
+            ],
+          );
+        },
+      );
       return;
     }
 
@@ -577,10 +599,10 @@ class _HireHousekeeperPageState extends State<HireHousekeeperPage> {
                           _selectedHireName = null;
                           _startDateController.clear();
                           _startTimeController.clear();
-                          _endTimeController.clear();
+                          // _endTimeController.clear(); // **ลบออก**
                           _selectedStartDate = null;
                           _selectedStartTime = null;
-                          _selectedEndTime = null;
+                          // _selectedEndTime = null; // **ลบออก**
                           _selectedAdditionalServices.updateAll(
                             (key, value) => false,
                           );
@@ -667,8 +689,8 @@ class _HireHousekeeperPageState extends State<HireHousekeeperPage> {
               const SizedBox(height: 8.0),
               Text(
                 widget.isEnglish
-                    ? '(Base rate: ฿${widget.housekeeper.dailyRate?.toStringAsFixed(0)}, Additional service: ฿${_servicePricePerItem.toStringAsFixed(0)}/item)'
-                    : '(ค่าบริการพื้นฐาน: ฿${widget.housekeeper.dailyRate?.toStringAsFixed(0)}, บริการเพิ่มเติม: ฿${_servicePricePerItem.toStringAsFixed(0)}/รายการ)',
+                    ? '(Base rate: ฿${widget.housekeeper.dailyRate?.toStringAsFixed(0)}, Additional service: ฿${widget.housekeeper.dailyRate?.toStringAsFixed(0)}/item)' // **แก้ไข: แสดงราคาตาม dailyRate**
+                    : '(ค่าบริการพื้นฐาน: ฿${widget.housekeeper.dailyRate?.toStringAsFixed(0)}, บริการเพิ่มเติม: ฿${widget.housekeeper.dailyRate?.toStringAsFixed(0)}/รายการ)', // **แก้ไข: แสดงราคาตาม dailyRate**
                 style: HireFormStyles.priceDetailTextStyle,
               ),
               Container(
@@ -709,7 +731,7 @@ class _HireHousekeeperPageState extends State<HireHousekeeperPage> {
                 controller: _startTimeController,
                 focusNode: _startTimeFocusNode,
                 readOnly: true,
-                onTap: () => _selectTime(context, true),
+                onTap: () => _selectTime(context), // **แก้ไข: ลบ `isStartTime`**
                 labelText: widget.isEnglish ? 'Start Time' : 'เวลาเริ่มงาน',
                 hintText: widget.isEnglish ? 'Select start time' : 'เลือกเวลาเริ่มต้น',
                 suffixIcon: const Icon(Icons.access_time, color: Colors.grey),
@@ -720,29 +742,29 @@ class _HireHousekeeperPageState extends State<HireHousekeeperPage> {
                   return null;
                 },
               ),
-              const SizedBox(height: 16.0),
-              HireTextFormField(
-                controller: _endTimeController,
-                focusNode: _endTimeFocusNode,
-                readOnly: true,
-                onTap: () => _selectTime(context, false),
-                labelText: widget.isEnglish ? 'End Time' : 'เวลาสิ้นสุดงาน',
-                hintText: widget.isEnglish ? 'Select end time' : 'เลือกเวลาสิ้นสุด',
-                suffixIcon: const Icon(Icons.access_time, color: Colors.grey),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return widget.isEnglish ? 'Please select an end time.' : 'กรุณาเลือกเวลาสิ้นสุดงาน';
-                  }
-                  if (_selectedStartTime != null && _selectedEndTime != null) {
-                    final startDateTime = DateTime(2000, 1, 1, _selectedStartTime!.hour, _selectedStartTime!.minute);
-                    final endDateTime = DateTime(2000, 1, 1, _selectedEndTime!.hour, _selectedEndTime!.minute);
-                    if (endDateTime.isBefore(startDateTime)) {
-                      return widget.isEnglish ? 'End time must be after start time.' : 'เวลาสิ้นสุดต้องมากกว่าเวลาเริ่มงาน';
-                    }
-                  }
-                  return null;
-                },
-              ),
+              // const SizedBox(height: 16.0), // **ลบออก**
+              // HireTextFormField( // **ลบออก**
+              //   controller: _endTimeController, // **ลบออก**
+              //   focusNode: _endTimeFocusNode, // **ลบออก**
+              //   readOnly: true, // **ลบออก**
+              //   onTap: () => _selectTime(context, false), // **ลบออก**
+              //   labelText: widget.isEnglish ? 'End Time' : 'เวลาสิ้นสุดงาน', // **ลบออก**
+              //   hintText: widget.isEnglish ? 'Select end time' : 'เลือกเวลาสิ้นสุด', // **ลบออก**
+              //   suffixIcon: const Icon(Icons.access_time, color: Colors.grey), // **ลบออก**
+              //   validator: (value) { // **ลบออก**
+              //     if (value == null || value.isEmpty) { // **ลบออก**
+              //       return widget.isEnglish ? 'Please select an end time.' : 'กรุณาเลือกเวลาสิ้นสุดงาน'; // **ลบออก**
+              //     } // **ลบออก**
+              //     if (_selectedStartTime != null && _selectedEndTime != null) { // **ลบออก**
+              //       final startDateTime = DateTime(2000, 1, 1, _selectedStartTime!.hour, _selectedStartTime!.minute); // **ลบออก**
+              //       final endDateTime = DateTime(2000, 1, 1, _selectedEndTime!.hour, _selectedEndTime!.minute); // **ลบออก**
+              //       if (endDateTime.isBefore(startDateTime)) { // **ลบออก**
+              //         return widget.isEnglish ? 'End time must be after start time.' : 'เวลาสิ้นสุดต้องมากกว่าเวลาเริ่มงาน'; // **ลบออก**
+              //       } // **ลบออก**
+              //     } // **ลบออก**
+              //     return null; // **ลบออก**
+              //   }, // **ลบออก**
+              // ), // **ลบออก**
               const SizedBox(height: 16.0),
               HireTextFormField(
                 controller: _phoneController,

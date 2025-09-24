@@ -1,6 +1,7 @@
 import 'package:maebanjumpen/model/hirer.dart';
 import 'package:maebanjumpen/model/housekeeper.dart';
 import 'package:maebanjumpen/model/review.dart';
+import 'package:maebanjumpen/model/report.dart'; // เพิ่ม import สำหรับคลาส Report
 
 class Hire {
   final int? hireId;
@@ -13,12 +14,12 @@ class Hire {
   final String? endTime;
   final String? location;
   final String? jobStatus;
-  // ** แก้ไข: เปลี่ยนชนิดข้อมูลจาก String เป็น List<String> **
   final List<String>? progressionImageUrls;
 
   final Hirer? hirer;
   final Housekeeper? housekeeper;
   final Review? review;
+  final Report? report; // *** นี่คือส่วนที่เพิ่มเข้ามาใหม่ ***
 
   Hire({
     this.hireId,
@@ -32,14 +33,13 @@ class Hire {
     this.location,
     this.jobStatus,
     this.progressionImageUrls,
-
     this.hirer,
     this.housekeeper,
     this.review,
+    this.report, // *** เพิ่มใน constructor ***
   });
 
   factory Hire.fromJson(Map<String, dynamic> json) {
-    // ** แก้ไข: แปลงข้อมูลจาก dynamic เป็น List<String> **
     List<String>? progressionImageUrls;
     if (json['progressionImageUrls'] != null) {
       progressionImageUrls = (json['progressionImageUrls'] as List)
@@ -58,16 +58,16 @@ class Hire {
       endTime: json['endTime'] as String?,
       location: json['location'] as String?,
       jobStatus: json['jobStatus'] as String?,
-      progressionImageUrls: progressionImageUrls, // ** ใช้ตัวแปรที่แปลงแล้ว **
+      progressionImageUrls: progressionImageUrls,
       hirer: json['hirer'] != null ? Hirer.fromJson(json['hirer'] as Map<String, dynamic>) : null,
       housekeeper: json['housekeeper'] != null ? Housekeeper.fromJson(json['housekeeper'] as Map<String, dynamic>) : null,
       review: json['review'] != null && json['review'] is! int
               ? Review.fromJson(json['review'] as Map<String, dynamic>)
               : null,
+      report: json['report'] != null ? Report.fromJson(json['report'] as Map<String, dynamic>) : null, // *** เพิ่มใน factory ***
     );
   }
 
-  // ไม่ต้องแก้ไขส่วนนี้ เพราะเราไม่จำเป็นต้องส่งรายการรูปภาพกลับไปให้ API
   @override
   Map<String, dynamic> toJson() {
     final Map<String, dynamic> data = <String, dynamic>{};
@@ -81,6 +81,9 @@ class Hire {
     data['endTime'] = endTime;
     data['location'] = location;
     data['jobStatus'] = jobStatus;
+
+    // เราไม่ส่งรายการรูปภาพกลับไปให้ API
+    // data['progressionImageUrls'] = progressionImageUrls;
 
     if (hirer != null && hirer!.id != null) {
       data['hirer'] = {
@@ -107,6 +110,15 @@ class Hire {
     } else {
       data['review'] = null;
     }
+
+    if (report != null && report!.reportId != null) {
+      data['report'] = {
+        'reportId': report!.reportId,
+      };
+    } else {
+      data['report'] = null;
+    }
+
     return data;
   }
 
@@ -121,13 +133,13 @@ class Hire {
     String? endTime,
     String? location,
     String? jobStatus,
-    // ** แก้ไข: เปลี่ยนชนิดข้อมูลเป็น List<String> **
     List<String>? progressionImageUrls,
     List<String>? services,
     dynamic wage,
     Hirer? hirer,
     Housekeeper? housekeeper,
-    Review? review, 
+    Review? review,
+    Report? report, // *** เพิ่มใน copyWith ***
   }) {
     return Hire(
       hireId: hireId ?? this.hireId,
@@ -140,11 +152,11 @@ class Hire {
       endTime: endTime ?? this.endTime,
       location: location ?? this.location,
       jobStatus: jobStatus ?? this.jobStatus,
-      // ** แก้ไข: ใช้ตัวแปรที่แก้ไขแล้ว **
       progressionImageUrls: progressionImageUrls ?? this.progressionImageUrls,
       hirer: hirer ?? this.hirer,
       housekeeper: housekeeper ?? this.housekeeper,
       review: review ?? this.review,
+      report: report ?? this.report, // *** เพิ่มใน return ***
     );
   }
 }

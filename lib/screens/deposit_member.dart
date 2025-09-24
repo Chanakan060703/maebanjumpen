@@ -3,7 +3,8 @@ import 'package:maebanjumpen/model/hirer.dart';
 import 'package:intl/intl.dart';
 import 'package:maebanjumpen/screens/deposit_qr_code_member.dart';
 import 'package:maebanjumpen/screens/home_member.dart';
-import 'package:maebanjumpen/controller/memberController.dart'; 
+import 'package:maebanjumpen/controller/memberController.dart';
+import 'package:awesome_dialog/awesome_dialog.dart';
 
 class CardpageMember extends StatefulWidget {
   final Hirer user;
@@ -20,18 +21,16 @@ class CardpageMember extends StatefulWidget {
 }
 
 class _CardpageMemberState extends State<CardpageMember> {
-
   final TextEditingController _customAmountController = TextEditingController();
-  double? _selectedAmount; // เก็บจำนวนเงินที่ถูกเลือกจากปุ่ม Quick Top Up
-
+  double? _selectedAmount;
   late Hirer _currentUser;
   late String _displayBalance;
-  bool _isFetchingBalance = false; 
+  bool _isFetchingBalance = false;
 
   @override
   void initState() {
     super.initState();
-    _currentUser = widget.user; 
+    _currentUser = widget.user;
     _updateBalanceDisplay();
   }
 
@@ -41,46 +40,87 @@ class _CardpageMemberState extends State<CardpageMember> {
     _fetchLatestBalance();
   }
 
+  @override
+  void dispose() {
+    _customAmountController.dispose();
+    super.dispose();
+  }
 
   void _updateBalanceDisplay() {
     _displayBalance = NumberFormat('#,##0.00').format(_currentUser.balance ?? 0.0);
   }
 
-  // *** เพิ่ม Method นี้เพื่อดึง Balance ล่าสุดจาก Backend ***
   Future<void> _fetchLatestBalance() async {
-    if (_isFetchingBalance) return; // ป้องกันการเรียกซ้ำซ้อน
+  if (_isFetchingBalance) return;
 
-    setState(() {
-      _isFetchingBalance = true;
-    });
+  // setState() แรกนี้ปลอดภัยเพราะถูกเรียกทันที
+  setState(() {
+    _isFetchingBalance = true;
+  });
 
-    try {
-      final MemberController memberController = MemberController();
-      // สมมติว่า memberController มี method สำหรับดึงข้อมูล Hirer ล่าสุด
-      // และคุณมี ID ของ Hirer อยู่ใน widget.user.id
-      // คุณอาจจะต้องส่ง token หรือ session ID ไปด้วย
-      final Hirer? latestHirerData = await memberController.getHirerById(widget.user.id!.toString()); // *** เปลี่ยนตาม method ใน MemberController ของคุณ ***
+  try {
+    final MemberController memberController = MemberController();
+    final Hirer? latestHirerData = await memberController.getHirerById(widget.user.id!.toString());
 
-      if (latestHirerData != null) {
-        setState(() {
-          _currentUser = latestHirerData; // อัปเดต user object ทั้งหมด
-          _updateBalanceDisplay(); // อัปเดตการแสดงผล balance
-        });
-        print('Balance updated successfully to: ${_currentUser.balance}');
-      } else {
-        print('Failed to fetch latest hirer data.');
-      }
-    } catch (e) {
-      print('Error fetching latest balance: $e');
-      // อาจจะแสดง Snackbar บอกผู้ใช้ว่าโหลดข้อมูลไม่สำเร็จ
-    } finally {
+    // ✅ เพิ่มการตรวจสอบ `mounted` ที่นี่
+    // ถ้า widget ไม่ได้อยู่ใน tree แล้ว จะไม่ทำต่อ
+    if (!mounted) return;
+
+    if (latestHirerData != null) {
       setState(() {
-        _isFetchingBalance = false;
+        _currentUser = latestHirerData;
+        _updateBalanceDisplay();
       });
+      print('Balance updated successfully to: ${_currentUser.balance}');
+    } else {
+      print('Failed to fetch latest hirer data.');
     }
+  } catch (e) {
+    print('Error fetching latest balance: $e');
+    // ✅ เพิ่มการตรวจสอบ `mounted` ที่นี่
+    if (!mounted) return;
+  } finally {
+    // ✅ เพิ่มการตรวจสอบ `mounted` ที่นี่
+    if (!mounted) return;
+    setState(() {
+      _isFetchingBalance = false;
+    });
+  }
+}
+
+  // ฟังก์ชันสำหรับแสดง AwesomeDialog
+  void _showErrorDialog({String? title, String? desc}) {
+    if (!mounted) return;
+
+    AwesomeDialog(
+      context: context,
+      dialogType: DialogType.noHeader,
+      animType: AnimType.bottomSlide,
+      customHeader: CircleAvatar(
+        backgroundColor: Colors.red.shade100,
+        radius: 40,
+        child: const Icon(Icons.close_rounded, color: Colors.red, size: 40),
+      ),
+      title: title ?? (widget.isEnglish ? 'Oops!' : 'เกิดข้อผิดพลาด'),
+      desc: desc ?? (widget.isEnglish ? 'An unexpected error occurred.' : 'เกิดข้อผิดพลาดที่ไม่คาดคิด'),
+      btnOkText: widget.isEnglish ? 'OK' : 'ตกลง',
+      btnOkOnPress: () {},
+      btnOkColor: Colors.redAccent,
+      titleTextStyle: const TextStyle(
+        fontSize: 22,
+        fontWeight: FontWeight.bold,
+        color: Colors.red,
+      ),
+      descTextStyle: const TextStyle(fontSize: 16),
+      buttonsTextStyle: const TextStyle(
+        fontWeight: FontWeight.bold,
+        color: Colors.white,
+      ),
+    ).show();
   }
 
-  void _handleTopUp() async { // *** เพิ่ม async ตรงนี้ ***
+
+  void _handleTopUp() async {
     double? amount;
     if (_selectedAmount != null) {
       amount = _selectedAmount;
@@ -89,9 +129,7 @@ class _CardpageMemberState extends State<CardpageMember> {
     }
 
     if (amount != null && amount > 0) {
-      // Navigate to QR Code page with the selected amount
-      // *** ใช้ await เพื่อรอจนกว่า DepositQrCodePage จะ pop กลับมา ***
-      await Navigator.push( // เพิ่ม await ตรงนี้
+      await Navigator.push(
         context,
         MaterialPageRoute(
           builder: (context) => DepositQrCodePage(
@@ -101,27 +139,16 @@ class _CardpageMemberState extends State<CardpageMember> {
           ),
         ),
       );
-
-      // *** เมื่อ DepositQrCodePage pop กลับมา (ไม่ว่าจะเป็นจาก PaymentSuccessfulPage
-      // หรือกดปุ่ม back ใน DepositQrCodePage เอง) ให้เรียกโหลด balance ใหม่
       print('Returned from DepositQrCodePage. Fetching latest balance...');
-      _fetchLatestBalance(); // เรียกโหลด balance ล่าสุดอีกครั้ง
-
+      _fetchLatestBalance();
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(widget.isEnglish ? 'Please enter a valid amount.' : 'กรุณาป้อนจำนวนเงินที่ถูกต้อง'),
-          backgroundColor: Colors.red,
-        ),
+      _showErrorDialog(
+        title: widget.isEnglish ? 'Invalid Amount' : 'จำนวนเงินไม่ถูกต้อง',
+        desc: widget.isEnglish ? 'Please enter a valid amount.' : 'กรุณาป้อนจำนวนเงินที่ถูกต้อง',
       );
     }
   }
 
-  @override
-  void dispose() {
-    _customAmountController.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -182,7 +209,6 @@ class _CardpageMemberState extends State<CardpageMember> {
                     ),
                   ),
                   const SizedBox(height: 10),
-                  // *** แสดง loading indicator หรือ balance ***
                   _isFetchingBalance
                       ? const CircularProgressIndicator(color: Colors.white)
                       : Text(
@@ -208,15 +234,15 @@ class _CardpageMemberState extends State<CardpageMember> {
             ),
             const SizedBox(height: 15),
             Wrap(
-              spacing: 10.0, // horizontal space between buttons
-              runSpacing: 10.0, // vertical space between lines of buttons
+              spacing: 10.0,
+              runSpacing: 10.0,
               children: [
                 _buildAmountButton(20.0),
                 _buildAmountButton(50.0),
                 _buildAmountButton(100.0),
                 _buildAmountButton(200.0),
                 _buildAmountButton(500.0),
-                 _buildAmountButton(1000.0),
+                _buildAmountButton(1000.0),
               ],
             ),
             const SizedBox(height: 30),
@@ -241,7 +267,6 @@ class _CardpageMemberState extends State<CardpageMember> {
                 suffixIcon: const Icon(Icons.attach_money),
               ),
               onChanged: (text) {
-                // Clear selected amount when user types in custom amount field
                 setState(() {
                   _selectedAmount = null;
                 });
@@ -256,7 +281,7 @@ class _CardpageMemberState extends State<CardpageMember> {
               child: ElevatedButton(
                 onPressed: _handleTopUp,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red, // Background color
+                  backgroundColor: Colors.red,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
                   ),
@@ -295,7 +320,7 @@ class _CardpageMemberState extends State<CardpageMember> {
         setState(() {
           if (selected) {
             _selectedAmount = amount;
-            _customAmountController.clear(); // Clear custom amount when quick top up is selected
+            _customAmountController.clear();
           } else {
             _selectedAmount = null;
           }

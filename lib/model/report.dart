@@ -1,5 +1,6 @@
 // lib/model/report.dart
 import 'package:flutter/material.dart';
+import 'package:maebanjumpen/model/hire.dart';
 // สามารถลบได้หากไม่ใช้ class Hirer ตรงๆ ในไฟล์นี้
 // สามารถลบได้หากไม่ใช้ class Housekeeper ตรงๆ ในไฟล์นี้
 import 'package:maebanjumpen/model/party_role.dart';
@@ -16,6 +17,7 @@ class Report {
   final PartyRole? hirer; // เปลี่ยนเป็น PartyRole? ตามที่ต้องการ
   final PartyRole? housekeeper; // เปลี่ยนเป็น PartyRole? ตามที่ต้องการ
   final Penalty? penalty;
+  final Hire? hire;
   final int? reportCount;
 
   Report({
@@ -28,6 +30,7 @@ class Report {
     this.hirer,
     this.housekeeper,
     this.penalty,
+    this.hire,
     this.reportCount,
   });
 
@@ -51,6 +54,9 @@ class Report {
           : null,
       penalty: json['penalty'] != null
           ? Penalty.fromJson(json['penalty'] as Map<String, dynamic>)
+          : null,
+      hire: json['hire'] != null
+          ? Hire.fromJson(json['hire'] as Map<String, dynamic>)
           : null,
     );
   }
@@ -98,6 +104,13 @@ class Report {
       };
     } else {
       data['penalty'] = null;
+    }
+    if (hire != null && hire!.hireId != null) {
+      data['hire'] = {
+        'hireId': hire!.hireId,
+      };
+    } else {
+      data['hire'] = null;
     }
 
     return data;

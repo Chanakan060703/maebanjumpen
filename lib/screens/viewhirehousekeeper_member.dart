@@ -285,7 +285,7 @@ class _ViewhireHousekeeperPageState extends State<ViewhireHousekeeperPage> {
             case 2:
             // เมื่อกด Tab Hirelist ให้ไปที่ HireListPage โดยใช้ pushReplacement
             // เพื่อไม่ให้ซ้อนหน้าเดิมซ้ำๆ ใน Stack
-              nextPage = HireListPage(user: widget.user, isEnglish: widget.isEnglish);
+              nextPage = HireListPage(user: widget.user, isEnglish: widget.isEnglish,);
               break;
             case 3:
               nextPage = ProfileMemberPage(user: widget.user, isEnglish: widget.isEnglish);

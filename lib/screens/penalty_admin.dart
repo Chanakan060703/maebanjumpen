@@ -24,10 +24,10 @@ class PenaltyScreen extends StatefulWidget {
 
 class _PenaltyScreenState extends State<PenaltyScreen> {
   String? _selectedPenaltyType;
-  final TextEditingController _dateController = TextEditingController();
+  final TextEditingController _endDateController = TextEditingController(); // เปลี่ยนชื่อ Controller
   final TextEditingController _detailsController = TextEditingController();
 
-  DateTime? _selectedPenaltyDate;
+  DateTime? _selectedPenaltyEndDate; // เปลี่ยนชื่อตัวแปร State
 
   final Penaltycontroller _penaltyController = Penaltycontroller();
   final ReportController _reportController = ReportController();
@@ -38,11 +38,11 @@ class _PenaltyScreenState extends State<PenaltyScreen> {
     final String localeCode = widget.isEnglish ? 'en_US' : 'th_TH';
 
     if (widget.report.penalty?.penaltyDate != null) {
-      _selectedPenaltyDate = widget.report.penalty!.penaltyDate;
-      _dateController.text = DateFormat(
+      _selectedPenaltyEndDate = widget.report.penalty!.penaltyDate;
+      _endDateController.text = DateFormat(
         'dd/MM/yyyy',
         localeCode,
-      ).format(_selectedPenaltyDate!);
+      ).format(_selectedPenaltyEndDate!);
     }
     _selectedPenaltyType = widget.report.penalty?.penaltyType;
     _detailsController.text = widget.report.penalty?.penaltyDetail ?? '';
@@ -50,7 +50,7 @@ class _PenaltyScreenState extends State<PenaltyScreen> {
 
   @override
   void dispose() {
-    _dateController.dispose();
+    _endDateController.dispose();
     _detailsController.dispose();
     super.dispose();
   }
@@ -58,14 +58,14 @@ class _PenaltyScreenState extends State<PenaltyScreen> {
   Future<void> _selectDate(BuildContext context) async {
     final Locale currentLocale =
         widget.isEnglish ? const Locale('en', 'US') : const Locale('th', 'TH');
+    
+    final DateTime now = DateTime.now();
 
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: _selectedPenaltyDate ?? DateTime.now(),
-      firstDate: DateTime(2000),
-      lastDate: DateTime(
-        2101,
-      ),
+      initialDate: _selectedPenaltyEndDate ?? now, // ใช้ตัวแปรใหม่
+      firstDate: now,
+      lastDate: DateTime(2101),
       locale: currentLocale,
       builder: (context, child) {
         return Theme(
@@ -86,10 +86,10 @@ class _PenaltyScreenState extends State<PenaltyScreen> {
       },
     );
 
-    if (picked != null && picked != _selectedPenaltyDate) {
+    if (picked != null && picked != _selectedPenaltyEndDate) {
       setState(() {
-        _selectedPenaltyDate = picked;
-        _dateController.text = DateFormat(
+        _selectedPenaltyEndDate = picked; // อัปเดตตัวแปรใหม่
+        _endDateController.text = DateFormat(
           'dd/MM/yyyy',
           currentLocale.toLanguageTag(),
         ).format(picked);
@@ -99,7 +99,7 @@ class _PenaltyScreenState extends State<PenaltyScreen> {
 
   Future<void> _submitPenalty() async {
     if (_selectedPenaltyType == null ||
-        _dateController.text.isEmpty ||
+        _endDateController.text.isEmpty || // ใช้ Controller ใหม่
         _detailsController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -113,7 +113,7 @@ class _PenaltyScreenState extends State<PenaltyScreen> {
       return;
     }
 
-    DateTime? penaltyDateForBackend = _selectedPenaltyDate;
+    DateTime? penaltyDateForBackend = _selectedPenaltyEndDate; // ใช้ตัวแปรใหม่
 
     if (penaltyDateForBackend == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -161,7 +161,7 @@ class _PenaltyScreenState extends State<PenaltyScreen> {
       );
 
       print('กำลังพยายามเพิ่มบทลงโทษไปยัง Backend...');
-      
+
       final createdPenalty = await _penaltyController.addPenalty(
         penaltyToCreate,
         widget.report.reportId!.toString(),
@@ -178,17 +178,17 @@ class _PenaltyScreenState extends State<PenaltyScreen> {
         reportTitle: widget.report.reportTitle,
         reportMessage: widget.report.reportMessage,
         reportDate: widget.report.reportDate,
-        reportStatus: 'resolved', 
+        reportStatus: 'resolved',
         reporter: widget.report.reporter,
         hirer: widget.report.hirer,
         housekeeper: widget.report.housekeeper,
-        penalty: createdPenalty, 
+        penalty: createdPenalty,
       );
 
       print(
         'กำลังพยายามอัปเดตสถานะรายงานเป็น resolved และเชื่อมโยง Penalty ID: ${createdPenalty.penaltyId}',
       );
-      
+
       final resultReport = await _reportController.updateReport(
         widget.report.reportId!,
         updatedReport,
@@ -287,9 +287,7 @@ class _PenaltyScreenState extends State<PenaltyScreen> {
               ),
             ),
             Text(
-              widget.isEnglish
-                  ? 'Select Penalty Type'
-                  : 'เลือกประเภทบทลงโทษ',
+              widget.isEnglish ? 'Select Penalty Type' : 'เลือกประเภทบทลงโทษ',
               style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
@@ -330,7 +328,7 @@ class _PenaltyScreenState extends State<PenaltyScreen> {
             ),
             const SizedBox(height: 20),
             Text(
-              widget.isEnglish ? 'Penalty Date' : 'วันที่ลงโทษ',
+              widget.isEnglish ? 'Until Date' : 'จนถึงวันที่', // เปลี่ยนข้อความตรงนี้
               style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
@@ -339,7 +337,7 @@ class _PenaltyScreenState extends State<PenaltyScreen> {
             ),
             const SizedBox(height: 10),
             TextField(
-              controller: _dateController,
+              controller: _endDateController, // ใช้ Controller ตัวใหม่
               readOnly: true,
               onTap: () => _selectDate(context),
               decoration: InputDecoration(
@@ -359,9 +357,7 @@ class _PenaltyScreenState extends State<PenaltyScreen> {
             ),
             const SizedBox(height: 20),
             Text(
-              widget.isEnglish
-                  ? 'Penalty Details'
-                  : 'รายละเอียดบทลงโทษ',
+              widget.isEnglish ? 'Penalty Details' : 'รายละเอียดบทลงโทษ',
               style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
@@ -373,8 +369,9 @@ class _PenaltyScreenState extends State<PenaltyScreen> {
               controller: _detailsController,
               maxLines: 6,
               decoration: InputDecoration(
-                hintText:
-                    widget.isEnglish ? 'Please provide more details about the incident...' : 'โปรดระบุรายละเอียดเพิ่มเติมเกี่ยวกับเหตุการณ์...',
+                hintText: widget.isEnglish
+                    ? 'Please provide more details about the incident...'
+                    : 'โปรดระบุรายละเอียดเพิ่มเติมเกี่ยวกับเหตุการณ์...',
                 filled: true,
                 fillColor: Colors.white,
                 border: OutlineInputBorder(
@@ -400,9 +397,7 @@ class _PenaltyScreenState extends State<PenaltyScreen> {
                   ),
                 ),
                 child: Text(
-                  widget.isEnglish
-                      ? 'Submit Penalty'
-                      : 'ส่งบทลงโทษ',
+                  widget.isEnglish ? 'Submit Penalty' : 'ส่งบทลงโทษ',
                   style: const TextStyle(
                     fontSize: 18,
                     color: Colors.white,
