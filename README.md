@@ -114,8 +114,8 @@ Licensed under the MIT License – see the `LICENSE` file for details.
 
 ---
 
-## 📬 Contact
+## 📬 Contact  
 
-* **Name:** Chanakan Kongyen
+👤 **Chanakan Kongyen**  
 * **Email:** Chonakankongyen@gmail.com
 * **GitHub:** [github.com/Chanakan060703](https://github.com/Chanakan060703)
