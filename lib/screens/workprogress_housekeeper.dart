@@ -8,7 +8,7 @@ import 'package:maebanjumpen/controller/image_uploadController.dart';
 import 'package:maebanjumpen/model/hire.dart';
 import 'dart:typed_data';
 
-// Assuming these are external classes and models.
+// These are assumed to be external classes and models.
 // If you are missing these, you will need to define them.
 // class HireController { ... }
 // class ImageUploadService { ... }
@@ -32,6 +32,7 @@ class _WorkProgressScreenState extends State<WorkProgressScreen> {
   final ImagePicker _picker = ImagePicker();
   final List<XFile> _pickedFiles = [];
   bool _isUploading = false;
+  DateTime? _endTime;
 
   @override
   void initState() {
@@ -129,17 +130,17 @@ class _WorkProgressScreenState extends State<WorkProgressScreen> {
 
     setState(() {
       _isUploading = true;
+      _endTime = DateTime.now(); // Capture end time immediately on submit
     });
 
     final ImageUploadService imageUploadService = ImageUploadService();
     final Hirecontroller hireController = Hirecontroller();
 
     try {
-      // แก้ไขการเรียกใช้ฟังก์ชันให้ใช้ named parameters ตามที่ฟังก์ชันกำหนด
       final List<String>? uploadedUrls = await imageUploadService.uploadImages(
-      id: widget.hire.hireId!,
-      imageFiles: _pickedFiles,
-);
+        id: widget.hire.hireId!,
+        imageFiles: _pickedFiles,
+      );
 
       if (uploadedUrls == null || uploadedUrls.isEmpty) {
         _showSnackbar(
@@ -155,6 +156,7 @@ class _WorkProgressScreenState extends State<WorkProgressScreen> {
       final updatedHire = widget.hire.copyWith(
         jobStatus: 'pendingapproval',
         progressionImageUrls: uploadedUrls,
+        endTime: _endTime?.toIso8601String(), // Convert DateTime to ISO 8601 string
       );
 
       final Hire? responseHire = await hireController.updateHire(
@@ -338,6 +340,10 @@ class _WorkProgressScreenState extends State<WorkProgressScreen> {
             '${widget.hire.startDate!.year}'
         : (widget.isEnglish ? 'N/A' : 'ไม่มีข้อมูล');
 
+    String formattedEndTime = _endTime != null
+        ? '${_endTime!.hour.toString().padLeft(2, '0')}:${_endTime!.minute.toString().padLeft(2, '0')}'
+        : (widget.isEnglish ? 'N/A' : 'ไม่มีข้อมูล');
+
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
@@ -432,6 +438,16 @@ class _WorkProgressScreenState extends State<WorkProgressScreen> {
             ),
             const SizedBox(height: 15),
             _buildDetailCard(
+              title: widget.isEnglish ? 'Job Name' : 'ชื่องาน',
+              value: widget.hire.hireName ?? (widget.isEnglish ? 'No job name provided' : 'ไม่มีชื่องาน'),
+            ),
+            const SizedBox(height: 15),
+            _buildDetailCard(
+              title: widget.isEnglish ? 'Job Detail' : 'รายละเอียดงาน',
+              value: widget.hire.hireDetail ?? (widget.isEnglish ? 'No job detail provided' : 'ไม่มีรายละเอียดงาน'),
+            ),
+            const SizedBox(height: 15),
+            _buildDetailCard(
               title: widget.isEnglish ? 'Service Date' : 'วันที่ให้บริการ',
               value: formattedServiceDate,
             ),
@@ -439,9 +455,9 @@ class _WorkProgressScreenState extends State<WorkProgressScreen> {
             _buildDetailCard(
               title: widget.isEnglish ? 'Service Time' : 'เวลาให้บริการ',
               value:
-                  '${widget.hire.startTime ?? (widget.isEnglish ? 'N/A' : 'ไม่มีข้อมูล')} - ${widget.hire.endTime ?? (widget.isEnglish ? 'N/A' : 'ไม่มีข้อมูล')}',
+                  '${widget.hire.startTime ?? (widget.isEnglish ? 'N/A' : 'ไม่มีข้อมูล')} ',
             ),
-            const SizedBox(height: 15),
+             const SizedBox(height: 15),
             _buildDetailCard(
               title: widget.isEnglish ? 'Location' : 'สถานที่',
               value: widget.hire.location ??
@@ -600,4 +616,3 @@ class DashedBorderContainer extends StatelessWidget {
     );
   }
 }
-

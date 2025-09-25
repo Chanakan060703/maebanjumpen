@@ -136,8 +136,8 @@ class _ListRequestsWithdrawalScreenState
         setState(() {
           _errorMessage =
               widget.isEnglish
-                  ? 'Failed to load withdrawal requests. Please try again.'
-                  : 'ไม่สามารถโหลดรายการคำขอถอนเงินได้ กรุณาลองใหม่';
+                  ? 'No withdrawal requests found.'
+                  : 'ไม่พบรายการคำขอถอนเงิน';
           _isLoading = false;
         });
       }

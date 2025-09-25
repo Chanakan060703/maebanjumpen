@@ -177,7 +177,6 @@ class _ReportHousekeeperPageState extends State<ReportHousekeeperPage> {
       hirer: reporterHirer,
       housekeeper: reportedHousekeeper,
       penalty: null,
-      hire: widget.hire, // CRITICAL FIX: Pass the hire object
     );
 
     try {

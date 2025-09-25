@@ -1,11 +1,8 @@
-// lib/model/report.dart
-import 'package:flutter/material.dart';
-import 'package:maebanjumpen/model/hire.dart';
-// สามารถลบได้หากไม่ใช้ class Hirer ตรงๆ ในไฟล์นี้
-// สามารถลบได้หากไม่ใช้ class Housekeeper ตรงๆ ในไฟล์นี้
+// maebanjumpen/model/report.dart
 import 'package:maebanjumpen/model/party_role.dart';
 import 'package:maebanjumpen/model/penalty.dart';
-// สามารถลบได้หากไม่ใช้ function จาก dart:convert ตรงๆ ในไฟล์นี้
+// NEW: หากต้องการให้ Report สามารถมีข้อมูล Hire ได้ (แต่ระวัง Recursive Loop)
+// import 'package:maebanjumpen/model/hire.dart';
 
 class Report {
   final int? reportId;
@@ -14,11 +11,11 @@ class Report {
   final DateTime? reportDate;
   final String? reportStatus;
   final PartyRole? reporter;
-  final PartyRole? hirer; // เปลี่ยนเป็น PartyRole? ตามที่ต้องการ
-  final PartyRole? housekeeper; // เปลี่ยนเป็น PartyRole? ตามที่ต้องการ
+  final PartyRole? hirer;
+  final PartyRole? housekeeper;
   final Penalty? penalty;
-  final Hire? hire;
-  final int? reportCount;
+  final int? reportCount; // ควรจะเป็น int? สำหรับ reportCount
+  // final Hire? hire; // พิจารณาเพิ่ม หาก Backend ส่งข้อมูล Hire กลับมาใน Report และจัดการ recursive loop ดีแล้ว
 
   Report({
     this.reportId,
@@ -30,8 +27,8 @@ class Report {
     this.hirer,
     this.housekeeper,
     this.penalty,
-    this.hire,
     this.reportCount,
+    // this.hire, // NEW: เพิ่มใน constructor หากต้องการ
   });
 
   factory Report.fromJson(Map<String, dynamic> json) {
@@ -43,21 +40,23 @@ class Report {
           ? DateTime.parse(json['reportDate'])
           : null,
       reportStatus: json['reportStatus'] as String?,
-      reporter: json['reporter'] != null
+      // PartyRole.fromJson จะจัดการการเลือก Subclass ที่ถูกต้องให้
+      reporter: json['reporter'] != null && json['reporter'] is Map<String, dynamic>
           ? PartyRole.fromJson(json['reporter'] as Map<String, dynamic>)
           : null,
-      hirer: json['hirer'] != null
+      hirer: json['hirer'] != null && json['hirer'] is Map<String, dynamic>
           ? PartyRole.fromJson(json['hirer'] as Map<String, dynamic>)
           : null,
-      housekeeper: json['housekeeper'] != null
+      housekeeper: json['housekeeper'] != null && json['housekeeper'] is Map<String, dynamic>
           ? PartyRole.fromJson(json['housekeeper'] as Map<String, dynamic>)
           : null,
-      penalty: json['penalty'] != null
+      penalty: json['penalty'] != null && json['penalty'] is Map<String, dynamic>
           ? Penalty.fromJson(json['penalty'] as Map<String, dynamic>)
           : null,
-      hire: json['hire'] != null
-          ? Hire.fromJson(json['hire'] as Map<String, dynamic>)
-          : null,
+      reportCount: json['reportCount'] as int?,
+      // hire: json['hire'] != null && json['hire'] is! int // NEW: เพิ่มใน fromJson หากต้องการ
+      //     ? Hire.fromJson(json['hire'] as Map<String, dynamic>)
+      //     : null,
     );
   }
 
@@ -69,15 +68,16 @@ class Report {
     data['reportMessage'] = reportMessage;
     data['reportDate'] = reportDate?.toIso8601String();
     data['reportStatus'] = reportStatus;
+    data['reportCount'] = reportCount; // เพิ่ม reportCount ใน toJson
 
+    // ส่งแค่ ID และ Type ของ PartyRole กลับไป
     if (reporter != null && reporter!.id != null && reporter!.type != null) {
       data['reporter'] = {
         'id': reporter!.id,
         'type': reporter!.type,
       };
     } else {
-      debugPrint('Warning: Attempting to send Report with null or invalid reporter: $reporter');
-      data['reporter'] = null; // ส่ง null กลับไปหากข้อมูลไม่สมบูรณ์
+      data['reporter'] = null;
     }
 
     if (hirer != null && hirer!.id != null && hirer!.type != null) {
@@ -105,14 +105,41 @@ class Report {
     } else {
       data['penalty'] = null;
     }
-    if (hire != null && hire!.hireId != null) {
-      data['hire'] = {
-        'hireId': hire!.hireId,
-      };
-    } else {
-      data['hire'] = null;
-    }
+    // NEW: เพิ่มส่วนสำหรับ hire ใน toJson หากต้องการ (และจัดการ recursive loop ดีแล้ว)
+    // if (hire != null && hire!.hireId != null) {
+    //   data['hire'] = {'hireId': hire!.hireId};
+    // } else {
+    //   data['hire'] = null;
+    // }
 
     return data;
+  }
+
+  Report copyWith({
+    int? reportId,
+    String? reportTitle,
+    String? reportMessage,
+    DateTime? reportDate,
+    String? reportStatus,
+    PartyRole? reporter,
+    PartyRole? hirer,
+    PartyRole? housekeeper,
+    Penalty? penalty,
+    int? reportCount,
+    // Hire? hire, // NEW: เพิ่มใน copyWith หากต้องการ
+  }) {
+    return Report(
+      reportId: reportId ?? this.reportId,
+      reportTitle: reportTitle ?? this.reportTitle,
+      reportMessage: reportMessage ?? this.reportMessage,
+      reportDate: reportDate ?? this.reportDate,
+      reportStatus: reportStatus ?? this.reportStatus,
+      reporter: reporter ?? this.reporter,
+      hirer: hirer ?? this.hirer,
+      housekeeper: housekeeper ?? this.housekeeper,
+      penalty: penalty ?? this.penalty,
+      reportCount: reportCount ?? this.reportCount,
+      // hire: hire ?? this.hire, // NEW: เพิ่มใน copyWith หากต้องการ
+    );
   }
 }

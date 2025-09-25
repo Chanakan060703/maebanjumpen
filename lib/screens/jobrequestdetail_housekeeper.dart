@@ -8,6 +8,7 @@ import 'package:maebanjumpen/screens/profile_housekeeper.dart'; // Import profil
 import 'package:maebanjumpen/screens/requestwithdraw_housekeeper.dart';
 import 'package:maebanjumpen/screens/workprogress_housekeeper.dart';
 import 'package:maebanjumpen/styles/finishJobStyles.dart'; // Import AppColors
+import 'package:intl/intl.dart'; // Import this for date formatting
 
 
 class JobRequestDetailsPage extends StatefulWidget {
@@ -159,6 +160,15 @@ class _JobRequestDetailsPageState extends State<JobRequestDetailsPage> {
     final Color statusColor = _getStatusColor(currentStatus);
     final String statusText = _getLocalizedJobStatus(currentStatus, widget.isEnglish);
 
+    // Format the date
+    String formattedDate = '';
+    if (_currentHire.startDate != null) {
+      // Assuming _currentHire.startDate is a DateTime object
+      final DateFormat formatter = DateFormat('dd/MM/yyyy');
+      formattedDate = formatter.format(_currentHire.startDate!);
+    }
+
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.white,
@@ -233,13 +243,52 @@ class _JobRequestDetailsPageState extends State<JobRequestDetailsPage> {
                       ],
                     ),
                     const SizedBox(height: 16.0),
+                    // Add hireName here with a label and icon
+                    Row(
+                      children: [
+                        const Icon(Icons.assignment, color: Colors.blue, size: 20.0),
+                        const SizedBox(width: 8.0),
+                        Text(
+                          '${widget.isEnglish ? 'Service Name' : 'ชื่องาน'}: ',
+                          style: const TextStyle(
+                            fontSize: 16.0,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black54,
+                          ),
+                        ),
+                        Expanded(
+                          child: Text(
+                            _currentHire.hireName ?? (widget.isEnglish ? 'No Service Name' : 'ไม่มีชื่อบริการ'),
+                            style: const TextStyle(
+                              fontSize: 16.0,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87,
+                            ),
+                            overflow: TextOverflow.ellipsis, // Add this to prevent text overflow
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16.0),
+                    Row(
+                      children: [
+                        const Icon(Icons.calendar_today_outlined,
+                            color: Colors.grey, size: 14.0),
+                        const SizedBox(width: 4.0),
+                        Text(
+                          formattedDate,
+                          style: const TextStyle(fontSize: 12.0),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8.0),
                     Row(
                       children: [
                         const Icon(Icons.access_time_outlined,
                             color: Colors.grey, size: 14.0),
                         const SizedBox(width: 4.0),
                         Text(
-                          '${_currentHire.startTime ?? (widget.isEnglish ? 'N/A' : 'ไม่มีข้อมูล')} - ${_currentHire.endTime ?? (widget.isEnglish ? 'N/A' : 'ไม่มีข้อมูล')}',
+                          '${_currentHire.startTime ?? (widget.isEnglish ? 'N/A' : 'ไม่มีข้อมูล')} ',
                           style: const TextStyle(fontSize: 12.0),
                         ),
                       ],
@@ -269,7 +318,8 @@ class _JobRequestDetailsPageState extends State<JobRequestDetailsPage> {
                         padding: const EdgeInsets.symmetric(vertical: 2.0),
                         child: Text(widget.isEnglish ? 'No specific requirements.' : 'ไม่มีข้อกำหนดพิเศษ'),
                       ),
-                    const SizedBox(height: 16.0),
+                    const SizedBox(height: 16.0), // Reduced spacing
+
                     Row(
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
@@ -308,7 +358,7 @@ class _JobRequestDetailsPageState extends State<JobRequestDetailsPage> {
                     const SizedBox(height: 24.0),
 
                     // START: เพิ่มเงื่อนไขการแสดงปุ่มตามสถานะงาน
-                    if (currentStatus == 'in_progress' || currentStatus =='pending')
+                    if (currentStatus == 'pending')
                       Column(
                         children: [
                           Row(
@@ -358,7 +408,7 @@ class _JobRequestDetailsPageState extends State<JobRequestDetailsPage> {
                         ],
                       ),
                     
-                    if (currentStatus == 'upcoming' ) // แสดงปุ่ม "Start Work" เมื่อสถานะเป็น upcoming หรือ in_progress
+                    if (currentStatus == 'upcoming' || currentStatus == 'in_progress') // แสดงปุ่ม "Start Work" เมื่อสถานะเป็น upcoming หรือ in_progress
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(

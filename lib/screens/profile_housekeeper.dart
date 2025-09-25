@@ -405,41 +405,6 @@ class _ProfilePageState extends State<ProfilePage> {
               ),
             ),
             const SizedBox(height: 16.0),
-            Card(
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(15.0),
-                side: BorderSide(color: Colors.grey[200]!, width: 1.0),
-              ),
-              margin: EdgeInsets.zero,
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      isEnglish ? 'Social Media' : 'โซเชียลมีเดีย',
-                      style: const TextStyle(fontSize: 18.0, fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 12.0),
-                    _buildSocialMediaRow(
-                      'Facebook',
-                      _currentUser.facebookLink ?? (isEnglish ? 'Not provided' : 'ไม่ได้ระบุ'),
-                      'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b8/2021_Facebook_icon.svg/800px-2021_Facebook_icon.svg.png',
-                      backgroundColor: Colors.transparent,
-                    ),
-                    Divider(height: 24, color: Colors.grey[300]),
-                    _buildSocialMediaRow(
-                      'Line',
-                      _currentUser.lineId ?? (isEnglish ? 'Not provided' : 'ไม่ได้ระบุ'),
-                      'https://upload.wikimedia.org/wikipedia/commons/2/2e/LINE_New_App_Icon_%282020-12%29.png',
-                      backgroundColor: Colors.transparent,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 24.0),
             ElevatedButton(
               onPressed: _handleLogout,
               style: ElevatedButton.styleFrom(

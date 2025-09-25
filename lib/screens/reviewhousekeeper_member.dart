@@ -1,17 +1,17 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:maebanjumpen/controller/hireController.dart';
+import 'package:maebanjumpen/controller/hireController.dart'; // ตรวจสอบว่าจำเป็นต้องใช้ Hirecontroller ในหน้านี้หรือไม่ ถ้าไม่ได้ใช้ก็สามารถลบออกได้
 import 'package:maebanjumpen/controller/reviewController.dart';
-import 'package:maebanjumpen/model/review.dart';
+import 'package:maebanjumpen/model/review.dart'; // ตรวจสอบว่าจำเป็นต้องใช้ Review model ในหน้านี้หรือไม่ ถ้าไม่ได้สร้าง Review object ตรงๆ ก็สามารถลบออกได้
 import 'package:maebanjumpen/model/hire.dart';
 import 'package:maebanjumpen/model/hirer.dart';
 import 'package:maebanjumpen/screens/hirelist_member.dart';
 import 'package:maebanjumpen/screens/home_member.dart';
 import 'package:maebanjumpen/screens/deposit_member.dart';
 import 'package:maebanjumpen/screens/profile_member.dart';
-import 'package:http/http.dart' as http;
-import 'package:maebanjumpen/constant/constant_value.dart';
+import 'package:http/http.dart' as http; // ตรวจสอบว่าจำเป็นต้องใช้ http ตรงๆ ในหน้านี้หรือไม่ ถ้า ReviewController/HireController จัดการหมดแล้วก็สามารถลบออกได้
+import 'package:maebanjumpen/constant/constant_value.dart'; // ตรวจสอบว่าจำเป็นต้องใช้ constant_value ตรงๆ ในหน้านี้หรือไม่
 
 class ReviewHousekeeperPage extends StatefulWidget {
   final Hire hire;
@@ -35,28 +35,28 @@ class _ReviewHousekeeperPageState extends State<ReviewHousekeeperPage> {
   final int _selectedIndex = 2;
   bool _isLoading = false;
 
+  // ใช้ late final เพื่อให้แน่ใจว่าค่าจะถูกกำหนดใน initState
   late final String _housekeeperName;
   late final String? _housekeeperImage;
-  late final String _hireId;
+  late final int _hireId; // เปลี่ยนเป็น int โดยตรง
   late final DateTime _hireDate;
   late final String _hireName;
 
   final Reviewcontroller _reviewApi = Reviewcontroller();
-  final Hirecontroller _hireApi = Hirecontroller();
+  // final Hirecontroller _hireApi = Hirecontroller(); // ถ้าไม่ได้ใช้ในหน้านี้ ก็สามารถลบออกได้
 
   @override
   void initState() {
     super.initState();
     final hire = widget.hire;
 
-    _housekeeperName =
-        hire.housekeeper?.person?.firstName ??
+    _housekeeperName = hire.housekeeper?.person?.firstName ??
         (widget.isEnglish ? 'N/A' : 'ไม่ระบุ');
     _housekeeperImage = hire.housekeeper?.person?.pictureUrl;
-    _hireId = hire.hireId?.toString() ?? '0';
+    // ตรวจสอบว่า hire.hireId ไม่เป็น null ก่อนกำหนด
+    _hireId = hire.hireId ?? 0; // กำหนดค่า default เป็น 0 หาก hireId เป็น null
     _hireDate = hire.startDate ?? DateTime.now();
-    _hireName =
-        hire.hireName ??
+    _hireName = hire.hireName ??
         (widget.isEnglish ? 'No Service Name' : 'ไม่มีชื่องาน');
   }
 
@@ -81,14 +81,15 @@ class _ReviewHousekeeperPageState extends State<ReviewHousekeeperPage> {
     if (widget.isEnglish) {
       return DateFormat.yMMMd('en_US').format(date);
     } else {
-      return "${DateFormat('dd MMM', 'th_TH').format(date)} ${date.year + 543}";
+      final thaiYear = date.year + 543;
+      return "${DateFormat('dd MMM', 'th_TH').format(date)} $thaiYear";
     }
   }
 
   void _showSnackbar(String message) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    if (mounted) { // เพิ่มการตรวจสอบ mounted เพื่อความปลอดภัย
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    }
   }
 
   Future<void> _submitReview() async {
@@ -107,9 +108,9 @@ class _ReviewHousekeeperPageState extends State<ReviewHousekeeperPage> {
     try {
       final now = DateTime.now();
       final String reviewDateTime = now.toIso8601String();
-      final int? hireId = int.tryParse(_hireId);
 
-      if (hireId == null) {
+      // ไม่ต้องแปลงเป็น String แล้วค่อยแปลงเป็น int เพราะ _hireId เป็น int อยู่แล้ว
+      if (_hireId == 0) { // ใช้ _hireId ที่ถูกกำหนดใน initState แล้ว
         throw Exception(
           widget.isEnglish
               ? 'Invalid hireId: $_hireId'
@@ -121,7 +122,7 @@ class _ReviewHousekeeperPageState extends State<ReviewHousekeeperPage> {
         reviewMessage: _reviewTextController.text.trim(),
         reviewDate: reviewDateTime,
         score: _rating,
-        hireId: hireId,
+        hireId: _hireId, // ใช้ _hireId ที่เป็น int โดยตรง
       );
 
       if (response.containsKey('reviewId')) {
@@ -131,10 +132,18 @@ class _ReviewHousekeeperPageState extends State<ReviewHousekeeperPage> {
               : 'ส่งรีวิวเรียบร้อยแล้ว!',
         );
         if (mounted) {
-          // ส่งค่า true กลับไปเมื่อรีวิวสำเร็จ
-          // เพื่อแจ้งให้หน้า HireListPage โหลดข้อมูลใหม่
-          Navigator.pop(context, true); 
+          // แทนที่หน้าจอปัจจุบัน (ReviewHousekeeperPage) ด้วย HireListPage
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => HireListPage(
+                user: widget.user,
+                isEnglish: widget.isEnglish,
+              ),
+            ),
+          );
         }
+      
       } else {
         _showSnackbar(
           widget.isEnglish
@@ -160,7 +169,7 @@ class _ReviewHousekeeperPageState extends State<ReviewHousekeeperPage> {
     final pages = [
       HomePage(user: user, isEnglish: isEnglish),
       CardpageMember(user: user, isEnglish: isEnglish),
-      HireListPage(user: user, isEnglish: isEnglish,),
+      HireListPage(user: user, isEnglish: isEnglish),
       ProfileMemberPage(user: user, isEnglish: isEnglish),
     ];
 
@@ -190,7 +199,7 @@ class _ReviewHousekeeperPageState extends State<ReviewHousekeeperPage> {
         onPressed: () {
           // ส่งค่า true กลับไปเมื่อผู้ใช้กดปุ่มย้อนกลับ
           // ซึ่งจะกระตุ้นให้หน้าก่อนหน้า (HireListPage) โหลดข้อมูลใหม่
-          Navigator.pop(context, true); 
+          Navigator.pop(context, true);
         },
       ),
       title: Text(
@@ -254,6 +263,10 @@ class _ReviewHousekeeperPageState extends State<ReviewHousekeeperPage> {
             backgroundImage: housekeeperImageProvider,
             onBackgroundImageError: (exception, stackTrace) {
               debugPrint('Error loading housekeeper image: $exception');
+              // สามารถตั้งค่าให้แสดง placeholder image ในกรณีเกิด error ได้
+              // setState(() {
+              //   housekeeperImageProvider = const AssetImage('assets/placeholder_housekeeper.png');
+              // });
             },
           ),
           const SizedBox(height: 8),
@@ -272,6 +285,7 @@ class _ReviewHousekeeperPageState extends State<ReviewHousekeeperPage> {
               ),
               const SizedBox(width: 4),
               Text(
+                // ตรวจสอบ hire.startTime และ hire.endTime เป็น null หรือไม่ก่อนใช้งาน
                 '${_formatDate(_hireDate)} • ${widget.hire.startTime ?? ''} - ${widget.hire.endTime ?? ''}',
                 style: const TextStyle(fontSize: 12),
               ),
@@ -299,9 +313,7 @@ class _ReviewHousekeeperPageState extends State<ReviewHousekeeperPage> {
             enabled: !_isLoading,
             decoration: InputDecoration(
               hintText:
-                  widget.isEnglish
-                      ? 'Write your review...'
-                      : 'เขียนรีวิวของคุณ...',
+                  widget.isEnglish ? 'Write your review...' : 'เขียนรีวิวของคุณ...',
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(10),
               ),
@@ -320,26 +332,25 @@ class _ReviewHousekeeperPageState extends State<ReviewHousekeeperPage> {
                   borderRadius: BorderRadius.circular(10),
                 ),
               ),
-              child:
-                  _isLoading
-                      ? const SizedBox(
-                          width: 24,
-                          height: 24,
-                          child: CircularProgressIndicator(
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              Colors.white,
-                            ),
-                            strokeWidth: 2.5,
-                          ),
-                        )
-                      : Text(
-                          widget.isEnglish ? 'Submit Review' : 'ส่งรีวิว',
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                          ),
+              child: _isLoading
+                  ? const SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          Colors.white,
                         ),
+                        strokeWidth: 2.5,
+                      ),
+                    )
+                  : Text(
+                      widget.isEnglish ? 'Submit Review' : 'ส่งรีวิว',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
             ),
           ),
         ],

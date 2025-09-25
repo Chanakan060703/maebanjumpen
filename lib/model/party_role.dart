@@ -1,10 +1,10 @@
 import 'package:maebanjumpen/model/person.dart';
-
-import 'package:maebanjumpen/model/member.dart'; // Member extends PartyRole
-import 'package:maebanjumpen/model/hirer.dart'; // Hirer extends Member
-import 'package:maebanjumpen/model/housekeeper.dart'; // Housekeeper extends Member
+import 'package:maebanjumpen/model/housekeeper.dart';
+import 'package:maebanjumpen/model/hirer.dart';
 import 'package:maebanjumpen/model/admin.dart';
 import 'package:maebanjumpen/model/account_manager.dart';
+import 'package:maebanjumpen/model/member.dart';
+import 'package:flutter/foundation.dart'; // For debugPrint
 
 abstract class PartyRole {
   final int? id;
@@ -18,9 +18,9 @@ abstract class PartyRole {
   });
 
   factory PartyRole.fromJson(Map<String, dynamic> json) {
-    // ใช้ 'type' field ที่มาจาก Backend เป็นหลักในการตัดสินใจ
     String? type = json['type'] as String?;
 
+    // ใช้ 'type' field ที่มาจาก Backend เป็นหลัก
     if (type == 'housekeeper') {
       return Housekeeper.fromJson(json);
     } else if (type == 'hirer') {
@@ -29,7 +29,7 @@ abstract class PartyRole {
       return Admin.fromJson(json);
     } else if (type == 'accountManager') {
       return AccountManager.fromJson(json);
-    } else if (type == 'member') { // ถ้า backend ส่ง type เป็น 'member'
+    } else if (type == 'member') {
       return Member.fromJson(json);
     }
 
@@ -40,7 +40,8 @@ abstract class PartyRole {
         json.containsKey('statusVerify')) {
       return Housekeeper.fromJson(json);
     }
-    if (json.containsKey('hires') && json['hires'] is List) { // ตรวจสอบว่าเป็น List เพื่อความแม่นยำ
+    // ตรวจสอบว่าเป็น List เพื่อความแม่นยำและป้องกัน error หาก hires เป็น null หรือไม่ใช่ List
+    if (json.containsKey('hires') && json['hires'] is List) {
       return Hirer.fromJson(json);
     }
     if (json.containsKey('adminStatus')) {
@@ -51,8 +52,9 @@ abstract class PartyRole {
     }
 
     // หากยังไม่สามารถระบุได้ ให้เป็น Member โดย default หรือ throw error
+    // นี่คือ fallback ที่ปลอดภัยที่สุด
     if (json.containsKey('person') && json['person'] is Map<String, dynamic>) {
-        // This suggests it's at least a Member or higher
+        debugPrint('Warning: PartyRole type not specified, defaulting to Member for JSON: $json');
         return Member.fromJson(json);
     }
 
@@ -64,11 +66,11 @@ abstract class PartyRole {
   Map<String, dynamic> toJson() {
     final Map<String, dynamic> data = <String, dynamic>{};
     data['id'] = id;
-    // ส่ง type ที่มีอยู่แล้ว หรือกำหนดตาม subclass ถ้า type เป็น null
+
+    // กำหนด type จาก instance type หาก type field เป็น null
     if (type != null && type!.isNotEmpty) {
       data['type'] = type;
     } else {
-        // หาก type เป็น null ให้พยายามเดา type จาก runtimeType
         if (this is Hirer) {
             data['type'] = 'hirer';
         } else if (this is Housekeeper) {
@@ -77,8 +79,11 @@ abstract class PartyRole {
             data['type'] = 'admin';
         } else if (this is AccountManager) {
             data['type'] = 'accountManager';
-        } else if (this is Member) { // ตรวจสอบ Member เป็นอันสุดท้าย
+        } else if (this is Member) {
             data['type'] = 'member';
+        } else {
+            debugPrint('Warning: PartyRole cannot determine type for toJson. Defaulting to generic "partyRole".');
+            data['type'] = 'partyRole'; // Fallback for unknown PartyRole type
         }
     }
 
@@ -88,7 +93,7 @@ abstract class PartyRole {
     return data;
   }
 
-  // Abstract copyWith method
+  @override
   PartyRole copyWith({
     int? id,
     Person? person,

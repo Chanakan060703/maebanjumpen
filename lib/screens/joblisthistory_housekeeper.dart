@@ -88,6 +88,8 @@ class JobListHistoryScreenState extends State<JobListHistoryScreen> {
         return Colors.orange;
       case 'Upcoming':
         return Colors.orange;
+      case 'Reviewed':
+        return Colors.grey;
       case 'Accepted':
         return Colors.blue;
       case 'Declined':

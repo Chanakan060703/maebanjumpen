@@ -242,7 +242,7 @@ class _JobRequestsPageState extends State<JobRequestsPage> {
               : _currentJobRequests.isEmpty
                   ? Center(
                       child: Text(
-                        widget.isEnglish ? 'No active job requests found.' : 'ไม่พบรายการงานที่รับที่ยังไม่เสร็จสิ้น',
+                        widget.isEnglish ? 'No active job requests found.' : 'ไม่พบการจ้างงาน',
                       ),
                     )
                   : RefreshIndicator(
@@ -320,7 +320,7 @@ class _JobRequestsPageState extends State<JobRequestsPage> {
                                           color: Colors.grey, size: 16.0),
                                       const SizedBox(width: 8.0),
                                       Text(
-                                        '${request.startTime ?? (widget.isEnglish ? 'N/A' : 'ไม่มีข้อมูล')} - ${request.endTime ?? (widget.isEnglish ? 'N/A' : 'ไม่มีข้อมูล')}',
+                                        '${request.startTime ?? (widget.isEnglish ? 'N/A' : 'ไม่มีข้อมูล')}',
                                         style: const TextStyle(fontSize: 14.0),
                                       ),
                                     ],

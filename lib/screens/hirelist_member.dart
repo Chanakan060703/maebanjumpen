@@ -31,7 +31,8 @@ class _HireListPageState extends State<HireListPage> {
   String _selectedFilter = 'All';
   List<Hire> _allHires = [];
   List<Hire> _filteredHires = [];
-  List<Hire> _previousHires = [];
+  List<Hire> _previousHires = []; // เก็บสถานะก่อนหน้าสำหรับการเปรียบเทียบ
+
   bool _isLoading = false;
 
   @override
@@ -45,6 +46,7 @@ class _HireListPageState extends State<HireListPage> {
     setState(() => _isLoading = true);
 
     try {
+      // เก็บสถานะปัจจุบันก่อน fetch ใหม่
       _previousHires = List.from(_allHires);
 
       final response = await http.get(
@@ -96,9 +98,9 @@ class _HireListPageState extends State<HireListPage> {
         (h) => h.hireId == newHire.hireId,
       );
 
-      final String eventKey =
-          'hire_status_change_${newHire.hireId}_${newHire.jobStatus}';
+      final String eventKeyPrefix = 'hire_${newHire.hireId}';
 
+      // Notifying for new hires (if oldHire is null)
       if (oldHire == null) {
         notificationManager.addNotification(
           title: widget.isEnglish ? 'New Hire Created!' : 'สร้างการจ้างใหม่แล้ว!',
@@ -107,9 +109,11 @@ class _HireListPageState extends State<HireListPage> {
               : 'คุณได้สร้างการจ้างใหม่: "${newHire.hireName ?? 'การจ้างที่ไม่มีชื่อ'}" สถานะ "${_getLocalizedJobStatus(newHire.jobStatus ?? '')}"',
           payload: 'new_hire_created_${newHire.hireId}',
           showNow: true,
-          eventKey: eventKey,
+          eventKey: '${eventKeyPrefix}_created',
         );
-      } else if (oldHire.jobStatus != newHire.jobStatus) {
+      }
+      // Notifying for status changes
+      else if (oldHire.jobStatus != newHire.jobStatus) {
         final String oldStatusLocalized = _getLocalizedJobStatus(
           oldHire.jobStatus ?? '',
         );
@@ -124,11 +128,36 @@ class _HireListPageState extends State<HireListPage> {
               : 'การจ้าง "${newHire.hireName ?? 'การจ้างที่ไม่มีชื่อ'}" เปลี่ยนสถานะจาก "$oldStatusLocalized" เป็น "$newStatusLocalized" แล้ว',
           payload: 'hire_status_update_${newHire.hireId}',
           showNow: true,
-          eventKey: eventKey,
+          eventKey: '${eventKeyPrefix}_status_change_${newHire.jobStatus}',
+        );
+      }
+      // NEW: Notifying for new review
+      if (oldHire?.review == null && newHire.review != null) {
+        notificationManager.addNotification(
+          title: widget.isEnglish ? 'Hire Reviewed!' : 'มีการรีวิวการจ้างแล้ว!',
+          body: widget.isEnglish
+              ? 'The hire "${newHire.hireName ?? 'Unnamed Hire'}" has been reviewed.'
+              : 'การจ้าง "${newHire.hireName ?? 'การจ้างที่ไม่มีชื่อ'}" ได้รับการรีวิวแล้ว',
+          payload: 'hire_reviewed_${newHire.hireId}',
+          showNow: true,
+          eventKey: '${eventKeyPrefix}_reviewed',
+        );
+      }
+      // NEW: Notifying for new report
+      if (oldHire?.report == null && newHire.report != null) {
+        notificationManager.addNotification(
+          title: widget.isEnglish ? 'Hire Reported!' : 'มีการรายงานการจ้าง!',
+          body: widget.isEnglish
+              ? 'The hire "${newHire.hireName ?? 'Unnamed Hire'}" has been reported.'
+              : 'การจ้าง "${newHire.hireName ?? 'การจ้างที่ไม่มีชื่อ'}" ได้รับการรายงานแล้ว',
+          payload: 'hire_reported_${newHire.hireId}',
+          showNow: true,
+          eventKey: '${eventKeyPrefix}_reported',
         );
       }
     }
   }
+
 
   void _showMessage(String message) {
     if (mounted) {
@@ -147,7 +176,7 @@ class _HireListPageState extends State<HireListPage> {
           final jobStatus = hire.jobStatus?.toLowerCase();
           switch (filterLower) {
             case 'upcoming':
-              return jobStatus == 'pending';
+              return jobStatus == 'pending'; // Changed to 'pending' as per your status map
             case 'completed':
               return jobStatus == 'completed' || jobStatus == 'reviewed';
             case 'cancelled':
@@ -160,6 +189,8 @@ class _HireListPageState extends State<HireListPage> {
               return jobStatus == 'pendingapproval';
             case 'in progress':
               return jobStatus == 'in_progress';
+            case 'accepted': // Added 'accepted' filter
+              return jobStatus == 'accepted';
             default:
               return false;
           }
@@ -291,6 +322,7 @@ class _HireListPageState extends State<HireListPage> {
   }
 
   void _handleReport(BuildContext context, Hire hire) async {
+    // NEW: Check if housekeeper is available before navigating to Report page
     if (hire.housekeeper != null) {
       final result = await Navigator.push(
         context,
@@ -303,16 +335,18 @@ class _HireListPageState extends State<HireListPage> {
         ),
       );
 
+      // Refresh hires if a report was submitted
       if (result == true) {
         _fetchHires();
       }
     } else {
+      // Show an error if housekeeper data is missing
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
             widget.isEnglish
-                ? 'Housekeeper information is missing.'
-                : 'ไม่พบข้อมูลแม่บ้าน',
+                ? 'Housekeeper information is missing, cannot report.'
+                : 'ไม่พบข้อมูลแม่บ้าน ไม่สามารถรายงานได้',
           ),
           backgroundColor: Colors.red,
         ),
@@ -393,10 +427,13 @@ class _HireListPageState extends State<HireListPage> {
                                   (widget.isEnglish ? 'No details' : 'ไม่มีรายละเอียด'),
                               statusColor: _getStatusColor(status),
                               showVerifyButton: status == 'pendingapproval',
+                              // NEW: showReportButton ควรเป็น true ถ้าสถานะที่กำหนดและยังไม่มีรายงาน
                               showReportButton: (status == 'pendingapproval' ||
                                   status == 'completed' ||
-                                  status == 'reviewed') && !hasReport,
-                              showReviewButton: status == 'completed' && !hasReview,
+                                  status == 'reviewed' ||
+                                  status == 'in_progress' || // สามารถรายงานขณะ in_progress ได้ด้วย
+                                  status == 'accepted') && !hasReport, // เพิ่ม 'accepted' และ 'in_progress' ให้สามารถรายงานได้
+                              showReviewButton: status == 'completed' && !hasReview && status != 'reviewed',
                               isEnglish: widget.isEnglish,
                               hire: hire,
                               hirerUser: widget.user,
