@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:maebanjumpen/controller/hireController.dart';
 import 'package:maebanjumpen/controller/notification_manager.dart';
 import 'package:maebanjumpen/model/hire.dart'; // Import Hire model
@@ -258,6 +259,11 @@ class _JobRequestsPageState extends State<JobRequestsPage> {
                           final Color statusColor = _getStatusColor(currentStatus);
                           final String statusText = _getLocalizedJobStatus(currentStatus);
 
+                          // ✅ แก้ไข: กำหนดตัวแปรสำหรับวันที่เริ่มงาน
+                          final String formattedHireDate = request.hireDate != null
+                              ? DateFormat('yyyy-MM-dd').format(request.hireDate!)
+                              : (widget.isEnglish ? 'N/A' : 'ไม่มีข้อมูล');
+
                           return Card(
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(10.0),
@@ -331,8 +337,9 @@ class _JobRequestsPageState extends State<JobRequestsPage> {
                                       const Icon(Icons.calendar_today_outlined,
                                           color: Colors.grey, size: 16.0),
                                       const SizedBox(width: 8.0),
+                                      // ✅ แก้ไข: แสดง Hire Date ที่ถูก format แล้ว
                                       Text(
-                                        (request.hireDate != null ? request.hireDate.toString() : (widget.isEnglish ? 'N/A' : 'ไม่มีข้อมูล')), // Assuming you have a 'date' field
+                                        formattedHireDate,
                                         style: const TextStyle(fontSize: 14.0),
                                       ),
                                     ],
@@ -357,7 +364,7 @@ class _JobRequestsPageState extends State<JobRequestsPage> {
                                   Align(
                                     alignment: Alignment.centerRight,
                                     child: ElevatedButton.icon(
-                                      onPressed: () async { // <<< เปลี่ยนเป็น async เพื่อรอผลลัพธ์
+                                      onPressed: () async {
                                         print('View Request Job for: ${request.hireName}');
                                         // Navigate to details page and wait for result
                                         final result = await Navigator.push(

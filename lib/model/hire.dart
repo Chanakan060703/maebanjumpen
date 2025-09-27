@@ -1,8 +1,8 @@
-// maebanjumpen/model/hire.dart
 import 'package:maebanjumpen/model/hirer.dart';
 import 'package:maebanjumpen/model/housekeeper.dart';
-import 'package:maebanjumpen/model/review.dart'; // import Review model
-import 'package:maebanjumpen/model/report.dart'; // NEW: import Report model
+import 'package:maebanjumpen/model/review.dart';
+import 'package:maebanjumpen/model/report.dart';
+import 'package:maebanjumpen/model/skill_type.dart';
 
 class Hire {
   final int? hireId;
@@ -17,10 +17,14 @@ class Hire {
   final String? jobStatus;
   final List<String>? progressionImageUrls;
 
+  // ✅ แก้ไข: เอา final ออกเพื่อให้สามารถกำหนดค่าได้ใน constructor
+  List<int>? additionalSkillTypeIds;
+  int? skillTypeId;
   final Hirer? hirer;
   final Housekeeper? housekeeper;
   final Review? review;
-  final Report? report; // NEW: เพิ่ม field สำหรับ Report
+  final Report? report;
+  final SkillType? skillType;
 
   Hire({
     this.hireId,
@@ -37,98 +41,77 @@ class Hire {
     this.hirer,
     this.housekeeper,
     this.review,
-    this.report, // NEW: เพิ่มใน constructor
+    this.report,
+    this.skillType,
+    this.skillTypeId,
+    this.additionalSkillTypeIds,
   });
 
   factory Hire.fromJson(Map<String, dynamic> json) {
-    List<String>? progressionImageUrls;
-    if (json['progressionImageUrls'] != null) {
-      progressionImageUrls = (json['progressionImageUrls'] as List)
-          .map((item) => item as String)
-          .toList();
-    }
-
     return Hire(
       hireId: json['hireId'] as int?,
       hireName: json['hireName'] as String?,
       hireDetail: json['hireDetail'] as String?,
       paymentAmount: (json['paymentAmount'] as num?)?.toDouble(),
-      hireDate: json['hireDate'] != null ? DateTime.parse(json['hireDate']) : null,
-      startDate: json['startDate'] != null ? DateTime.parse(json['startDate']) : null,
+      hireDate: json['hireDate'] != null ? DateTime.tryParse(json['hireDate']) : null,
+      startDate: json['startDate'] != null ? DateTime.tryParse(json['startDate']) : null,
       startTime: json['startTime'] as String?,
       endTime: json['endTime'] as String?,
       location: json['location'] as String?,
       jobStatus: json['jobStatus'] as String?,
-      progressionImageUrls: progressionImageUrls,
-      // ตรวจสอบว่า hirer และ housekeeper ไม่ใช่แค่ ID และ parse เป็น Object
+      progressionImageUrls: (json['progressionImageUrls'] as List?)
+          ?.map((e) => e.toString())
+          .toList(),
+      // ✅ การรับค่าจาก JSON ควรใช้ skillType
+      skillType: json['skillType'] != null && json['skillType'] is Map<String, dynamic>
+          ? SkillType.fromJson(json['skillType'] as Map<String, dynamic>)
+          : null,
       hirer: json['hirer'] != null && json['hirer'] is Map<String, dynamic>
           ? Hirer.fromJson(json['hirer'] as Map<String, dynamic>)
           : null,
       housekeeper: json['housekeeper'] != null && json['housekeeper'] is Map<String, dynamic>
           ? Housekeeper.fromJson(json['housekeeper'] as Map<String, dynamic>)
           : null,
-      // ตรวจสอบ review ไม่ให้เป็น int (ถ้า Backend ส่งแค่ ID มา)
-      review: json['review'] != null && json['review'] is! int
+      review: json['review'] != null && json['review'] is Map<String, dynamic>
           ? Review.fromJson(json['review'] as Map<String, dynamic>)
           : null,
-      // NEW: ตรวจสอบ report ไม่ให้เป็น int และ parse เป็น Report object
-      report: json['report'] != null && json['report'] is! int
+      report: json['report'] != null && json['report'] is Map<String, dynamic>
           ? Report.fromJson(json['report'] as Map<String, dynamic>)
           : null,
+      additionalSkillTypeIds: (json['additionalSkillTypeIds'] as List?)?.map((e) => e as int).toList(),
     );
   }
 
-  @override
   Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = <String, dynamic>{};
-    data['hireId'] = hireId;
-    data['hireName'] = hireName;
-    data['hireDetail'] = hireDetail;
-    data['paymentAmount'] = paymentAmount;
-    data['hireDate'] = hireDate?.toIso8601String();
-    data['startDate'] = startDate?.toIso8601String().split('T').first;
-    data['startTime'] = startTime;
-    data['endTime'] = endTime;
-    data['location'] = location;
-    data['jobStatus'] = jobStatus;
-    data['progressionImageUrls'] = progressionImageUrls; // ส่ง List<String> ได้เลย
-
-    // ส่งแค่ ID และ Type ของ hirer, housekeeper, review, report กลับไป (เพื่อป้องกัน recursive loop)
-    if (hirer != null && hirer!.id != null && hirer!.type != null) {
-      data['hirer'] = {
-        'id': hirer!.id,
-        'type': hirer!.type,
-      };
-    } else {
-      data['hirer'] = null;
-    }
-
-    if (housekeeper != null && housekeeper!.id != null && housekeeper!.type != null) {
-      data['housekeeper'] = {
-        'id': housekeeper!.id,
-        'type': housekeeper!.type,
-      };
-    } else {
-      data['housekeeper'] = null;
-    }
-
-    if (review != null && review!.reviewId != null) {
-      data['review'] = {
-        'reviewId': review!.reviewId,
-      };
-    } else {
-      data['review'] = null;
-    }
-
-    // NEW: เพิ่มส่วนสำหรับ report
-    if (report != null && report!.reportId != null) {
-      data['report'] = {
-        'reportId': report!.reportId,
-      };
-    } else {
-      data['report'] = null;
-    }
-    return data;
+    return {
+      'hireId': hireId,
+      'hireName': hireName,
+      'hireDetail': hireDetail,
+      'paymentAmount': paymentAmount,
+      'hireDate': hireDate?.toIso8601String(),
+      'startDate': startDate?.toIso8601String().split('T').first,
+      'startTime': startTime,
+      'endTime': endTime,
+      'location': location,
+      'jobStatus': jobStatus,
+      'progressionImageUrls': progressionImageUrls,
+      'skillType': skillType != null
+          ? {'skillTypeId': skillType!.skillTypeId}
+          : (skillTypeId != null ? {'skillTypeId': skillTypeId} : null),
+      'hirer': (hirer != null && hirer!.id != null)
+          ? {'id': hirer!.id, 'type': 'hirer'}
+          : null,
+      'housekeeper': (housekeeper != null && housekeeper!.id != null)
+          ? {'id': housekeeper!.id, 'type': 'housekeeper'}
+          : null,
+      'review': (review != null && review!.reviewId != null)
+          ? {'reviewId': review!.reviewId}
+          : null,
+      'report': (report != null && report!.reportId != null)
+          ? {'reportId': report!.reportId}
+          : null,
+      'additionalSkillTypeIds': additionalSkillTypeIds,
+    };
   }
 
   Hire copyWith({
@@ -143,10 +126,13 @@ class Hire {
     String? location,
     String? jobStatus,
     List<String>? progressionImageUrls,
+    int? skillTypeId,
     Hirer? hirer,
     Housekeeper? housekeeper,
     Review? review,
-    Report? report, // NEW: เพิ่มใน copyWith
+    Report? report,
+    SkillType? skillType,
+    List<int>? additionalSkillTypeIds, // ✅ เพิ่มใน copyWith
   }) {
     return Hire(
       hireId: hireId ?? this.hireId,
@@ -160,10 +146,13 @@ class Hire {
       location: location ?? this.location,
       jobStatus: jobStatus ?? this.jobStatus,
       progressionImageUrls: progressionImageUrls ?? this.progressionImageUrls,
+      skillTypeId: skillTypeId ?? this.skillTypeId,
       hirer: hirer ?? this.hirer,
       housekeeper: housekeeper ?? this.housekeeper,
       review: review ?? this.review,
-      report: report ?? this.report, // NEW: เพิ่มใน copyWith
+      report: report ?? this.report,
+      skillType: skillType ?? this.skillType,
+      additionalSkillTypeIds: additionalSkillTypeIds ?? this.additionalSkillTypeIds,
     );
   }
 }

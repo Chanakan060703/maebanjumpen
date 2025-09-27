@@ -195,7 +195,7 @@ class _SeeAllHousekeeperPageState extends State<SeeAllHousekeeperPage> {
               final query = _searchQuery.toLowerCase();
 
               // ตรวจสอบสถานะ verified
-              final isVerified = housekeeper.statusVerify == 'verified';
+              final isVerified = housekeeper.statusVerify == 'verified' || housekeeper.statusVerify == 'APPROVED';
 
               // คืนค่า true ถ้าตรงกับคำค้นหาและสถานะเป็น verified
               return isVerified && (fullName.contains(query) ||
@@ -347,7 +347,6 @@ class _SeeAllHousekeeperPageState extends State<SeeAllHousekeeperPage> {
                                 children: [
                                   Text(
                                     // ถ้ามีข้อมูลราคา ให้แสดงราคาจริง
-                                    // หากไม่มี ให้ใช้ค่า default ฿ 300 /วัน
                                     (housekeeper.hires != null && housekeeper.hires!.isNotEmpty && housekeeper.dailyRate != null)
                                         ? "${widget.isEnglish ? '\฿' : '฿'} ${housekeeper.dailyRate!.toStringAsFixed(0)} ${widget.isEnglish ? '/day' : '/วัน'}"
                                         : "${widget.isEnglish ? '\฿' : '฿'} 300 ${widget.isEnglish ? '/day' : '/วัน'}",

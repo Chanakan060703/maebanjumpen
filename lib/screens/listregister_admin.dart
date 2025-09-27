@@ -111,7 +111,7 @@ class _VerlifyRegisterScreenState extends State<VerlifyRegisterScreen> {
   }
 }
 
-// UserRegistrationCard Widget (ไม่มีการเปลี่ยนแปลงในส่วนนี้)
+// UserRegistrationCard Widget
 class UserRegistrationCard extends StatelessWidget {
   final String imageUrl;
   final String name;

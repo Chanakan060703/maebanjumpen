@@ -594,7 +594,7 @@ class _VerifyJobPageState extends State<VerifyJobPage> {
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(
-                builder: (context) => CardpageMember(
+                builder: (context) => DepositMemberPage(
                   user: widget.user!,
                   isEnglish: widget.isEnglish,
                 ),

@@ -2,44 +2,65 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 import 'package:maebanjumpen/constant/constant_value.dart';
+import 'package:maebanjumpen/model/skill_type.dart';
 
 class Skilltypecontroller {
 
-    
-
-   Future<List<dynamic>> getAllSkilltype() async { // เปลี่ยน return type เป็น List<dynamic>
+  Future<List<SkillType>> getAllSkilltype() async { // เปลี่ยน return type เป็น List<SkillType>
     var url = Uri.parse('$baseURL/maeban/skill-types');
     http.Response response = await http.get(url, headers: headers);
 
     if (response.statusCode == 200) {
-      // Backend ส่งคืน List ของ SkillType Objects โดยตรง
-      List<dynamic> jsonResponse = jsonDecode(response.body);
-      print('SkillType API Response: $jsonResponse'); // เพื่อ Debug
-      return jsonResponse;
+      List<dynamic> jsonList = jsonDecode(response.body);
+      // Map JSON แต่ละอันให้เป็น SkillType object
+      return jsonList.map((json) => SkillType.fromJson(json)).toList();
     } else {
-      // จัดการข้อผิดพลาด
       print('Failed to load skill types: ${response.statusCode}');
-      return []; // คืนค่า List ว่างเปล่าหากเกิดข้อผิดพลาด
+      return [];
     }
   }
 
-  Future addSkilltype(String name) async {
-    Map data = {'name': name};
+  Future<Map<String, dynamic>?> addSkilltype(String skillTypeName, String skillTypeDetail, double basePricePerHour) async {
+    Map<String, dynamic> data = {
+        'skillTypeName': skillTypeName,
+        'skillTypeDetail': skillTypeDetail,
+        'basePricePerHour': basePricePerHour,
+    };
     var body = json.encode(data);
     var url = Uri.parse('$baseURL/maeban/skill-types');
     http.Response response = await http.post(url, headers: headers, body: body);
-    var jsonResponse = jsonDecode(response.body);
-    return jsonResponse;
-  }
 
-  Future updateSkilltype(int id, String name) async {
-    Map data = {'name': name};
+    if (response.statusCode == 200 || response.statusCode == 201) {
+        var jsonResponse = jsonDecode(response.body);
+        print('Add SkillType Response: $jsonResponse');
+        return jsonResponse;
+    } else {
+        var errorBody = jsonDecode(response.body);
+        print('Failed to add skill type: ${response.statusCode} - $errorBody');
+        return null; // หรือ throw Exception
+    }
+}
+
+  Future<Map<String, dynamic>?> updateSkilltype(int id, String skillTypeName, String skillTypeDetail, double basePricePerHour) async {
+    Map<String, dynamic> data = {
+        'skillTypeName': skillTypeName,
+        'skillTypeDetail': skillTypeDetail,
+        'basePricePerHour': basePricePerHour,
+    };
     var body = json.encode(data);
-    var url = Uri.parse('$baseURL/maeban/skill-types/${id}');
+    var url = Uri.parse('$baseURL/maeban/skill-types/$id');
     http.Response response = await http.put(url, headers: headers, body: body);
-    var jsonResponse = jsonDecode(response.body);
-    return jsonResponse;
-  }
+
+    if (response.statusCode == 200) {
+        var jsonResponse = jsonDecode(response.body);
+        print('Update SkillType Response: $jsonResponse');
+        return jsonResponse;
+    } else {
+        var errorBody = jsonDecode(response.body);
+        print('Failed to update skill type: ${response.statusCode} - $errorBody');
+        return null; // หรือ throw Exception
+    }
+}
 
   Future<Map<String, dynamic>> deleteHousekeeperskill(int skillId) async {
     var url = Uri.parse('$baseURL/maeban/housekeeper-skills/$skillId');

@@ -417,7 +417,7 @@ class _HireListPageState extends State<HireListPage> {
                                   (widget.isEnglish ? 'N/A' : 'ไม่ระบุ'),
                               date: _formatDate(hire.startDate),
                               time:
-                                  '${hire.startTime ?? ''} - ${hire.endTime ?? ''}',
+                                  '${hire.startTime ?? ''} ',
                               address: hire.location ??
                                   (widget.isEnglish ? 'Unknown Address' : 'ที่อยู่ไม่ระบุ'),
                               status: _getLocalizedJobStatus(status),

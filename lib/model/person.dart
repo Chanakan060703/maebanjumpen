@@ -1,4 +1,3 @@
-// lib/model/person.dart
 import 'package:maebanjumpen/model/login.dart';
 
 class Person {
@@ -85,5 +84,4 @@ class Person {
       login: login ?? this.login,
     );
   }
-
 }

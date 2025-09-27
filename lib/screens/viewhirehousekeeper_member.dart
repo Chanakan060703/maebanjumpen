@@ -59,7 +59,6 @@ class _ViewhireHousekeeperPageState extends State<ViewhireHousekeeperPage> {
             return;
           }
 
-          // ***** สำคัญมาก: เรียกใช้ _hireController.updateHire แทน _hireController.updateHireStatus *****
           final Hire? resultHire = await _hireController.updateHire(_currentHire.hireId!, updatedHire);
 
           if (resultHire != null) {
@@ -144,7 +143,8 @@ class _ViewhireHousekeeperPageState extends State<ViewhireHousekeeperPage> {
   // เมธอดสำหรับแสดงสถานะงานในภาษาที่เลือก
   String _getLocalizedJobStatus(String? status) {
     Map<String, String> enMap = {
-      'pending': 'Upcoming',
+      'pending': 'Pending',
+      'upcoming': 'Upcoming',
       'completed': 'Completed',
       'cancelled': 'Cancelled',
       'in_progress': 'In Progress',
@@ -155,7 +155,8 @@ class _ViewhireHousekeeperPageState extends State<ViewhireHousekeeperPage> {
     };
 
     Map<String, String> thMap = {
-      'pending': 'กำลังจะมาถึง',
+      'pending': 'กำลังดำเนินการ',
+      'upcoming': 'กำลังจะมาถึง',
       'completed': 'เสร็จสิ้น',
       'cancelled': 'ยกเลิกแล้ว',
       'in_progress': 'กำลังดำเนินการ',
@@ -220,7 +221,7 @@ class _ViewhireHousekeeperPageState extends State<ViewhireHousekeeperPage> {
                       style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                     ),
                     Text(
-                      '${hire.startTime ?? ''} - ${hire.endTime ?? ''}',
+                      '${hire.startTime ?? ''}',
                       style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                     ),
                   ],
@@ -280,7 +281,7 @@ class _ViewhireHousekeeperPageState extends State<ViewhireHousekeeperPage> {
               nextPage = HomePage(user: widget.user, isEnglish: widget.isEnglish);
               break;
             case 1:
-              nextPage = CardpageMember(user: widget.user, isEnglish: widget.isEnglish);
+              nextPage = DepositMemberPage(user: widget.user, isEnglish: widget.isEnglish);
               break;
             case 2:
             // เมื่อกด Tab Hirelist ให้ไปที่ HireListPage โดยใช้ pushReplacement
@@ -360,7 +361,7 @@ class _ViewhireHousekeeperPageState extends State<ViewhireHousekeeperPage> {
           Row(children: [
             const Icon(Icons.timer_outlined, color: Colors.grey),
             const SizedBox(width: 8),
-            Text('${hire.startTime ?? ''} - ${hire.endTime ?? ''}', style: TextStyle(color: Colors.grey[600])),
+            Text('${hire.startTime ?? ''} ', style: TextStyle(color: Colors.grey[600])),
           ]),
 
           const SizedBox(height: 16),
@@ -399,10 +400,6 @@ class _ViewhireHousekeeperPageState extends State<ViewhireHousekeeperPage> {
           if (hire.hireDetail != null && hire.hireDetail!.isNotEmpty)
             ServiceItem(text: '${widget.isEnglish ? 'Details: ' : 'รายละเอียด: '}${hire.hireDetail!}', isEnglish: widget.isEnglish),
 
-          // You can keep other static services if they are always included
-          // Example of static services, if still needed:
-          // ServiceItem(text: widget.isEnglish ? 'General cleaning and dusting' : 'ทำความสะอาดทั่วไปและปัดฝุ่น', isEnglish: widget.isEnglish),
-          // ServiceItem(text: widget.isEnglish ? 'Bathroom cleaning' : 'ทำความสะอาดห้องน้ำ', isEnglish: widget.isEnglish),
         ],
       ),
     );

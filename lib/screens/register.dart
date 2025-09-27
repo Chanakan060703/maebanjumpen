@@ -83,7 +83,7 @@ class _RegisterPageState extends State<RegisterPage> {
     ).show();
   }
 
-  Future<void> _registerUser() async {
+   Future<void> _registerUser() async {
     if (!_formKey.currentState!.validate()) {
       return;
     }
@@ -103,6 +103,11 @@ class _RegisterPageState extends State<RegisterPage> {
           'password': password,
         }),
       );
+      
+      // ตรวจสอบสถานะของ Login Response (ถึงแม้จะเป็น 201 แต่ควรเช็ค)
+      if (loginResponse.statusCode != 201) {
+         throw Exception('Failed to create login: ${loginResponse.body}');
+      }
 
       // 2. สร้าง Object Person
       final personResponse = await http.post(
@@ -115,7 +120,8 @@ class _RegisterPageState extends State<RegisterPage> {
           'idCardNumber': idCardNumber,
           'phoneNumber': phoneNumber,
           'address': address,
-          'pictureUrl': null,
+          // 'pictureUrl' ถูกตั้งเป็น null ในการสร้าง Person
+          'pictureUrl': null, 
           'accountStatus': accountStatus,
           'login': {
             'username': username,
@@ -131,23 +137,48 @@ class _RegisterPageState extends State<RegisterPage> {
       final person = Person.fromJson(json.decode(personResponse.body));
 
       // 3. สร้าง Party Role (Hirer หรือ Housekeeper)
+      
+      // 3.1. เตรียม Body Payload ให้สอดคล้องกับ PartyRoleDTO/HirerDTO/HousekeeperDTO
+      Map<String, dynamic> partyRoleBody = {
+        // ✅ การแก้ไขสำคัญ: ต้องส่ง Person Object ที่มี Person ID ภายใน
+        'person': {
+          'personId': person.personId, // ใช้ Person ID ที่เพิ่งสร้าง
+        },
+        'type': selectedAccountType == 'Member' ? 'hirer' : 'housekeeper',
+      };
+
+      if (selectedAccountType == 'Member') {
+        // สำหรับ Hirer (ผู้ว่าจ้าง)
+        partyRoleBody.addAll({
+          // ฟิลด์เริ่มต้นที่จำเป็นสำหรับ HirerDTO (ต้องใส่ตาม DTO ของคุณ)
+          'hires': [], 
+          'balance': 0.0, // ตัวอย่าง: หากคุณมีฟิลด์นี้
+        });
+      } else if (selectedAccountType == 'Housekeeper') {
+        // สำหรับ Housekeeper (แม่บ้าน)
+        partyRoleBody.addAll({
+          // ฟิลด์เริ่มต้นที่จำเป็นสำหรับ HousekeeperDTO 
+          'housekeeperSkills': [],
+          'rating': 0.0, 
+          'statusVerify': 'PENDING', // ตั้งสถานะเริ่มต้น
+          'photoVerifyUrl': null, // จะอัปเดตภายหลัง
+        });
+      }
+
       final partyRoleResponse = await http.post(
         Uri.parse('$baseURL/maeban/party-roles'),
         headers: headers,
-        body: json.encode({
-          'person_id': person.personId,
-          'type': selectedAccountType == 'Member' ? 'hirer' : 'housekeeper',
-        }),
+        body: json.encode(partyRoleBody), // ใช้งาน Body Payload ที่ถูกต้อง
       );
 
-      if (partyRoleResponse.statusCode != 200) {
+      if (partyRoleResponse.statusCode != 200 && partyRoleResponse.statusCode != 201) {
         throw Exception(
           'Failed to create party role: ${partyRoleResponse.body}',
         );
       }
 
       final partyRoleData = json.decode(partyRoleResponse.body);
-      final int partyRoleId = partyRoleData['id'];
+      final int partyRoleId = partyRoleData['id']; // ดึง ID ของ PartyRole ที่สร้างเสร็จแล้ว
 
       String? finalPhotoVerifyUrl;
 
@@ -203,10 +234,17 @@ class _RegisterPageState extends State<RegisterPage> {
       }
     } catch (e) {
       print('Registration error: $e');
-      if (e.toString().contains('/maeban/persons')) {
+      // เพิ่มการจัดการข้อผิดพลาดสำหรับ Duplicate ID Card Number
+      if (e.toString().contains('Duplicate entry')) {
           _showErrorDialog(
           title: isEnglish ? 'Registration Failed' : 'การสมัครสมาชิกล้มเหลว',
-          desc: isEnglish ? 'Username already exists. Please choose another one.' : 'ข้อมูลชื่อผู้ใช้ซ้ำ กรุณากรอกใหม่อีกครั้ง',
+          desc: isEnglish ? 'ID Card Number already exists. Please check and try again.' : 'หมายเลขบัตรประชาชนซ้ำ กรุณาตรวจสอบและลองใหม่อีกครั้ง',
+        );
+      } else if (e.toString().contains('Failed to create person')) {
+          // ใช้การจัดการเดิมสำหรับ username ซ้ำ (สันนิษฐานว่า username ถูกตรวจสอบใน person/login)
+          _showErrorDialog(
+          title: isEnglish ? 'Registration Failed' : 'การสมัครสมาชิกล้มเหลว',
+          desc: isEnglish ? 'Username or ID Card Number already exists. Please choose another one.' : 'ข้อมูลชื่อผู้ใช้หรือหมายเลขบัตรประชาชนซ้ำ กรุณากรอกใหม่อีกครั้ง',
         );
       } else {
         _showErrorDialog(

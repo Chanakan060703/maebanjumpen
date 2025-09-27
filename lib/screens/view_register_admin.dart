@@ -160,7 +160,7 @@ class _VerifyRegisterDetailScreenState extends State<VerifyRegisterDetailScreen>
               children: [
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: () => _updateStatus('rejected'),
+                    onPressed: () => _updateStatus('REJECTED'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.red,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -173,7 +173,7 @@ class _VerifyRegisterDetailScreenState extends State<VerifyRegisterDetailScreen>
                 const SizedBox(width: 15),
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: () => _updateStatus('verified'),
+                    onPressed: () => _updateStatus('APPROVED'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.green,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),

@@ -50,17 +50,19 @@ class Transaction {
       transactionId: json['transactionId'] as int?,
       transactionType: json['transactionType'] as String?,
       transactionAmount: (json['transactionAmount'] as num?)?.toDouble(),
-      transactionDate: json['transactionDate'] != null
-          ? DateTime.parse(json['transactionDate'])
-          : null,
+      transactionDate:
+          json['transactionDate'] != null
+              ? DateTime.parse(json['transactionDate'])
+              : null,
       transactionStatus: json['transactionStatus'] as String?,
       member: parsedMember,
       prompayNumber: json['prompayNumber'] as String?,
       bankAccountNumber: json['bankAccountNumber'] as String?,
       bankAccountName: json['bankAccountName'] as String?,
-      transactionApprovalDate: json['transactionApprovalDate'] != null
-          ? DateTime.parse(json['transactionApprovalDate'])
-          : null,
+      transactionApprovalDate:
+          json['transactionApprovalDate'] != null
+              ? DateTime.parse(json['transactionApprovalDate'])
+              : null,
     );
   }
 
@@ -74,10 +76,7 @@ class Transaction {
 
     // Send member data in the structure expected by backend (ID and Type)
     if (member != null && member!.id != null && member!.type != null) {
-      data['member'] = {
-        'id': member!.id,
-        'type': member!.type,
-      };
+      data['member'] = {'id': member!.id, 'type': member!.type};
     } else {
       data['member'] = null;
     }
@@ -85,7 +84,8 @@ class Transaction {
     data['prompayNumber'] = prompayNumber;
     data['bankAccountNumber'] = bankAccountNumber;
     data['bankAccountName'] = bankAccountName;
-    data['transactionApprovalDate'] = transactionApprovalDate?.toIso8601String();
+    data['transactionApprovalDate'] =
+        transactionApprovalDate?.toIso8601String();
 
     return data;
   }
@@ -112,7 +112,13 @@ class Transaction {
       prompayNumber: prompayNumber ?? this.prompayNumber,
       bankAccountNumber: bankAccountNumber ?? this.bankAccountNumber,
       bankAccountName: bankAccountName ?? this.bankAccountName,
-      transactionApprovalDate: transactionApprovalDate ?? this.transactionApprovalDate,
+      transactionApprovalDate:
+          transactionApprovalDate ?? this.transactionApprovalDate,
     );
+  }
+
+  @override
+  String toString() {
+    return 'Transaction(id: $transactionId, type: $transactionType, amount: $transactionAmount, status: $transactionStatus)';
   }
 }

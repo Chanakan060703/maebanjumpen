@@ -52,6 +52,7 @@ class JobListHistoryScreenState extends State<JobListHistoryScreen> {
         'In progress',
         'Pending',
         'PendingApproval',
+        'Rejected',
       ];
 
       return hires.where((hire) => !excludedStatuses.contains(hire.jobStatus)).toList();
@@ -94,7 +95,7 @@ class JobListHistoryScreenState extends State<JobListHistoryScreen> {
         return Colors.blue;
       case 'Declined':
         return Colors.redAccent;
-      case 'Rejected':
+      case 'rejected':
         return Colors.redAccent;
       case 'In progress':
         return Colors.blueGrey;

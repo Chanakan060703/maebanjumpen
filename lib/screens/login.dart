@@ -36,6 +36,8 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
+  final LoginController _loginController = LoginController();
+
   @override
   void initState() {
     super.initState();
@@ -105,8 +107,6 @@ class _LoginPageState extends State<LoginPage> {
     ).show();
   }
 
-  final LoginController _loginController = LoginController();
-
   Future<void> _handleLogin() async {
     // เพิ่มการตรวจสอบความถูกต้องของฟอร์ม
     if (!_formKey.currentState!.validate()) {
@@ -140,10 +140,12 @@ class _LoginPageState extends State<LoginPage> {
 
       await _saveRememberMeCredentials();
 
-      if (partyRole is Member &&
-          partyRole.person?.accountStatus != 'active' &&
-          partyRole.person?.accountStatus != "Active") {
-        final penaltyType = partyRole.person?.accountStatus;
+      // 💡 ปรับปรุง: ใช้ toLowerCase() เพื่อจัดการกับ "Active" และ "active"
+      final accountStatus = partyRole.person?.accountStatus?.toLowerCase();
+
+      if (partyRole is Member && accountStatus != 'active') {
+        final penaltyType =
+            partyRole.person?.accountStatus; // ⬅️ ใช้ค่าเดิมสำหรับแสดงผล
         String penaltyMessage = '';
 
         if (partyRole.person?.personId != null) {
@@ -187,7 +189,13 @@ class _LoginPageState extends State<LoginPage> {
       if (!mounted) return;
 
       if (partyRole is Housekeeper) {
-        if (partyRole.statusVerify == 'verified') {
+        // 💡 ปรับปรุง: ใช้ Null-aware access และ toLowerCase() เพื่อความปลอดภัย
+        final statusVerify =
+            partyRole.statusVerify
+                ?.toUpperCase(); // ใช้ toUpperCase() เพื่อเทียบกับ Enum ที่มักจะเป็นตัวใหญ่
+
+        // 1. เงื่อนไขที่ถูกต้อง: อนุญาตให้เข้าสู่ระบบได้ ถ้าสถานะเป็น APPROVED หรือ VERIFIED
+        if (statusVerify == 'APPROVED' || statusVerify == 'VERIFIED') {
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
@@ -196,22 +204,26 @@ class _LoginPageState extends State<LoginPage> {
                       HousekeeperPage(user: partyRole, isEnglish: isEnglish),
             ),
           );
-        } else if (partyRole.statusVerify == 'not verified') {
+        }
+        // 2. เงื่อนไขที่ถูกต้อง: บัญชีกำลังรอ/ถูกปฏิเสธ (ไม่ให้เข้าสู่ระบบ)
+        else if (statusVerify == 'PENDING' || statusVerify == 'REJECTED') {
+          // ... (แสดง Dialog บัญชีกำลังตรวจสอบ/ถูกปฏิเสธ)
           _showErrorDialog(
             title: isEnglish ? 'Account Under Review' : 'บัญชีกำลังตรวจสอบ',
             desc:
                 isEnglish
-                    ? 'Your account is currently under review. Please wait for verification.'
-                    : 'บัญชีของคุณกำลังตรวจสอบ โปรดรอการยืนยัน',
+                    ? 'Your account status is $statusVerify. Please wait for verification.'
+                    : 'บัญชีของคุณสถานะเป็น $statusVerify โปรดรอการยืนยัน',
           );
           return;
         } else {
+          // ... (สถานะอื่นๆ หรือเป็น null)
           _showErrorDialog(
             title: isEnglish ? 'Verification Required' : 'ต้องมีการยืนยัน',
             desc:
                 isEnglish
                     ? 'Your housekeeper account needs verification.'
-                    : 'บัญชีแม่บ้านของคุณต้องได้รับการยืนยัน ',
+                    : 'บัญชีแม่บ้านของคุณต้องได้รับการยืนยันก่อน',
           );
           return;
         }
@@ -229,7 +241,8 @@ class _LoginPageState extends State<LoginPage> {
           MaterialPageRoute(
             builder:
                 (context) => HomeAdminPage(
-                  user: partyRole as Admin,
+                  user:
+                      partyRole, // 💡 ไม่จำเป็นต้อง as Admin เพราะมีการตรวจสอบ type แล้ว
                   isEnglish: isEnglish,
                 ),
           ),
@@ -240,7 +253,8 @@ class _LoginPageState extends State<LoginPage> {
           MaterialPageRoute(
             builder:
                 (context) => AccountManagerPage(
-                  user: partyRole as AccountManager,
+                  user:
+                      partyRole, // 💡 ไม่จำเป็นต้อง as AccountManager เพราะมีการตรวจสอบ type แล้ว
                   isEnglish: isEnglish,
                 ),
           ),
@@ -290,7 +304,6 @@ class _LoginPageState extends State<LoginPage> {
           child: Center(
             child: SingleChildScrollView(
               child: Form(
-                // <-- เพิ่ม Form widget
                 key: _formKey, // <-- กำหนด key ให้กับ Form
                 child: Column(
                   children: [

@@ -11,11 +11,7 @@ abstract class PartyRole {
   final Person? person;
   final String? type;
 
-  PartyRole({
-    this.id,
-    this.person,
-    this.type,
-  });
+  PartyRole({this.id, this.person, this.type});
 
   factory PartyRole.fromJson(Map<String, dynamic> json) {
     String? type = json['type'] as String?;
@@ -54,12 +50,15 @@ abstract class PartyRole {
     // หากยังไม่สามารถระบุได้ ให้เป็น Member โดย default หรือ throw error
     // นี่คือ fallback ที่ปลอดภัยที่สุด
     if (json.containsKey('person') && json['person'] is Map<String, dynamic>) {
-        debugPrint('Warning: PartyRole type not specified, defaulting to Member for JSON: $json');
-        return Member.fromJson(json);
+      debugPrint(
+        'Warning: PartyRole type not specified, defaulting to Member for JSON: $json',
+      );
+      return Member.fromJson(json);
     }
 
     throw ArgumentError(
-        'JSON ไม่ได้มี PartyRole type ที่ถูกต้อง และไม่สามารถเดาได้จาก properties ที่ให้มาใน JSON Response: $json');
+      'JSON ไม่ได้มี PartyRole type ที่ถูกต้อง และไม่สามารถเดาได้จาก properties ที่ให้มาใน JSON Response: $json',
+    );
   }
 
   @override
@@ -71,20 +70,22 @@ abstract class PartyRole {
     if (type != null && type!.isNotEmpty) {
       data['type'] = type;
     } else {
-        if (this is Hirer) {
-            data['type'] = 'hirer';
-        } else if (this is Housekeeper) {
-            data['type'] = 'housekeeper';
-        } else if (this is Admin) {
-            data['type'] = 'admin';
-        } else if (this is AccountManager) {
-            data['type'] = 'accountManager';
-        } else if (this is Member) {
-            data['type'] = 'member';
-        } else {
-            debugPrint('Warning: PartyRole cannot determine type for toJson. Defaulting to generic "partyRole".');
-            data['type'] = 'partyRole'; // Fallback for unknown PartyRole type
-        }
+      if (this is Hirer) {
+        data['type'] = 'hirer';
+      } else if (this is Housekeeper) {
+        data['type'] = 'housekeeper';
+      } else if (this is Admin) {
+        data['type'] = 'admin';
+      } else if (this is AccountManager) {
+        data['type'] = 'accountManager';
+      } else if (this is Member) {
+        data['type'] = 'member';
+      } else {
+        debugPrint(
+          'Warning: PartyRole cannot determine type for toJson. Defaulting to generic "partyRole".',
+        );
+        data['type'] = 'partyRole'; // Fallback for unknown PartyRole type
+      }
     }
 
     if (person != null) {
@@ -93,10 +94,24 @@ abstract class PartyRole {
     return data;
   }
 
+  PartyRole copyWith({int? id, Person? person, String? type}) {
+    // เนื่องจาก PartyRole เป็น abstract class จึงไม่สามารถสร้าง instance ได้โดยตรง
+
+    // ควรจะถูก override ใน Subclasses (เช่น Hirer, Housekeeper)
+
+    // การใช้งาน copyWith ใน abstract class มักจะส่งคืน this หรือโยน exception/error
+
+    // แต่เพื่อให้โค้ดคอมไพล์ได้และยืดหยุ่น ควรเลือก fallback ที่เหมาะสมกับโมเดล
+
+    // ในบริบทนี้, ควรจะถูก override ใน subclass ต่างๆ อยู่แล้ว
+
+    throw UnimplementedError(
+      'copyWith must be implemented in concrete subclasses of PartyRole',
+    );
+  }
+
   @override
-  PartyRole copyWith({
-    int? id,
-    Person? person,
-    String? type,
-  });
+  String toString() {
+    return 'PartyRole(id: $id, person: $person, type: $type)';
+  }
 }

@@ -492,7 +492,7 @@ class _EditProfileMemberPageState extends State<EditProfileMemberPage> {
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(
-                  builder: (context) => CardpageMember(user: user, isEnglish: isEnglish)),
+                  builder: (context) => DepositMemberPage(user: user, isEnglish: isEnglish)),
             );
           } else if (index == 2) {
             Navigator.pushReplacement(

@@ -169,8 +169,8 @@ class _ListReportScreenState extends State<ListReportScreen> {
                 padding: const EdgeInsets.all(20.0),
                 child: Text(
                   widget.isEnglish
-                      ? 'No reports found for this filter.'
-                      : 'ไม่พบรายงานสำหรับตัวกรองนี้',
+                      ? 'No reports found.'
+                      : 'ไม่พบการรายงาน',
                   style: const TextStyle(fontSize: 16, color: Colors.grey),
                   textAlign: TextAlign.center,
                 ),

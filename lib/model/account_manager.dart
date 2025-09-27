@@ -14,8 +14,6 @@ class AccountManager extends PartyRole {
         );
 
   factory AccountManager.fromJson(Map<String, dynamic> json) {
-    // แก้ไขการ parse ออบเจกต์ 'person' ที่ซ้อนอยู่
-    // มันจะตรวจสอบว่า 'json['person']' มีอยู่และเป็น Map หรือไม่ จากนั้นเรียก Person.fromJson บน Map นั้น
     final Person? parsedPerson = json['person'] != null
         ? Person.fromJson(json['person'] as Map<String, dynamic>)
         : null;

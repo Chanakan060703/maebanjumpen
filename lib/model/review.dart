@@ -1,4 +1,3 @@
-// maebanjumpen/model/review.dart
 import 'package:maebanjumpen/model/hire_lite.dart'; // import HireLite
 
 class Review {

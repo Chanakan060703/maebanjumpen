@@ -8,11 +8,7 @@ class ProfilePage extends StatefulWidget {
   final Housekeeper user;
   final bool isEnglish;
 
-  const ProfilePage({
-    super.key,
-    required this.user,
-    required this.isEnglish,
-  });
+  const ProfilePage({super.key, required this.user, required this.isEnglish});
 
   @override
   _ProfilePageState createState() => _ProfilePageState();
@@ -24,15 +20,76 @@ class _ProfilePageState extends State<ProfilePage> {
 
   late Housekeeper _currentUser;
 
+  // รายละเอียดของแต่ละประเภททักษะ (SkillType)
   final Map<String, Map<String, dynamic>> _skillDetails = {
-    'General Cleaning': {'icon': Icons.cleaning_services, 'enName': 'General Cleaning', 'thaiName': 'ทำความสะอาดทั่วไป'},
-    'Laundry': {'icon': Icons.local_laundry_service, 'enName': 'Laundry', 'thaiName': 'ซักรีด'},
-    'Cooking': {'icon': Icons.restaurant, 'enName': 'Cooking', 'thaiName': 'ทำอาหาร'},
-    'Garden': {'icon': Icons.local_florist, 'enName': 'Garden', 'thaiName': 'ดูแลสวน'},
-    'Pet Care': {'icon': Icons.pets, 'enName': 'Pet Care', 'thaiName': 'ดูแลสัตว์เลี้ยง'},
-    'Window Cleaning': {'icon': Icons.window, 'enName': 'Window Cleaning', 'thaiName': 'ทำความสะอาดหน้าต่าง'},
-    'Organization': {'icon': Icons.category, 'enName': 'Organization', 'thaiName': 'จัดระเบียบ'},
+    'General Cleaning': {
+      'icon': Icons.cleaning_services,
+      'enName': 'General Cleaning',
+      'thaiName': 'ทำความสะอาดทั่วไป',
+    },
+    'Laundry': {
+      'icon': Icons.local_laundry_service,
+      'enName': 'Laundry',
+      'thaiName': 'ซักรีด',
+    },
+    'Cooking': {
+      'icon': Icons.restaurant,
+      'enName': 'Cooking',
+      'thaiName': 'ทำอาหาร',
+    },
+    'Garden': {
+      'icon': Icons.local_florist,
+      'enName': 'Garden',
+      'thaiName': 'ดูแลสวน',
+    },
+    'Pet Care': {
+      'icon': Icons.pets,
+      'enName': 'Pet Care',
+      'thaiName': 'ดูแลสัตว์เลี้ยง',
+    },
+    'Window Cleaning': {
+      'icon': Icons.window,
+      'enName': 'Window Cleaning',
+      'thaiName': 'ทำความสะอาดหน้าต่าง',
+    },
+    'Organization': {
+      'icon': Icons.category,
+      'enName': 'Organization',
+      'thaiName': 'จัดระเบียบ',
+    },
   };
+
+  // เปลี่ยน Map เป็น List เพื่อแก้ไขข้อผิดพลาด
+  final List<Map<String, dynamic>> _skillLevels = [
+    {
+      'id': 1,
+      'en': 'Beginner',
+      'th': 'มือใหม่',
+      'minHiresForLevel': 0,
+      'color': Colors.blueAccent
+    },
+    {
+      'id': 2,
+      'en': 'Intermediate',
+      'th': 'ฝึกหัด',
+      'minHiresForLevel': 5,
+      'color': Colors.green
+    },
+    {
+      'id': 3,
+      'en': 'Advanced',
+      'th': 'ชำนาญ',
+      'minHiresForLevel': 20,
+      'color': Colors.orange
+    },
+    {
+      'id': 4,
+      'en': 'Expert',
+      'th': 'เชี่ยวชาญ',
+      'minHiresForLevel': 50,
+      'color': Colors.red
+    },
+  ];
 
   @override
   void initState() {
@@ -43,9 +100,7 @@ class _ProfilePageState extends State<ProfilePage> {
   void _handleLogout() {
     Navigator.pushAndRemoveUntil(
       context,
-      MaterialPageRoute(
-        builder: (context) => const LoginPage(),
-      ),
+      MaterialPageRoute(builder: (context) => const LoginPage()),
       (Route<dynamic> route) => false,
     );
   }
@@ -68,25 +123,14 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
-  Map<String, dynamic> _getSkillDisplayInfo(String? skillTypeName) {
-    if (skillTypeName == null || skillTypeName.isEmpty) {
-      return {
-        'name': widget.isEnglish ? 'Unknown Skill' : 'ทักษะไม่ระบุ',
-        'icon': Icons.help_outline,
-      };
+  Map<String, dynamic> _getSkillLevel(int totalHiresCompleted) {
+    // ใช้ for loop เพื่อค้นหาจาก List ที่แก้ไขแล้ว
+    for (var level in _skillLevels.reversed) {
+      if (totalHiresCompleted >= level['minHiresForLevel']) {
+        return level;
+      }
     }
-    final detail = _skillDetails[skillTypeName];
-    if (detail != null) {
-      return {
-        'name': widget.isEnglish ? detail['enName']! : detail['thaiName']!,
-        'icon': detail['icon']!,
-      };
-    } else {
-      return {
-        'name': widget.isEnglish ? skillTypeName : skillTypeName,
-        'icon': Icons.help_outline,
-      };
-    }
+    return _skillLevels.first;
   }
 
   @override
@@ -97,49 +141,50 @@ class _ProfilePageState extends State<ProfilePage> {
     String fullName =
         '${housekeeper.person?.firstName ?? ''} ${housekeeper.person?.lastName ?? ''}'
             .trim();
-    if (fullName.isEmpty) fullName = isEnglish ? 'Unknown User' : 'ผู้ใช้ไม่ระบุชื่อ';
+    if (fullName.isEmpty)
+      fullName = isEnglish ? 'Unknown User' : 'ผู้ใช้ไม่ระบุชื่อ';
 
-    String email = housekeeper.person?.email ?? (isEnglish ? 'No email' : 'ไม่มีอีเมล');
-    String phone = housekeeper.person?.phoneNumber ?? (isEnglish ? 'No phone' : 'ไม่มีเบอร์โทรศัพท์');
-    String address = housekeeper.person?.address ?? (isEnglish ? 'No address provided' : 'ไม่มีที่อยู่');
-    // เพิ่ม Daily Rate
-    String dailyRate = housekeeper.dailyRate?.toStringAsFixed(2) ?? '0.00'; // แสดงเป็นทศนิยม 2 ตำแหน่ง, ค่าเริ่มต้น 0.00
+    String email =
+        housekeeper.person?.email ?? (isEnglish ? 'No email' : 'ไม่มีอีเมล');
+    String phone =
+        housekeeper.person?.phoneNumber ?? (isEnglish ? 'No phone' : 'ไม่มีเบอร์โทรศัพท์');
+    String address =
+        housekeeper.person?.address ?? (isEnglish ? 'No address provided' : 'ไม่มีที่อยู่');
+    String dailyRate = housekeeper.dailyRate?.toStringAsFixed(2) ?? '0.00';
 
-    // --- ส่วนนี้คือการปรับปรุงการจัดการรูปโปรไฟล์ ---
     Widget profileImageWidget;
-    if (housekeeper.person?.pictureUrl != null && housekeeper.person!.pictureUrl!.isNotEmpty) {
-      // พยายามโหลดจาก Network
+    if (housekeeper.person?.pictureUrl != null &&
+        housekeeper.person!.pictureUrl!.isNotEmpty) {
       profileImageWidget = Image.network(
         housekeeper.person!.pictureUrl!,
         fit: BoxFit.cover,
         errorBuilder: (context, error, stackTrace) {
-          // ถ้า NetworkImage โหลดไม่ได้ ให้ fallback ไปที่ AssetImage
-          print('Error loading network image: $error');
           return Image.asset(
-            'assets/profile.jpg', // Path ไปยังรูป fallback ใน assets
+            'assets/profile.jpg',
             fit: BoxFit.cover,
             errorBuilder: (context, error, stackTrace) {
-              // ถ้า AssetImage ก็โหลดไม่ได้ ให้แสดงไอคอน default
-              print('Error loading asset image (fallback): $error');
-              return const Icon(Icons.person, size: 100, color: Colors.grey); // ไอคอนคนสีเทา
+              return const Icon(
+                Icons.person,
+                size: 100,
+                color: Colors.grey,
+              );
             },
           );
         },
       );
     } else {
-      // ถ้าไม่มี URL รูปโปรไฟล์ ให้ใช้ AssetImage เป็น fallback ตั้งแต่แรก
       profileImageWidget = Image.asset(
-        'assets/profile.jpg', // Path ไปยังรูป fallback ใน assets
+        'assets/profile.jpg',
         fit: BoxFit.cover,
         errorBuilder: (context, error, stackTrace) {
-          // ถ้า AssetImage ก็โหลดไม่ได้ ให้แสดงไอคอน default
-          print('Error loading asset image (initial fallback): $error');
-          return const Icon(Icons.person, size: 100, color: Colors.grey); // ไอคอนคนสีเทา
+          return const Icon(
+            Icons.person,
+            size: 100,
+            color: Colors.grey,
+          );
         },
       );
     }
-    // ---------------------------------------------
-
 
     String displayedAddress = address;
     bool showReadMoreButton = false;
@@ -201,15 +246,13 @@ class _ProfilePageState extends State<ProfilePage> {
               children: [
                 CircleAvatar(
                   radius: 60.0,
-                  // --- ใช้ Widget ที่สร้างไว้ด้านบน ---
-                  child: ClipOval( // ใช้ ClipOval เพื่อตัดรูปให้เป็นวงกลม
+                  child: ClipOval(
                     child: SizedBox(
                       width: 120, // 2 * radius
                       height: 120, // 2 * radius
                       child: profileImageWidget,
                     ),
                   ),
-                  // -----------------------------------
                 ),
                 Positioned(
                   right: 0,
@@ -235,7 +278,10 @@ class _ProfilePageState extends State<ProfilePage> {
             const SizedBox(height: 16.0),
             Text(
               fullName,
-              style: const TextStyle(fontSize: 24.0, fontWeight: FontWeight.bold),
+              style: const TextStyle(
+                fontSize: 24.0,
+                fontWeight: FontWeight.bold,
+              ),
             ),
             Text(
               email,
@@ -254,7 +300,10 @@ class _ProfilePageState extends State<ProfilePage> {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(20.0),
                 ),
-                padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 10.0),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24.0,
+                  vertical: 10.0,
+                ),
               ),
             ),
             const SizedBox(height: 24.0),
@@ -264,7 +313,10 @@ class _ProfilePageState extends State<ProfilePage> {
                 padding: const EdgeInsets.only(left: 16.0, bottom: 8.0),
                 child: Text(
                   isEnglish ? 'Housekeeper Skills' : 'ทักษะแม่บ้าน',
-                  style: const TextStyle(fontSize: 18.0, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    fontSize: 18.0,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ),
@@ -279,49 +331,34 @@ class _ProfilePageState extends State<ProfilePage> {
                     Wrap(
                       spacing: 12.0,
                       runSpacing: 12.0,
-                      children: _currentUser.housekeeperSkills!
-                          .map(
-                            (skill) {
-                              final String backendSkillName = skill.skillType?.skillTypeName ?? '';
-                              final Map<String, dynamic>? details = _skillDetails[backendSkillName];
+                      children: _currentUser.housekeeperSkills!.map((skill) {
+                        final String backendSkillName =
+                            skill.skillType?.skillTypeName ?? '';
+                        final int totalHiresCompleted =
+                            skill.totalHiresCompleted ?? 0;
 
-                              final IconData icon = details?['icon'] ?? Icons.build;
-                              final String displayName = widget.isEnglish
-                                  ? backendSkillName.isNotEmpty ? backendSkillName : 'No skill name'
-                                  : details?['thaiName'] ?? 'ไม่มีชื่อทักษะ';
+                        final Map<String, dynamic>? skillTypeDetails =
+                            _skillDetails[backendSkillName];
+                        final IconData icon =
+                            skillTypeDetails?['icon'] ?? Icons.build;
+                        final String skillTypeNameDisplay = isEnglish
+                            ? (skillTypeDetails?['enName'] ?? backendSkillName)
+                            : (skillTypeDetails?['thaiName'] ?? backendSkillName);
 
-                              return Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(8),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.grey.withOpacity(0.2),
-                                      spreadRadius: 1,
-                                      blurRadius: 5,
-                                      offset: const Offset(0, 2),
-                                    ),
-                                  ],
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(icon, color: Colors.red, size: 24),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      displayName,
-                                      style: const TextStyle(
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
-                          )
-                          .toList(),
+                        final Map<String, dynamic> skillLevel =
+                            _getSkillLevel(totalHiresCompleted);
+                        final String skillLevelDisplay =
+                            isEnglish ? skillLevel['en'] : skillLevel['th'];
+                        final Color levelColor = skillLevel['color'];
+
+                        return _buildSkillCardWithDetails(
+                          skillTypeNameDisplay,
+                          icon,
+                          skillLevelDisplay,
+                          levelColor,
+                          totalHiresCompleted,
+                        );
+                      }).toList(),
                     )
                   else
                     Text(
@@ -346,28 +383,39 @@ class _ProfilePageState extends State<ProfilePage> {
                   children: [
                     Text(
                       isEnglish ? 'Personal Information' : 'ข้อมูลส่วนตัว',
-                      style: const TextStyle(fontSize: 18.0, fontWeight: FontWeight.bold),
+                      style: const TextStyle(
+                        fontSize: 18.0,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 16.0),
                     _buildInfoRow(
-                        Icons.person_outline, isEnglish ? 'Full Name' : 'ชื่อ-นามสกุล', fullName),
+                      Icons.person_outline,
+                      isEnglish ? 'Full Name' : 'ชื่อ-นามสกุล',
+                      fullName,
+                    ),
                     Divider(height: 24, color: Colors.grey[300]),
                     _buildInfoRow(Icons.email_outlined, 'Email', email),
                     Divider(height: 24, color: Colors.grey[300]),
                     _buildInfoRow(
-                        Icons.phone_outlined, isEnglish ? 'Phone' : 'เบอร์โทรศัพท์', phone),
+                      Icons.phone_outlined,
+                      isEnglish ? 'Phone' : 'เบอร์โทรศัพท์',
+                      phone,
+                    ),
                     Divider(height: 24, color: Colors.grey[300]),
-                    // *** เพิ่ม Daily Rate ตรงนี้ ***
                     _buildInfoRow(
-                        Icons.payments_outlined, // หรือไอคอนที่เหมาะสม
-                        isEnglish ? 'Daily Rate' : 'ค่าจ้างต่อวัน',
-                        '$dailyRate ${isEnglish ? 'THB' : 'บาท'}'),
+                      Icons.payments_outlined,
+                      isEnglish ? 'Daily Rate' : 'ค่าจ้างต่อวัน',
+                      '$dailyRate ${isEnglish ? 'THB' : 'บาท'}',
+                    ),
                     Divider(height: 24, color: Colors.grey[300]),
-                    // *** สิ้นสุดการเพิ่ม Daily Rate ***
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(Icons.location_on_outlined, color: Colors.red),
+                        const Icon(
+                          Icons.location_on_outlined,
+                          color: Colors.red,
+                        ),
                         const SizedBox(width: 12.0),
                         Expanded(
                           child: Column(
@@ -375,12 +423,17 @@ class _ProfilePageState extends State<ProfilePage> {
                             children: [
                               Text(
                                 isEnglish ? 'Address' : 'ที่อยู่',
-                                style: TextStyle(fontSize: 14.0, color: Colors.grey[600]),
+                                style: TextStyle(
+                                  fontSize: 14.0,
+                                  color: Colors.grey[600],
+                                ),
                               ),
                               Text(
                                 displayedAddress,
-                                style:
-                                    const TextStyle(fontSize: 16.0, fontWeight: FontWeight.w500),
+                                style: const TextStyle(
+                                  fontSize: 16.0,
+                                  fontWeight: FontWeight.w500,
+                                ),
                               ),
                               if (showReadMoreButton)
                                 InkWell(
@@ -392,7 +445,9 @@ class _ProfilePageState extends State<ProfilePage> {
                                   child: Text(
                                     readMoreButtonText,
                                     style: const TextStyle(
-                                        color: Colors.red, fontWeight: FontWeight.bold),
+                                      color: Colors.red,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
                                 ),
                             ],
@@ -413,12 +468,18 @@ class _ProfilePageState extends State<ProfilePage> {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10.0),
                 ),
-                padding: const EdgeInsets.symmetric(horizontal: 40.0, vertical: 15.0),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 40.0,
+                  vertical: 15.0,
+                ),
                 minimumSize: const Size(double.infinity, 50),
               ),
               child: Text(
                 isEnglish ? 'Logout' : 'ออกจากระบบ',
-                style: const TextStyle(fontSize: 18.0, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  fontSize: 18.0,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
             const SizedBox(height: 16.0),
@@ -428,41 +489,88 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  // Widget สำหรับสร้างการ์ด Skill ให้เหมือน ViewHousekeeperPage
-  Widget _buildSkillCard(String text, IconData iconData) {
+  Widget _buildSkillCardWithDetails(
+    String skillTypeNameDisplay,
+    IconData iconData,
+    String skillLevelDisplay,
+    Color levelColor,
+    int totalHiresCompleted,
+  ) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      width:
+          (MediaQuery.of(context).size.width - 32 - 12) / 2, // แบ่ง 2 คอลัมน์
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.2),
+            color: Colors.grey.withOpacity(0.1),
             spreadRadius: 1,
-            blurRadius: 5,
-            offset: const Offset(0, 2),
+            blurRadius: 3,
+            offset: const Offset(0, 1),
           ),
         ],
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            iconData,
-            color: Colors.red,
-            size: 24,
-          ),
-          const SizedBox(width: 8),
-          Flexible(
-            child: Text(
-              text,
-              style: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w500,
-                color: Colors.black87,
+          Row(
+            children: [
+              Icon(iconData, color: Colors.red, size: 24),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  skillTypeNameDisplay,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
-              overflow: TextOverflow.ellipsis,
-            ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Text(
+                widget.isEnglish ? 'Level: ' : 'ระดับ: ',
+                style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+              ),
+              Flexible(
+                child: Text(
+                  skillLevelDisplay,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: levelColor,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              Text(
+                widget.isEnglish ? 'Completed Hires: ' : 'งานที่ทำสำเร็จ: ',
+                style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+              ),
+              Flexible(
+                child: Text(
+                  '$totalHiresCompleted',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -485,66 +593,14 @@ class _ProfilePageState extends State<ProfilePage> {
             const SizedBox(height: 4.0),
             Text(
               value,
-              style: const TextStyle(fontSize: 16.0, fontWeight: FontWeight.w500),
+              style: const TextStyle(
+                fontSize: 16.0,
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ],
         ),
       ],
-    );
-  }
-
-  Widget _buildSocialMediaRow(String platform, String handle, String iconUrl,
-      {Color? backgroundColor}) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Row(
-        children: [
-          Container(
-            width: 40.0,
-            height: 40.0,
-            decoration: BoxDecoration(
-              color: backgroundColor,
-              borderRadius: BorderRadius.circular(8.0),
-            ),
-            padding: const EdgeInsets.all(4.0),
-            child: Image.network(
-              iconUrl,
-              fit: BoxFit.contain,
-              errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) {
-                return Container(
-                  width: 30.0,
-                  height: 30.0,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[300],
-                    borderRadius: BorderRadius.circular(5.0),
-                  ),
-                  child: const Center(
-                    child: Icon(Icons.broken_image_outlined, color: Colors.grey),
-                  ),
-                );
-              },
-            ),
-          ),
-          const SizedBox(width: 12.0),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  platform,
-                  style: const TextStyle(fontSize: 16.0, fontWeight: FontWeight.w500),
-                ),
-                Text(
-                  handle,
-                  style: TextStyle(fontSize: 14.0, color: Colors.grey[600]),
-                ),
-              ],
-            ),
-          ),
-          Icon(Icons.arrow_forward_ios, color: Colors.grey[400], size: 16.0),
-          const SizedBox(width: 8.0),
-        ],
-      ),
     );
   }
 }

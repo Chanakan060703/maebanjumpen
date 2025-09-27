@@ -6,21 +6,21 @@ import 'package:maebanjumpen/screens/home_member.dart';
 import 'package:maebanjumpen/controller/memberController.dart';
 import 'package:awesome_dialog/awesome_dialog.dart';
 
-class CardpageMember extends StatefulWidget {
+class DepositMemberPage extends StatefulWidget {
   final Hirer user;
   final bool isEnglish;
 
-  const CardpageMember({
+  const DepositMemberPage({
     super.key,
     required this.isEnglish,
     required this.user,
   });
 
   @override
-  State<CardpageMember> createState() => _CardpageMemberState();
+  State<DepositMemberPage> createState() => _DepositMemberPageState();
 }
 
-class _CardpageMemberState extends State<CardpageMember> {
+class _DepositMemberPageState extends State<DepositMemberPage> {
   final TextEditingController _customAmountController = TextEditingController();
   double? _selectedAmount;
   late Hirer _currentUser;

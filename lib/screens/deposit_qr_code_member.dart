@@ -65,18 +65,29 @@ class _DepositQrCodePageState extends State<DepositQrCodePage> {
             amount: widget.amount,
           );
 
-      if (response != null && response['qrCodeImageBase64'] != null) {
-        String base64String = response['qrCodeImageBase64'];
+      // --- 🎯 เริ่มการแก้ไข/ปรับปรุง Logic นี้ ---
+      if (response != null && 
+          response.containsKey('qrCodeImageBase64') && 
+          response['qrCodeImageBase64'] != null) {
+        
+        String base64String = response['qrCodeImageBase64'] as String;
+        _currentTransactionId = response['transactionId'] as int?;
 
+        // *สำคัญ: ลบ Prefix 'data:image/svg+xml;base64,' ที่อาจมาจาก Omise *
+        // *การทำความสะอาด Base64 (ลบ whitespace) ได้ถูกทำใน Controller แล้ว*
         if (base64String.startsWith('data:image/svg+xml;base64,')) {
-          base64String = base64String.substring(
-            'data:image/svg+xml;base64,'.length,
-          );
+           base64String = base64String.substring(
+             'data:image/svg+xml;base64,'.length,
+           );
+         }
+        
+        // ตรวจสอบความยาวขั้นต่ำ
+        if (base64String.length < 100) { 
+             throw Exception('Received Base64 string is too short or invalid.');
         }
 
         _qrCodeImageBase64 = base64String;
-        _currentTransactionId = response['transactionId'] as int?;
-
+        
         if (_currentTransactionId != null) {
           _startPollingTransactionStatus();
         } else {
@@ -86,21 +97,40 @@ class _DepositQrCodePageState extends State<DepositQrCodePage> {
                   : 'ไม่สามารถรับรหัสธุรกรรมจากระบบหลังบ้านได้';
         }
       } else {
+        // กรณีที่ response ไม่เป็น null แต่ไม่มี qrCodeImageBase64
         _errorMessage =
             widget.isEnglish
-                ? 'Failed to generate QR Code. Please try again.'
-                : 'ไม่สามารถสร้าง QR Code ได้ กรุณาลองอีกครั้ง';
+                ? 'Failed to generate QR Code. Backend response was incomplete.'
+                : 'ไม่สามารถสร้าง QR Code ได้ ข้อมูลตอบกลับจากระบบหลังบ้านไม่สมบูรณ์';
       }
+      // --- 🎯 สิ้นสุดการแก้ไข Logic ---
     } catch (e) {
-      _errorMessage = widget.isEnglish ? 'Error: $e' : 'เกิดข้อผิดพลาด: $e';
+      // ⚠️ การจับ Error ในกรณีนี้ จะรวมถึง error ที่มาจาก TransactionController.dart
+      // ซึ่งตอนนี้ได้มีการ throw Exception เมื่อได้รับสถานะ 400
+      print('Error detail captured in DepositQrCodePage: $e');
+      
+      // พยายามดึงข้อความ Error ที่อ่านง่าย
+      String readableError = e.toString();
+      if (readableError.contains(":")) {
+          // ถ้าเป็น Exception: ข้อความที่ตามมา
+          readableError = readableError.substring(readableError.indexOf(":") + 1).trim();
+      } else if (readableError.startsWith("Exception")) {
+          readableError = readableError.substring("Exception".length).trim();
+      }
+
+      _errorMessage = widget.isEnglish 
+          ? 'QR Generation Error: $readableError' 
+          : 'เกิดข้อผิดพลาดในการสร้างคิวอาร์โค้ด: $readableError';
+      
     } finally {
       setState(() {
         _isLoading = false;
+        // ตรวจสอบอีกครั้งเพื่อยืนยันว่าไม่มี QR code
         if (_qrCodeImageBase64 == null && _errorMessage == null) {
           _errorMessage =
               widget.isEnglish
-                  ? 'Unknown error.'
-                  : 'เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ';
+                  ? 'Unknown error during QR Code processing.'
+                  : 'เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุระหว่างการประมวลผล QR Code';
         }
       });
     }

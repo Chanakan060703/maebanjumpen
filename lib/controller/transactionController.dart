@@ -258,27 +258,33 @@ class TransactionController {
         int? transactionId = responseData['transactionId'];
 
         if (qrCodeBase64 != null && qrCodeBase64.isNotEmpty) {
-          // >>> แก้ไข: ทำความสะอาด Base64 string ก่อนส่งออก <<<
-          String cleanBase64 = qrCodeBase64.replaceAll(RegExp(r'\s+'), ''); // ลบอักขระช่องว่างทั้งหมด
+          // ⚠️ ลบ: ลบโค้ดทำความสะอาด Base64 ที่ซ้ำซ้อนออก
+          // String cleanBase64 = qrCodeBase64.replaceAll(RegExp(r'\s+'), ''); 
+
+          print('TransactionController: Received qrCodeImageBase64 successfully. Length: ${qrCodeBase64.length}');
           
-          print('TransactionController: Received qrCodeImageBase64 successfully. Cleaned Length: ${cleanBase64.length}');
-          
-          return {'qrCodeImageBase64': cleanBase64, 'transactionId': transactionId};
+          // ใช้ qrCodeBase64 เดิมที่คาดว่าสะอาดแล้ว
+          return {'qrCodeImageBase64': qrCodeBase64, 'transactionId': transactionId};
         } else {
           print('TransactionController: qrCodeImageBase64 is null or empty in responseData. Full response: $responseData');
           throw Exception('Backend did not return valid QR Code Base64 data.');
         }
       } else {
-        print('Failed to create QR Code: ${response.statusCode} - ${response.body}');
+        // --- 🎯 แก้ไข: การจัดการ Error 400/500 ให้ชัดเจนขึ้น ---
+        String errorDetail = 'Unknown API error.';
         if (response.body.isNotEmpty) {
           try {
-            final errorDetail = json.decode(utf8.decode(response.bodyBytes));
-            print('Backend Error Detail: ${errorDetail['message'] ?? errorDetail['error'] ?? errorDetail}');
+            final errorJson = json.decode(utf8.decode(response.bodyBytes));
+            // พยายามดึง error message จาก field ต่างๆ ใน response
+            errorDetail = errorJson['message'] ?? errorJson['error'] ?? errorJson.toString();
           } catch (e) {
-            print('Could not parse backend error response for QR Code. Error: $e');
+            errorDetail = 'Error parsing backend error response (Status: ${response.statusCode}). Raw body: ${response.body}';
           }
+          print('Backend Error Detail: $errorDetail');
         }
-        throw Exception('Failed to create QR Code: ${response.body}');
+        
+        // Throw Exception ที่ชัดเจนพร้อมรหัสสถานะและรายละเอียด
+        throw Exception('Failed to create QR Code: ${response.statusCode} - $errorDetail');
       }
     } catch (e) {
       print('Error creating deposit QR Code: $e');

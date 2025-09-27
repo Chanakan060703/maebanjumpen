@@ -31,19 +31,16 @@ class LoginController {
         final data = json.decode(utf8.decode(response.bodyBytes));
         print('Authentication successful: $data');
 
-        final String userType = data['type'];
+        // 🚨 แก้ไขที่ 1: ใช้ PartyRole.fromJson() โดยตรง
+        // ให้ PartyRole Model (PartyRole.dart) จัดการการแยกประเภท (hirer/housekeeper/admin)
+        // เพื่อป้องกันปัญหา type 'Null' is not a subtype of type 'String'
+        
+        // ❌ บรรทัดที่ทำให้เกิด Error ถูกลบไปแล้ว: 
+        // final String userType = data['type']; 
 
-        if (userType == 'hirer') {
-          return Hirer.fromJson(data);
-        } else if (userType == 'housekeeper') {
-          return Housekeeper.fromJson(data);
-        } else if (userType == 'admin') {
-          return Admin.fromJson(data);
-        } else if (userType == 'accountManager') {
-          return AccountManager.fromJson(data);
-        } else {
-          throw Exception('Unknown user type received: $userType');
-        }
+        // 🚨 แก้ไขที่ 2: ใช้ PartyRole.fromJson() ให้เป็นตัวจัดการการแปลง
+        return PartyRole.fromJson(data);
+
       } else {
         throw Exception('Failed with status: ${response.statusCode}. Body: ${response.body}');
       }
@@ -77,7 +74,7 @@ class LoginController {
     try {
       http.Response response = await http.post(url, headers: headers, body: body);
 
-      if (response.statusCode == 200) {
+      if (response.statusCode == 201) { // 🚨 ใช้ 201 CREATED สำหรับ POST
         return Login.fromJson(json.decode(response.body));
       } else {
         print('Failed to create login: ${response.body}');

@@ -1,29 +1,41 @@
-// สำหรับ jsonEncode ใน toJson
-
+// lib/model/skill_type.dart
 class SkillType {
-  final int? skillTypeId;
-  final String? skillTypeName; // เปลี่ยนเป็น nullable
-  final String? skillTypeDetail; // เปลี่ยนเป็น nullable
+  int? skillTypeId;
+  String? skillTypeName;
+  String? skillTypeDetail;
+  double? basePricePerHour; // เพิ่ม field นี้
 
-  SkillType({
-    this.skillTypeId,
-    this.skillTypeName, // ลบ required ออก
-    this.skillTypeDetail, // ลบ required ออก
-  });
+  SkillType({this.skillTypeId, this.skillTypeName, this.skillTypeDetail, this.basePricePerHour});
 
   factory SkillType.fromJson(Map<String, dynamic> json) {
     return SkillType(
       skillTypeId: json['skillTypeId'],
-      skillTypeName: json['skillTypeName'] as String?, // Cast เป็น String?
-      skillTypeDetail: json['skillTypeDetail'] as String?, // Cast เป็น String?
+      skillTypeName: json['skillTypeName'],
+      skillTypeDetail: json['skillTypeDetail'],
+      basePricePerHour: (json['basePricePerHour'] as num?)?.toDouble(), // แปลงเป็น double
     );
   }
 
   Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = <String, dynamic>{};
-    data['skillTypeId'] = skillTypeId;
-    data['skillTypeName'] = skillTypeName;
-    data['skillTypeDetail'] = skillTypeDetail;
-    return data;
+    return {
+      'skillTypeId': skillTypeId,
+      'skillTypeName': skillTypeName,
+      'skillTypeDetail': skillTypeDetail,
+      'basePricePerHour': basePricePerHour,
+    };
+  }
+
+  SkillType copyWith({
+    int? skillTypeId,
+    String? skillTypeName,
+    String? skillTypeDetail,
+    double? basePricePerHour,
+  }) {
+    return SkillType(
+      skillTypeId: skillTypeId ?? this.skillTypeId,
+      skillTypeName: skillTypeName ?? this.skillTypeName,
+      skillTypeDetail: skillTypeDetail ?? this.skillTypeDetail,
+      basePricePerHour: basePricePerHour ?? this.basePricePerHour,
+    );
   }
 }
