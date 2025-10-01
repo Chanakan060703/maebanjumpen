@@ -4,6 +4,7 @@ class SkillLevelTier {
   final int? minHiresForLevel;
   final double? priceMultiplier;
   final double? maxPricePerHourLimit;
+  final double? minPricePerHourLimit; 
 
   SkillLevelTier({
     this.id,
@@ -11,6 +12,7 @@ class SkillLevelTier {
     this.minHiresForLevel,
     this.priceMultiplier,
     this.maxPricePerHourLimit,
+    this.minPricePerHourLimit,
   });
 
   factory SkillLevelTier.fromJson(Map<String, dynamic> json) {
@@ -20,6 +22,7 @@ class SkillLevelTier {
       minHiresForLevel: json['minHiresForLevel'] as int?,
       priceMultiplier: (json['priceMultiplier'] as num?)?.toDouble(),
       maxPricePerHourLimit: (json['maxPricePerHourLimit'] as num?)?.toDouble(),
+      minPricePerHourLimit: (json['minPricePerHourLimit'] as num?)?.toDouble(), 
     );
   }
 
@@ -30,6 +33,7 @@ class SkillLevelTier {
       'minHiresForLevel': minHiresForLevel,
       'priceMultiplier': priceMultiplier,
       'maxPricePerHourLimit': maxPricePerHourLimit,
+      'minPricePerHourLimit': minPricePerHourLimit,
     };
   }
 }

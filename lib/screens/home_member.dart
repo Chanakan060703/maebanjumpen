@@ -129,9 +129,9 @@ class _HomePageState extends State<HomePage> {
     final memberProvider = Provider.of<MemberProvider>(context, listen: false);
     _currentUser = memberProvider.currentUser;
     _updateBalanceDisplay();
-    // 💡 ไม่จำเป็นต้องเรียก _fetchInitialData() ซ้ำตรงนี้ ถ้าไม่ได้มีข้อมูลที่ต้องการอัปเดตเมื่อ provider เปลี่ยน 
+    // 💡 ไม่จำเป็นต้องเรียก _fetchInitialData() ซ้ำตรงนี้ ถ้าไม่ได้มีข้อมูลที่ต้องการอัปเดตเมื่อ provider เปลี่ยน
     // ถ้าเรียกซ้ำอาจทำให้เกิดการเรียก API ที่ไม่จำเป็น
-    // _fetchInitialData(); 
+    // _fetchInitialData();
   }
 
   @override
@@ -161,9 +161,13 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _fetchLatestBalance() async {
     // ✅ ตรวจสอบว่าเป็น Hirer ก่อนเรียกใช้ฟังก์ชัน
-    if (!mounted || _currentUser == null || !(_currentUser is Hirer) || _currentUser!.id == null) return;
+    if (!mounted ||
+        _currentUser == null ||
+        !(_currentUser is Hirer) ||
+        _currentUser!.id == null)
+      return;
     final Hirer? currentHirer = _currentUser as Hirer?;
-    
+
     setState(() {
       isLoading['balance'] = true;
     });
@@ -175,13 +179,16 @@ class _HomePageState extends State<HomePage> {
       );
       if (mounted && latestHirerData != null) {
         // ✅ อัปเดต currentUser ใน provider ด้วย
-        Provider.of<MemberProvider>(context, listen: false).setUser(latestHirerData);
+        Provider.of<MemberProvider>(
+          context,
+          listen: false,
+        ).setUser(latestHirerData);
         setState(() {
           _currentUser = latestHirerData;
           _updateBalanceDisplay();
         });
         print(
-          'HomePage Balance updated successfully to: ${( _currentUser as Hirer).balance}',
+          'HomePage Balance updated successfully to: ${(_currentUser as Hirer).balance}',
         );
       } else if (mounted) {
         print(
@@ -291,13 +298,15 @@ class _HomePageState extends State<HomePage> {
                   )
                   .join(' ');
               final query = _searchQuery.toLowerCase();
-              final isVerified = housekeeper.statusVerify == 'verified' || housekeeper.statusVerify == 'APPROVED';
+              final isVerified =
+                  housekeeper.statusVerify == 'verified' ||
+                  housekeeper.statusVerify == 'APPROVED';
               return isVerified &&
                   (fullName.contains(query) ||
                       address.contains(query) ||
                       skills.contains(query));
             }).toList();
-            
+
         // เรียงลำดับตาม Rating จากมากไปน้อย
         filteredAndVerifiedList.sort(
           (a, b) => (b.rating ?? 0.0).compareTo(a.rating ?? 0.0),
@@ -305,13 +314,13 @@ class _HomePageState extends State<HomePage> {
 
         // 🎯 Logic ใหม่: ถ้ามีการค้นหา ให้แสดงผลทั้งหมดที่ตรง ถ้าไม่ ให้แสดง 5 อันดับแรก
         final List<Housekeeper> housekeepersToDisplay;
-        
+
         if (_searchQuery.isNotEmpty) {
-            // ถ้ามีการค้นหา ให้แสดงผลการค้นหาทั้งหมด (ที่ verified)
-            housekeepersToDisplay = filteredAndVerifiedList;
+          // ถ้ามีการค้นหา ให้แสดงผลการค้นหาทั้งหมด (ที่ verified)
+          housekeepersToDisplay = filteredAndVerifiedList;
         } else {
-            // ถ้าไม่มีการค้นหา ให้แสดง 5 อันดับแรกตาม Rating
-            housekeepersToDisplay = filteredAndVerifiedList.take(5).toList();
+          // ถ้าไม่มีการค้นหา ให้แสดง 5 อันดับแรกตาม Rating
+          housekeepersToDisplay = filteredAndVerifiedList.take(5).toList();
         }
 
         setState(() {
@@ -394,27 +403,34 @@ class _HomePageState extends State<HomePage> {
       builder: (context, memberProvider, child) {
         final loggedInUser = memberProvider.currentUser;
         // ✅ ตรวจสอบว่าเป็น Hirer ก่อนใช้ loggedInUser.id
-        final bool isLoggedIn = loggedInUser != null && loggedInUser is Hirer && loggedInUser.id != null; 
-        
-        final pages = isLoggedIn
+        final bool isLoggedIn =
+            loggedInUser != null &&
+            loggedInUser is Hirer &&
+            loggedInUser.id != null;
+
+        final pages =
+            isLoggedIn
                 ? [
-                    _buildHomeScreenContent(),
-                    DepositMemberPage(
-                      user: loggedInUser as Hirer,
-                      isEnglish: widget.isEnglish,
-                    ),
-                    HireListPage(user: loggedInUser as Hirer, isEnglish: widget.isEnglish),
-                    ProfileMemberPage(
-                      user: loggedInUser as Hirer,
-                      isEnglish: widget.isEnglish,
-                    ),
-                  ]
+                  _buildHomeScreenContent(),
+                  DepositMemberPage(
+                    user: loggedInUser as Hirer,
+                    isEnglish: widget.isEnglish,
+                  ),
+                  HireListPage(
+                    user: loggedInUser as Hirer,
+                    isEnglish: widget.isEnglish,
+                  ),
+                  ProfileMemberPage(
+                    user: loggedInUser as Hirer,
+                    isEnglish: widget.isEnglish,
+                  ),
+                ]
                 : [
-                    _buildHomeScreenContent(),
-                    const Center(child: Text("Please login to view this page")),
-                    const Center(child: Text("Please login to view this page")),
-                    const Center(child: Text("Please login to view this page")),
-                  ];
+                  _buildHomeScreenContent(),
+                  const Center(child: Text("Please login to view this page")),
+                  const Center(child: Text("Please login to view this page")),
+                  const Center(child: Text("Please login to view this page")),
+                ];
 
         return Scaffold(
           key: _scaffoldKey,
@@ -432,7 +448,8 @@ class _HomePageState extends State<HomePage> {
                     context,
                     listen: false,
                   ).currentUser;
-              final isUserLoggedInAndHirer = user != null && user is Hirer && user.id != null;
+              final isUserLoggedInAndHirer =
+                  user != null && user is Hirer && user.id != null;
 
               if (index != 0 && !isUserLoggedInAndHirer) {
                 // หากไม่ได้ล็อกอินและพยายามไปหน้าอื่นที่ไม่ใช่หน้าหลัก
@@ -495,7 +512,9 @@ class _HomePageState extends State<HomePage> {
                     // 🎯 ปรับชื่อหัวข้อตามสถานะการค้นหา
                     _searchQuery.isNotEmpty
                         ? (widget.isEnglish ? "Search Results" : "ผลการค้นหา")
-                        : (widget.isEnglish ? "Popular Housekeeper" : "แม่บ้านที่ได้รับความนิยม"),
+                        : (widget.isEnglish
+                            ? "Popular Housekeeper"
+                            : "แม่บ้านที่ได้รับความนิยม"),
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -508,10 +527,14 @@ class _HomePageState extends State<HomePage> {
                         MaterialPageRoute(
                           builder:
                               (context) => SeeAllHousekeeperPage(
-                                  isEnglish: widget.isEnglish,
-                                  // ✅ ส่ง _currentUser เฉพาะเมื่อเป็น Hirer
-                                  user: (_currentUser is Hirer && _currentUser != null) ? _currentUser as Hirer : Hirer(), 
-                                ),
+                                isEnglish: widget.isEnglish,
+                                // ✅ ส่ง _currentUser เฉพาะเมื่อเป็น Hirer
+                                user:
+                                    (_currentUser is Hirer &&
+                                            _currentUser != null)
+                                        ? _currentUser as Hirer
+                                        : Hirer(),
+                              ),
                         ),
                       );
                     },
@@ -555,8 +578,9 @@ class _HomePageState extends State<HomePage> {
   Widget _buildTopBar() {
     final isLoggedIn =
         Provider.of<MemberProvider>(context, listen: false).currentUser != null;
-    final userIsHirer = Provider.of<MemberProvider>(context, listen: false).currentUser is Hirer;
-
+    final userIsHirer =
+        Provider.of<MemberProvider>(context, listen: false).currentUser
+            is Hirer;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -639,14 +663,14 @@ class _HomePageState extends State<HomePage> {
               const SizedBox(width: 4),
               isLoading['balance']!
                   ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2.0),
-                    )
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2.0),
+                  )
                   : Text(
-                      "฿$_displayBalance",
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
+                    "฿$_displayBalance",
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
             ],
           ),
       ],
@@ -678,17 +702,19 @@ class _HomePageState extends State<HomePage> {
                 '0.0';
             final serviceReviews =
                 _servicePopularityData[serviceKey]?['reviews'] ?? 0;
-            
+
             final detail = _skillDetails[serviceKey];
 
-            final displayRatingText = (serviceReviews == 0)
-                ? (widget.isEnglish ? 'No Reviews' : 'ไม่มีรีวิว')
-                : "$serviceRating (${NumberFormat.compact().format(serviceReviews)}${widget.isEnglish ? ' reviews' : ' รีวิว'})";
+            final displayRatingText =
+                (serviceReviews == 0)
+                    ? (widget.isEnglish ? 'No Reviews' : 'ไม่มีรีวิว')
+                    : "$serviceRating (${NumberFormat.compact().format(serviceReviews)}${widget.isEnglish ? ' reviews' : ' รีวิว'})";
 
             return CategoryCard(
               // ใช้ Icon และ Label จาก _skillDetails เพื่อความเสถียร
               icon: detail?['icon'] ?? Icons.help_outline,
-              label: widget.isEnglish ? detail!['enName']! : detail!['thaiName']!,
+              label:
+                  widget.isEnglish ? detail!['enName']! : detail!['thaiName']!,
               rating:
                   isLoading['servicePopularity']!
                       ? (widget.isEnglish ? 'Loading...' : 'กำลังโหลด...')
@@ -710,9 +736,13 @@ class _HomePageState extends State<HomePage> {
         child: Center(
           child: Text(
             // ปรับข้อความตามสถานะการค้นหา
-            _searchQuery.isNotEmpty 
-                ? (widget.isEnglish ? "No search results found." : "ไม่พบผลการค้นหา")
-                : (widget.isEnglish ? "No verified housekeepers available." : "ไม่พบแม่บ้านที่ได้รับการยืนยัน"),
+            _searchQuery.isNotEmpty
+                ? (widget.isEnglish
+                    ? "No search results found."
+                    : "ไม่พบผลการค้นหา")
+                : (widget.isEnglish
+                    ? "No verified housekeepers available."
+                    : "ไม่พบแม่บ้านที่ได้รับการยืนยัน"),
             style: const TextStyle(fontSize: 16, color: Colors.grey),
           ),
         ),
@@ -757,10 +787,14 @@ class _HomePageState extends State<HomePage> {
                       MaterialPageRoute(
                         builder:
                             (context) => ViewHousekeeperPage(
-                                  housekeeper: hk,
-                                  isEnglish: widget.isEnglish,
-                                  user: (_currentUser is Hirer && _currentUser != null) ? _currentUser as Hirer : Hirer(),
-                                ),
+                              housekeeper: hk,
+                              isEnglish: widget.isEnglish,
+                              user:
+                                  (_currentUser is Hirer &&
+                                          _currentUser != null)
+                                      ? _currentUser as Hirer
+                                      : Hirer(),
+                            ),
                       ),
                     );
                   },
@@ -829,7 +863,9 @@ class _HomePageState extends State<HomePage> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(
-                              "${hk.dailyRate != null ? hk.dailyRate!.toStringAsFixed(2) : '0.00'} ฿",
+                              hk.dailyRate != null && hk.dailyRate!.isNotEmpty
+                                  ? "${hk.dailyRate} ฿"
+                                  : "0.00 - 0.00 ฿",
                               style: const TextStyle(color: Colors.red),
                             ),
                             const Icon(
@@ -876,9 +912,10 @@ class _HomePageState extends State<HomePage> {
                   _servicePopularityData[serviceKey]?['reviews'] ?? 0;
 
               // 🎯 แสดง 'ไม่มีรีวิว' หาก reviews เป็น 0
-              final displayRatingText = (serviceReviews == 0)
-                  ? (widget.isEnglish ? 'No Reviews' : 'ไม่มีรีวิว')
-                  : "$serviceRating (${NumberFormat.compact().format(serviceReviews)}${widget.isEnglish ? ' reviews' : ' รีวิว'})";
+              final displayRatingText =
+                  (serviceReviews == 0)
+                      ? (widget.isEnglish ? 'No Reviews' : 'ไม่มีรีวิว')
+                      : "$serviceRating (${NumberFormat.compact().format(serviceReviews)}${widget.isEnglish ? ' reviews' : ' รีวิว'})";
 
               return Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8.0),
@@ -905,18 +942,18 @@ class _HomePageState extends State<HomePage> {
                     ),
                     isLoading['servicePopularity']!
                         ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2.0),
-                          )
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2.0),
+                        )
                         : Text(
-                              displayRatingText,
-                              style: const TextStyle(
-                                fontSize: 10,
-                                color: Colors.grey,
-                              ),
-                              textAlign: TextAlign.center,
+                          displayRatingText,
+                          style: const TextStyle(
+                            fontSize: 10,
+                            color: Colors.grey,
                           ),
+                          textAlign: TextAlign.center,
+                        ),
                   ],
                 ),
               );

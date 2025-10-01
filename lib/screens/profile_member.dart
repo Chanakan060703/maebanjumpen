@@ -189,6 +189,14 @@ class _ProfileMemberPageState extends State<ProfileMemberPage> {
                         .trim(),
                   ),
                   const SizedBox(height: 8.0),
+                  // START: Added ID Card Number
+                  _buildInfoRow(
+                    Icons.credit_card_outlined,
+                    widget.isEnglish ? 'ID Card Number' : 'หมายเลขบัตรประชาชน',
+                    _currentUser.person?.idCardNumber ?? 'N/A', // Assume idCardNumber exists on Person model
+                  ),
+                  const SizedBox(height: 8.0),
+                  // END: Added ID Card Number
                   _buildInfoRow(
                     Icons.email_outlined,
                     widget.isEnglish ? 'Email' : 'อีเมล',
@@ -245,23 +253,6 @@ class _ProfileMemberPageState extends State<ProfileMemberPage> {
               ),
             ),
             const SizedBox(height: 16.0),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16.0),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(10.0),
-                border: Border.all(color: Colors.grey[200]!),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-        
-                ],
-              ),
-            ),
-            const SizedBox(height: 24.0),
-            // The ElevatedButton Logout button is still here
             ElevatedButton(
               onPressed: _handleLogout,
               style: ElevatedButton.styleFrom(
@@ -303,75 +294,6 @@ class _ProfileMemberPageState extends State<ProfileMemberPage> {
           ],
         ),
       ],
-    );
-  }
-
-  Widget _buildSocialMediaRow(
-      String platform,
-      String handle,
-      String iconUrl,
-      bool isEnglish, {
-        Color? backgroundColor,
-      }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      decoration: BoxDecoration(
-        color: backgroundColor ?? Colors.blue[100],
-        borderRadius: BorderRadius.circular(8.0),
-      ),
-      child: Row(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Image.network(
-              iconUrl,
-              width: 30.0,
-              height: 30.0,
-              errorBuilder: (
-                BuildContext context,
-                Object error,
-                StackTrace? stackTrace,
-              ) {
-                return Container(
-                  width: 30.0,
-                  height: 30.0,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[300],
-                    borderRadius: BorderRadius.circular(5.0),
-                  ),
-                  child: const Center(
-                    child: Icon(
-                      Icons.broken_image_outlined,
-                      color: Colors.grey,
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-          const SizedBox(width: 12.0),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  platform,
-                  style: const TextStyle(
-                    fontSize: 16.0,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                Text(
-                  handle,
-                  style: const TextStyle(fontSize: 14.0, color: Colors.grey),
-                ),
-              ],
-            ),
-          ),
-          const Icon(Icons.arrow_forward_ios, color: Colors.grey, size: 16.0),
-          const SizedBox(width: 8.0),
-        ],
-      ),
     );
   }
 }

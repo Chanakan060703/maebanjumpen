@@ -1,14 +1,19 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:maebanjumpen/constant/constant_value.dart'; // ตรวจสอบว่าไฟล์นี้มี baseURL และ headers ที่ถูกต้อง
+import 'package:maebanjumpen/constant/constant_value.dart'; // ตรวจสอบว่ามี baseURL และ headers ที่ถูกต้อง
 import 'package:maebanjumpen/model/transaction.dart';
+import 'package:flutter/foundation.dart'; // สำหรับ kDebugMode
 
 class TransactionController {
-  // baseURL และ headers ควรจะถูกกำหนดใน constant_value.dart
+  // baseURL และ headers ถูกกำหนดใน constant_value.dart
   // เช่น final String baseURL = 'http://your-backend-ip:8088';
   // final Map<String, String> headers = {'Accept': 'application/json'};
 
-  // ดึงข้อมูล Transaction ทั้งหมด
+  // ------------------------------------------------------------------
+  // GET methods
+  // ------------------------------------------------------------------
+
+  /// ดึงข้อมูล Transaction ทั้งหมด
   Future<List<Transaction>> getAllTransactions() async {
     try {
       var url = Uri.parse('$baseURL/maeban/transactions');
@@ -20,12 +25,12 @@ class TransactionController {
       }
       throw Exception('Failed to load transactions: ${response.statusCode}');
     } catch (e) {
-      print('Error fetching transactions: $e');
+      if (kDebugMode) print('Error fetching all transactions: $e');
       throw Exception('Failed to load transactions');
     }
   }
 
-  // ดึงข้อมูล Transaction โดย ID
+  /// ดึงข้อมูล Transaction โดย ID
   Future<Transaction> getTransactionById(int id) async {
     try {
       var url = Uri.parse('$baseURL/maeban/transactions/$id');
@@ -34,14 +39,62 @@ class TransactionController {
       if (response.statusCode == 200) {
         return Transaction.fromJson(json.decode(utf8.decode(response.bodyBytes)));
       }
-      throw Exception('Failed to load transaction: ${response.statusCode}');
+      throw Exception('Failed to load transaction ID $id: ${response.statusCode}');
     } catch (e) {
-      print('Error fetching transaction: $e');
+      if (kDebugMode) print('Error fetching transaction ID $id: $e');
       throw Exception('Failed to load transaction');
     }
   }
 
-  // สร้าง Transaction ใหม่
+  /// ดึงข้อมูล Transaction โดย Member ID
+  Future<List<Transaction>> getTransactionsByMemberId(int memberId) async {
+    try {
+      var url = Uri.parse('$baseURL/maeban/transactions?memberId=$memberId');
+      var response = await http.get(url, headers: headers);
+
+      if (response.statusCode == 200) {
+        final data = json.decode(utf8.decode(response.bodyBytes)) as List;
+        return data.map((e) => Transaction.fromJson(e)).toList();
+      } else if (response.statusCode == 204 || response.body.isEmpty) { 
+        // No Content หรือ Body ว่าง หมายถึงไม่มีข้อมูล
+        return [];
+      }
+      
+      // การจัดการ Exception ที่มีรายละเอียดมากขึ้น
+      String errorDetail = response.body.isNotEmpty 
+          ? json.decode(utf8.decode(response.bodyBytes))['message'] ?? response.body 
+          : 'No detail';
+      
+      throw Exception('Failed to load transactions for member $memberId: ${response.statusCode}. Detail: $errorDetail');
+
+    } catch (e) {
+      if (kDebugMode) print('Error fetching transactions by member: $e');
+      throw Exception('Failed to load transactions for member $memberId: $e');
+    }
+  }
+  
+  /// ดึงข้อมูล Transaction โดยประเภท (ถ้า Backend รองรับ query param: ?type=)
+  Future<List<Transaction>> getTransactionsByType(String type) async {
+    try {
+      var url = Uri.parse('$baseURL/maeban/transactions?type=$type');
+      var response = await http.get(url, headers: headers);
+
+      if (response.statusCode == 200) {
+        final data = json.decode(utf8.decode(response.bodyBytes)) as List;
+        return data.map((e) => Transaction.fromJson(e)).toList();
+      }
+      throw Exception('Failed to load transactions by type: ${response.statusCode}');
+    } catch (e) {
+      if (kDebugMode) print('Error fetching transactions by type: $e');
+      throw Exception('Failed to load transactions');
+    }
+  }
+  
+  // ------------------------------------------------------------------
+  // POST/PATCH/PUT/DELETE methods
+  // ------------------------------------------------------------------
+
+  /// สร้าง Transaction ใหม่
   Future<Transaction> createTransaction(Transaction transaction) async {
     try {
       var url = Uri.parse('$baseURL/maeban/transactions');
@@ -51,7 +104,7 @@ class TransactionController {
       };
 
       var body = json.encode(transaction.toJson());
-      print('Sending POST Request Body: $body'); // เพิ่มบรรทัดนี้เพื่อ debug
+      if (kDebugMode) print('Sending POST Request Body: $body');
 
       var response = await http.post(
           url,
@@ -62,14 +115,17 @@ class TransactionController {
       if (response.statusCode == 201 || response.statusCode == 200) {
         return Transaction.fromJson(json.decode(utf8.decode(response.bodyBytes)));
       }
-      print('Failed to create transaction: ${response.statusCode} - ${response.body}');
-      throw Exception('Failed to create transaction: ${response.body}');
+      
+      String errorResponse = utf8.decode(response.bodyBytes);
+      if (kDebugMode) print('Failed to create transaction: ${response.statusCode} - $errorResponse');
+      throw Exception('Failed to create transaction: $errorResponse');
     } catch (e) {
-      print('Error creating transaction: $e');
+      if (kDebugMode) print('Error creating transaction: $e');
       throw Exception('Failed to create transaction');
     }
   }
 
+  /// อัปเดตสถานะ Transaction (ใช้ HTTP PATCH)
   Future<bool> updateTransactionStatus(int transactionId, String newStatus, int accountManagerId) async {
     try {
       var url = Uri.parse('$baseURL/maeban/transactions/$transactionId/status');
@@ -79,16 +135,15 @@ class TransactionController {
         'Content-Type': 'application/json',
       };
 
-      // สร้าง Body ที่มี 'newStatus' และ 'accountManagerId' ตามที่ Backend คาดหวัง
+      // สร้าง Body ที่มี 'newStatus' และ 'accountManagerId' (ส่งเป็น String เพื่อให้สอดคล้องกับ Map<String, String> ใน Java Backend)
       final Map<String, dynamic> bodyData = {
         'newStatus': newStatus,
-        'accountManagerId': accountManagerId.toString(), // Backend คาดหวัง String
+        'accountManagerId': accountManagerId.toString(), 
       };
 
       var body = json.encode(bodyData);
-      print('Sending PATCH Status Request Body to $url: $body'); // Debugging
+      if (kDebugMode) print('Sending PATCH Status Request Body to $url: $body');
 
-      // ใช้ http.patch() ตามที่ Backend กำหนดไว้ใน @PatchMapping
       var response = await http.patch(
         url,
         headers: requestHeaders,
@@ -96,29 +151,21 @@ class TransactionController {
       );
 
       if (response.statusCode == 200) {
-        print('Transaction ID $transactionId status updated to $newStatus successfully.');
+        if (kDebugMode) print('Transaction ID $transactionId status updated to $newStatus successfully.');
         return true;
       } else {
-        print('Failed to update transaction status: ${response.statusCode} - ${response.body}');
-        if (response.body.isNotEmpty) {
-          try {
-            final errorDetail = json.decode(utf8.decode(response.bodyBytes));
-            print('Backend Error Detail: ${errorDetail['error'] ?? errorDetail}');
-          } catch (e) {
-            print('Could not parse backend error response.');
-          }
+        if (kDebugMode) {
+          print('Failed to update transaction status: ${response.statusCode} - ${response.body}');
         }
         return false;
       }
     } catch (e) {
-      print('Error updating transaction status: $e');
+      if (kDebugMode) print('Error updating transaction status: $e');
       return false;
     }
   }
 
-  // อัปเดต Transaction ทั่วไป (ใช้เมื่อต้องการเปลี่ยนหลายฟิลด์ *ยกเว้นสถานะ*)
-  // เมธอดนี้จะยังคงอยู่และถูกใช้สำหรับอัปเดตข้อมูลอื่นๆ ที่ไม่ใช่สถานะ
-  // แต่จะไม่มีการส่ง 'transactionStatus' หรือ 'transactionApprovalDate' ใน body ของ request
+  /// อัปเดต Transaction ทั่วไป (ใช้ HTTP PUT)
   Future<bool> updateTransaction(int id, Transaction transaction) async {
     try {
       var url = Uri.parse('$baseURL/maeban/transactions/$id');
@@ -132,15 +179,12 @@ class TransactionController {
       if (transaction.transactionType != null) dataToUpdate['transactionType'] = transaction.transactionType;
       if (transaction.transactionAmount != null) dataToUpdate['transactionAmount'] = transaction.transactionAmount;
       if (transaction.transactionDate != null) dataToUpdate['transactionDate'] = transaction.transactionDate?.toIso8601String();
-      // ไม่รวม transactionStatus เพราะมี endpoint แยกต่างหาก
-      // ไม่รวม member เพราะ Backend บอก "Cannot change member of an existing transaction."
       if (transaction.prompayNumber != null) dataToUpdate['prompayNumber'] = transaction.prompayNumber;
       if (transaction.bankAccountNumber != null) dataToUpdate['bankAccountNumber'] = transaction.bankAccountNumber;
       if (transaction.bankAccountName != null) dataToUpdate['bankAccountName'] = transaction.bankAccountName;
-      // ไม่รวม transactionApprovalDate เพราะถูกตั้งค่าโดย endpoint สถานะ
       
       var body = json.encode(dataToUpdate);
-      print('Sending PUT Request Body to $url (non-status fields): $body'); // Debugging
+      if (kDebugMode) print('Sending PUT Request Body to $url (non-status fields): $body');
 
       var response = await http.put(
           url,
@@ -149,22 +193,22 @@ class TransactionController {
       );
 
       if (response.statusCode == 200) {
-        print('Transaction with ID $id updated successfully (non-status fields).');
+        if (kDebugMode) print('Transaction with ID $id updated successfully (non-status fields).');
         return true;
       } else if (response.statusCode == 404) {
-        print('Transaction with ID $id not found for update.');
+        if (kDebugMode) print('Transaction with ID $id not found for update.');
         return false;
       } else {
-        print('Failed to update transaction (non-status fields): ${response.statusCode} - ${response.body}');
+        if (kDebugMode) print('Failed to update transaction (non-status fields): ${response.statusCode} - ${response.body}');
         return false;
       }
     } catch (e) {
-      print('Error updating transaction (non-status fields): $e');
+      if (kDebugMode) print('Error updating transaction (non-status fields): $e');
       return false;
     }
   }
 
-  // ลบ Transaction
+  /// ลบ Transaction
   Future<bool> deleteTransaction(int id) async {
     try {
       var url = Uri.parse('$baseURL/maeban/transactions/$id');
@@ -175,54 +219,16 @@ class TransactionController {
       }
       throw Exception('Failed to delete transaction: ${response.statusCode}');
     } catch (e) {
-      print('Error deleting transaction: $e');
+      if (kDebugMode) print('Error deleting transaction: $e');
       throw Exception('Failed to delete transaction');
     }
   }
 
-  Future<List<Transaction>> getTransactionsByMemberId(int memberId) async {
-    try {
-      var url = Uri.parse('$baseURL/maeban/transactions?memberId=$memberId');
-      var response = await http.get(url, headers: headers);
+  // ------------------------------------------------------------------
+  // QR Code Generation
+  // ------------------------------------------------------------------
 
-      print('--- DEBUG Flutter: getTransactionsByMemberId ---');
-      print('URL ที่เรียก: $url');
-      print('HTTP Status Code: ${response.statusCode}');
-      final String rawResponseBody = utf8.decode(response.bodyBytes);
-      print('Response Body ที่ได้รับ (Raw): $rawResponseBody');
-      // --- ---------------------------------------------------- ---
-
-      if (response.statusCode == 200) {
-        final data = json.decode(rawResponseBody) as List;
-        return data.map((e) {
-          print('Processing item in map. Type: ${e.runtimeType}, value: $e');
-          return Transaction.fromJson(e);
-        }).toList();
-      }
-      throw Exception('Failed to load transactions: ${response.statusCode}');
-    } catch (e) {
-      print('Error fetching transactions by member: $e');
-      throw Exception('Failed to load transactions');
-    }
-  }
-
-  // ดึงข้อมูล Transaction โดยประเภท
-  Future<List<Transaction>> getTransactionsByType(String type) async {
-    try {
-      var url = Uri.parse('$baseURL/maeban/transactions?type=$type');
-      var response = await http.get(url, headers: headers);
-
-      if (response.statusCode == 200) {
-        final data = json.decode(utf8.decode(response.bodyBytes)) as List;
-        return data.map((e) => Transaction.fromJson(e)).toList();
-      }
-      throw Exception('Failed to load transactions: ${response.statusCode}');
-    } catch (e) {
-      print('Error fetching transactions by type: $e');
-      throw Exception('Failed to load transactions');
-    }
-  }
-
+  /// สร้าง QR Code สำหรับการฝากเงิน
   Future<Map<String, dynamic>?> createDepositQrCode({
     required int memberId,
     required double amount,
@@ -240,7 +246,7 @@ class TransactionController {
       };
 
       var body = json.encode(requestBody);
-      print('Sending POST QR Code Request Body to $url: $body');
+      if (kDebugMode) print('Sending POST QR Code Request Body to $url: $body');
 
       var response = await http.post(
         url,
@@ -248,50 +254,43 @@ class TransactionController {
         body: body,
       );
 
-      print('QR Code API Response Status: ${response.statusCode}');
-      print('QR Code API Response Body Length: ${response.bodyBytes.length} bytes');
+      if (kDebugMode) print('QR Code API Response Status: ${response.statusCode}');
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> responseData = json.decode(utf8.decode(response.bodyBytes));
 
         String? qrCodeBase64 = responseData['qrCodeImageBase64'];
-        int? transactionId = responseData['transactionId'];
+        // transactionId อาจเป็น int หรือ String ขึ้นอยู่กับ Backend
+        dynamic transactionId = responseData['transactionId'];
 
         if (qrCodeBase64 != null && qrCodeBase64.isNotEmpty) {
-          // ⚠️ ลบ: ลบโค้ดทำความสะอาด Base64 ที่ซ้ำซ้อนออก
-          // String cleanBase64 = qrCodeBase64.replaceAll(RegExp(r'\s+'), ''); 
-
-          print('TransactionController: Received qrCodeImageBase64 successfully. Length: ${qrCodeBase64.length}');
-          
-          // ใช้ qrCodeBase64 เดิมที่คาดว่าสะอาดแล้ว
+          if (kDebugMode) print('Received qrCodeImageBase64 successfully. Length: ${qrCodeBase64.length}');
           return {'qrCodeImageBase64': qrCodeBase64, 'transactionId': transactionId};
         } else {
-          print('TransactionController: qrCodeImageBase64 is null or empty in responseData. Full response: $responseData');
+          if (kDebugMode) print('qrCodeImageBase64 is null or empty. Full response: $responseData');
           throw Exception('Backend did not return valid QR Code Base64 data.');
         }
       } else {
-        // --- 🎯 แก้ไข: การจัดการ Error 400/500 ให้ชัดเจนขึ้น ---
         String errorDetail = 'Unknown API error.';
         if (response.body.isNotEmpty) {
           try {
             final errorJson = json.decode(utf8.decode(response.bodyBytes));
-            // พยายามดึง error message จาก field ต่างๆ ใน response
             errorDetail = errorJson['message'] ?? errorJson['error'] ?? errorJson.toString();
           } catch (e) {
             errorDetail = 'Error parsing backend error response (Status: ${response.statusCode}). Raw body: ${response.body}';
           }
-          print('Backend Error Detail: $errorDetail');
+          if (kDebugMode) print('Backend Error Detail: $errorDetail');
         }
         
-        // Throw Exception ที่ชัดเจนพร้อมรหัสสถานะและรายละเอียด
         throw Exception('Failed to create QR Code: ${response.statusCode} - $errorDetail');
       }
     } catch (e) {
-      print('Error creating deposit QR Code: $e');
+      if (kDebugMode) print('Error creating deposit QR Code: $e');
       throw Exception('Failed to create deposit QR Code: $e');
     }
   }
 
+  /// ดึงสถานะของ Transaction (ใช้สำหรับตรวจสอบหลังการชำระเงินด้วย QR)
   Future<Map<String, dynamic>?> getTransactionStatus(int transactionId) async {
     final url = Uri.parse('$baseURL/maeban/transactions/$transactionId/status');
     try {
@@ -303,12 +302,14 @@ class TransactionController {
       if (response.statusCode == 200) {
         return json.decode(utf8.decode(response.bodyBytes));
       } else {
-        print('Failed to get transaction status for ID $transactionId. Status code: ${response.statusCode}');
-        print('Response body: ${response.body}');
+        if (kDebugMode) {
+          print('Failed to get transaction status for ID $transactionId. Status code: ${response.statusCode}');
+          print('Response body: ${response.body}');
+        }
         return null;
       }
     } catch (e) {
-      print('Error getting transaction status: $e');
+      if (kDebugMode) print('Error getting transaction status: $e');
       return null;
     }
   }

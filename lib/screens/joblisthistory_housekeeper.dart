@@ -109,29 +109,6 @@ class JobListHistoryScreenState extends State<JobListHistoryScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.red),
-          onPressed: () {
-            widget.onGoToHome?.call();
-          },
-        ),
-        title: Text(
-          widget.isEnglish ? 'Job History' : 'ประวัติงาน',
-          style: const TextStyle(color: Colors.black),
-        ),
-        backgroundColor: Colors.white,
-        elevation: 0,
-        centerTitle: false,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh, color: Colors.black),
-            onPressed: () {
-              refreshJobHistory();
-            },
-          ),
-        ],
-      ),
       body: FutureBuilder<List<Hire>>(
         future: _futureHires,
         builder: (context, snapshot) {
@@ -196,8 +173,13 @@ class JobListHistoryScreenState extends State<JobListHistoryScreen> {
                       jobStatusText == 'Completed' && hire.review != null;
                   final bool showReportButton = jobStatusText == 'Completed';
 
+                  final String jobServiceName = hire.hireName ?? 
+                      (widget.isEnglish ? 'Unknown Service' : 'บริการไม่ระบุ');
+
                   return JobCardHistory(
                     name: hirerName,
+                    // **ส่ง jobServiceName เข้าไป**
+                    serviceName: jobServiceName, 
                     date: _formatDate(hire.startDate),
                     time: '${hire.startTime ?? ''} - ${hire.endTime ?? ''}',
                     address: jobAddress,

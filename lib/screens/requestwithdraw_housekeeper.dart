@@ -36,7 +36,6 @@ class _RequestWithdrawalScreenState extends State<RequestWithdrawalScreen> {
   final TransactionController _transactionController = TransactionController();
   double _currentBalance = 0.0;
   bool _isSubmitting = false; // สถานะการส่งข้อมูล
-  // final Uuid _uuid = Uuid(); // ไม่จำเป็นต้องใช้ Uuid ที่นี่แล้ว NotificationManager จัดการเอง
 
   @override
   void initState() {
@@ -45,8 +44,6 @@ class _RequestWithdrawalScreenState extends State<RequestWithdrawalScreen> {
     _currentBalance = widget.user.balance ?? 0.0;
     // Pre-fill PromPay number if user has a phone number
     _usePhoneNumberAsPromPay();
-    // Initialize bank account name/number if available from user profile (assuming they are stored there)
-    // You might need to adjust this based on how your Housekeeper model stores bank info
   }
 
   @override
@@ -77,14 +74,13 @@ class _RequestWithdrawalScreenState extends State<RequestWithdrawalScreen> {
 
     final double withdrawalAmount = double.tryParse(amountText) ?? 0.0;
 
-    final Member memberForTransaction = Member(id: widget.user.id);
-
+    // *** แก้ไขตรงนี้: ใช้ memberId โดยตรง แทนการสร้าง Member object ***
     final newTransaction = Transaction(
       transactionType: 'Withdrawal', // Backend expects 'Withdrawal'
       transactionAmount: withdrawalAmount,
       transactionDate: DateTime.now(), // Current date/time for the request
       transactionStatus: 'Pending Approve', // Initial status
-      member: memberForTransaction,
+      memberId: widget.user.id, // 🎯 ส่ง memberId (Integer) โดยตรง
       prompayNumber: prompayNumber.isNotEmpty ? prompayNumber : null,
       bankAccountNumber: bankAccountNumber.isNotEmpty ? bankAccountNumber : null,
       bankAccountName: bankAccountName.isNotEmpty ? bankAccountName : null,

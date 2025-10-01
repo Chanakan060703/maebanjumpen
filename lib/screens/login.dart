@@ -86,8 +86,7 @@ class _LoginPageState extends State<LoginPage> {
         child: const Icon(Icons.close_rounded, color: Colors.red, size: 40),
       ),
       title: title ?? (isEnglish ? 'Oops!' : 'เกิดข้อผิดพลาด'),
-      desc:
-          desc ??
+      desc: desc ??
           (isEnglish
               ? 'Please enter both email and password.'
               : 'กรุณากรอกอีเมลและรหัสผ่านให้ครบถ้วน'),
@@ -107,6 +106,37 @@ class _LoginPageState extends State<LoginPage> {
     ).show();
   }
 
+ 
+  String _generatePenaltyMessage({
+    required String accountStatus, // สถานะบัญชีจาก Backend (เช่น 'Ban', 'Account Suspension')
+    required String penaltyType, // ใช้เป็นตัวแสดงผล (มักจะตรงกับ accountStatus)
+    required String formattedDate, // วันที่สิ้นสุดโทษ
+    required bool isEnglish,
+  }) {
+    String penaltyMessage = '';
+
+    // เงื่อนไข 1: หากสถานะคือ 'Ban' (ต้องแสดงวันที่)
+    if (accountStatus == 'Ban') {
+      penaltyMessage = isEnglish
+          ? 'Your account is currently $penaltyType until $formattedDate.'
+          : 'บัญชีของคุณถูก $penaltyType จนถึงวันที่ $formattedDate';
+    }
+    // เงื่อนไข 2: หากสถานะคือ 'Account Suspension' (ไม่ต้องแสดงวันที่)
+    else if (accountStatus == 'Account Suspension') {
+      penaltyMessage = isEnglish
+          ? 'Your account is currently $penaltyType.'
+          : 'บัญชีของคุณถูก $penaltyType';
+    }
+    // เงื่อนไขอื่น ๆ ที่ถูกจำกัด แต่ไม่ได้ระบุชัดเจน (Fallback)
+    else {
+      penaltyMessage = isEnglish
+          ? 'Your account is currently restricted with status: $penaltyType.'
+          : 'บัญชีของคุณถูกจำกัดการเข้าถึงในสถานะ: $penaltyType';
+    }
+
+    return penaltyMessage;
+  }
+
   Future<void> _handleLogin() async {
     // เพิ่มการตรวจสอบความถูกต้องของฟอร์ม
     if (!_formKey.currentState!.validate()) {
@@ -122,12 +152,12 @@ class _LoginPageState extends State<LoginPage> {
       if (!mounted) return;
 
       if (partyRole == null) {
+        // กรณี authenticate คืนค่า null โดยไม่มี Exception
         _showErrorDialog(
           title: isEnglish ? 'Login Failed' : 'เข้าสู่ระบบล้มเหลว',
-          desc:
-              isEnglish
-                  ? 'Invalid username or password.'
-                  : 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง',
+          desc: isEnglish
+              ? 'Invalid username or password.'
+              : 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง',
         );
         return;
       }
@@ -141,12 +171,14 @@ class _LoginPageState extends State<LoginPage> {
       await _saveRememberMeCredentials();
 
       // 💡 ปรับปรุง: ใช้ toLowerCase() เพื่อจัดการกับ "Active" และ "active"
-      final accountStatus = partyRole.person?.accountStatus?.toLowerCase();
+      final accountStatusRaw = partyRole.person?.accountStatus;
+      final accountStatusLower = accountStatusRaw?.toLowerCase();
 
-      if (partyRole is Member && accountStatus != 'active') {
-        final penaltyType =
-            partyRole.person?.accountStatus; // ⬅️ ใช้ค่าเดิมสำหรับแสดงผล
+      // ✅ ตรวจสอบสถานะบัญชีที่ไม่ 'active' (สำหรับกรณี Backend ส่ง 200 OK มาพร้อมสถานะไม่ active)
+      if (partyRole is Member && accountStatusLower != 'active') {
+        final penaltyType = accountStatusRaw!; // ⬅️ ใช้ค่าเดิมสำหรับแสดงผล
         String penaltyMessage = '';
+        String formattedDate = '';
 
         if (partyRole.person?.personId != null) {
           final Penalty? penalty = await _loginController.getPenaltyByPersonId(
@@ -155,75 +187,69 @@ class _LoginPageState extends State<LoginPage> {
 
           if (!mounted) return;
 
+          // 2. จัดรูปแบบวันที่หากมีข้อมูลโทษและวันที่สิ้นสุด
           if (penalty != null && penalty.penaltyDate != null) {
             final dateFormat = DateFormat(
               'd MMMM y',
               isEnglish ? 'en_US' : 'th_TH',
             );
-            final formattedDate = dateFormat.format(penalty.penaltyDate!);
-
-            penaltyMessage =
-                isEnglish
-                    ? 'Your account is currently $penaltyType until $formattedDate.'
-                    : 'บัญชีของคุณถูก $penaltyType ถึงวันที่ $formattedDate';
-          } else {
-            penaltyMessage =
-                isEnglish
-                    ? 'Your account is currently $penaltyType.'
-                    : 'บัญชีของคุณถูก $penaltyType ';
+            formattedDate = dateFormat.format(penalty.penaltyDate!);
           }
+
+          // 3. ใช้เมธอดใหม่เพื่อสร้างข้อความตามตรรกะ if/else if ที่ต้องการ
+          penaltyMessage = _generatePenaltyMessage(
+            accountStatus: accountStatusRaw!,
+            penaltyType: penaltyType,
+            formattedDate: formattedDate,
+            isEnglish: isEnglish,
+          );
         } else {
-          penaltyMessage =
-              isEnglish
-                  ? 'Your account is currently $penaltyType.'
-                  : 'บัญชีของคุณถูก $penaltyType ';
+          // กรณีไม่มี personId (ไม่น่าจะเกิดขึ้น)
+          penaltyMessage = isEnglish
+              ? 'Your account is currently $penaltyType.'
+              : 'บัญชีของคุณถูก $penaltyType';
         }
 
         _showErrorDialog(
           title: isEnglish ? 'Account Restricted' : 'บัญชีถูกจำกัดการเข้าถึง',
           desc: penaltyMessage,
         );
-        return;
+        return; // สำคัญ: ต้อง return เพื่อไม่ให้ดำเนินการต่อเข้าหน้า Home
       }
 
       if (!mounted) return;
 
+      // ตรรกะการนำทางสำหรับผู้ใช้ที่สถานะเป็น 'active'
       if (partyRole is Housekeeper) {
-        // 💡 ปรับปรุง: ใช้ Null-aware access และ toLowerCase() เพื่อความปลอดภัย
-        final statusVerify =
-            partyRole.statusVerify
-                ?.toUpperCase(); // ใช้ toUpperCase() เพื่อเทียบกับ Enum ที่มักจะเป็นตัวใหญ่
+        // 💡 ปรับปรุง: ใช้ Null-aware access และ toUpperCase() เพื่อความปลอดภัย
+        final statusVerify = partyRole.statusVerify?.toUpperCase();
 
         // 1. เงื่อนไขที่ถูกต้อง: อนุญาตให้เข้าสู่ระบบได้ ถ้าสถานะเป็น APPROVED หรือ VERIFIED
         if (statusVerify == 'APPROVED' || statusVerify == 'VERIFIED') {
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
-              builder:
-                  (context) =>
-                      HousekeeperPage(user: partyRole, isEnglish: isEnglish),
+              builder: (context) =>
+                  HousekeeperPage(user: partyRole, isEnglish: isEnglish),
             ),
           );
         }
         // 2. เงื่อนไขที่ถูกต้อง: บัญชีกำลังรอ/ถูกปฏิเสธ (ไม่ให้เข้าสู่ระบบ)
         else if (statusVerify == 'PENDING' || statusVerify == 'REJECTED') {
-          // ... (แสดง Dialog บัญชีกำลังตรวจสอบ/ถูกปฏิเสธ)
           _showErrorDialog(
             title: isEnglish ? 'Account Under Review' : 'บัญชีกำลังตรวจสอบ',
-            desc:
-                isEnglish
-                    ? 'Your account status is $statusVerify. Please wait for verification.'
-                    : 'บัญชีของคุณสถานะเป็น $statusVerify โปรดรอการยืนยัน',
+            desc: isEnglish
+                ? 'Your account status is $statusVerify. Please wait for verification.'
+                : 'บัญชีของคุณสถานะเป็น $statusVerify โปรดรอการยืนยัน',
           );
           return;
         } else {
           // ... (สถานะอื่นๆ หรือเป็น null)
           _showErrorDialog(
             title: isEnglish ? 'Verification Required' : 'ต้องมีการยืนยัน',
-            desc:
-                isEnglish
-                    ? 'Your housekeeper account needs verification.'
-                    : 'บัญชีแม่บ้านของคุณต้องได้รับการยืนยันก่อน',
+            desc: isEnglish
+                ? 'Your housekeeper account needs verification.'
+                : 'บัญชีแม่บ้านของคุณต้องได้รับการยืนยันก่อน',
           );
           return;
         }
@@ -231,63 +257,93 @@ class _LoginPageState extends State<LoginPage> {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder:
-                (context) => HomePage(user: partyRole, isEnglish: isEnglish),
+            builder: (context) => HomePage(user: partyRole, isEnglish: isEnglish),
           ),
         );
       } else if (partyRole is Admin) {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder:
-                (context) => HomeAdminPage(
-                  user:
-                      partyRole, // 💡 ไม่จำเป็นต้อง as Admin เพราะมีการตรวจสอบ type แล้ว
-                  isEnglish: isEnglish,
-                ),
+            builder: (context) => HomeAdminPage(
+              user: partyRole,
+              isEnglish: isEnglish,
+            ),
           ),
         );
       } else if (partyRole is AccountManager) {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder:
-                (context) => AccountManagerPage(
-                  user:
-                      partyRole, // 💡 ไม่จำเป็นต้อง as AccountManager เพราะมีการตรวจสอบ type แล้ว
-                  isEnglish: isEnglish,
-                ),
+            builder: (context) => AccountManagerPage(
+              user: partyRole,
+              isEnglish: isEnglish,
+            ),
           ),
         );
       } else {
         _showErrorDialog(
           title: isEnglish ? 'Unknown User Type' : 'ประเภทผู้ใช้ไม่รู้จัก',
-          desc:
-              isEnglish
-                  ? 'Could not determine user role. Please try again.'
-                  : 'ไม่สามารถระบุบทบาทผู้ใช้ได้ กรุณาลองใหม่',
+          desc: isEnglish
+              ? 'Could not determine user role. Please try again.'
+              : 'ไม่สามารถระบุบทบาทผู้ใช้ได้ กรุณาลองใหม่',
         );
       }
     } catch (e) {
       print("Error during login: $e");
       if (mounted) {
-        // ตรวจสอบข้อผิดพลาดที่มาจากเซิร์ฟเวอร์ (เช่น Invalid username/password)
-        if (e.toString().contains('401')) {
+        final errorText = e.toString();
+
+        if (errorText.contains('401')) {
+          String dialogTitle;
+          String dialogDesc;
+
+          // 1. ตรวจสอบสถานะ 'Ban'
+          if (errorText.contains('Ban')) {
+            dialogTitle = isEnglish ? 'Account Banned' : 'บัญชีถูกแบน';
+            dialogDesc = isEnglish
+                ? 'Your account has been permanently banned. Please contact the administrator for details.'
+                : 'บัญชีของคุณถูกแบน กรุณาติดต่อผู้ดูแลระบบเพื่อสอบถามรายละเอียด';
+          }
+          // 2. ตรวจสอบสถานะ 'Account Suspension'
+          else if (errorText.contains('Account Suspension')) {
+            dialogTitle = isEnglish ? 'Account Suspended' : 'บัญชีถูกระงับ';
+            dialogDesc = isEnglish
+                ? 'Your account is currently suspended. Please contact the administrator for details.'
+                : 'บัญชีของคุณถูกระงับ กรุณาติดต่อผู้ดูแลระบบ';
+          }
+          // 3. ตรวจสอบสถานะ 'PENDING'
+          else if (errorText.contains('PENDING')) {
+            dialogTitle = isEnglish ? 'Account Under Review' : 'บัญชีกำลังตรวจสอบ';
+            dialogDesc = isEnglish
+                ? 'Your account status is PENDING. Please wait for verification.'
+                : 'บัญชีของคุณอยู่ในระหว่างการตรวจสอบ โปรดรอการยืนยัน';
+          }
+          // 4. ตรวจสอบสถานะ 'account status inactive' (กรณีทั่วไปที่ยังไม่ระบุชัดเจน)
+          else if (errorText.contains('account status inactive')) {
+            dialogTitle = isEnglish ? 'Account Inactive' : 'บัญชีไม่เปิดใช้งาน';
+            dialogDesc = isEnglish
+                ? 'Your account is currently inactive. Please contact the administrator for more details.'
+                : 'บัญชีของคุณไม่เปิดใช้งาน กรุณาติดต่อผู้ดูแลระบบเพื่อสอบถามรายละเอียดเพิ่มเติม';
+          }
+          // 5. Fallback สำหรับ 401: รหัสผ่าน/ชื่อผู้ใช้ผิด
+          else {
+            dialogTitle = isEnglish ? 'Login Failed' : 'เข้าสู่ระบบล้มเหลว';
+            dialogDesc = isEnglish
+                ? 'Invalid username or password.'
+                : 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง';
+          }
+
           _showErrorDialog(
-            title: isEnglish ? 'Login Failed' : 'เข้าสู่ระบบล้มเหลว',
-            desc:
-                isEnglish
-                    ? 'Invalid username or password.'
-                    : 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง',
+            title: dialogTitle,
+            desc: dialogDesc,
           );
         } else {
-          // สำหรับข้อผิดพลาดอื่น ๆ ที่ไม่เกี่ยวข้องกับการล็อกอิน
+          // Fallback สำหรับข้อผิดพลาดที่ไม่ใช่ 401 (เช่น Network Error)
           _showErrorDialog(
             title: isEnglish ? 'Login Error' : 'เกิดข้อผิดพลาดในการเข้าสู่ระบบ',
-            desc:
-                isEnglish
-                    ? 'An unexpected error occurred. Please try again.'
-                    : 'เกิดข้อผิดพลาดที่ไม่คาดคิด กรุณาลองใหม่',
+            desc: isEnglish
+                ? 'An unexpected error occurred. Please try again.'
+                : 'เกิดข้อผิดพลาดที่ไม่คาดคิด กรุณาลองใหม่',
           );
         }
       }
@@ -409,9 +465,7 @@ class _LoginPageState extends State<LoginPage> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
-                          isEnglish
-                              ? "Don't have an account? "
-                              : "ยังไม่มีบัญชี? ",
+                          isEnglish ? "Don't have an account? " : "ยังไม่มีบัญชี? ",
                           style: const TextStyle(
                             color: Colors.black,
                             fontWeight: FontWeight.normal,

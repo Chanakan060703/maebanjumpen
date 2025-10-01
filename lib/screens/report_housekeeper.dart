@@ -11,7 +11,8 @@ class ReportMemberPage extends StatefulWidget {
   final Hire hire;
   final bool isEnglish;
   final Housekeeper? housekeeper; // Housekeeper is the reporter
-  final Person? userPerson; // Pass userPerson for reporting context (if needed for reporter Person details)
+  final Person?
+      userPerson; // Pass userPerson for reporting context (if needed for reporter Person details)
 
   const ReportMemberPage({
     super.key,
@@ -30,13 +31,17 @@ class _ReportMemberPageState extends State<ReportMemberPage> {
   final TextEditingController _dateController = TextEditingController();
   final TextEditingController _detailsController = TextEditingController();
 
-  final ReportController _reportController = ReportController(); // สร้าง instance ของ controller
+  final ReportController _reportController =
+      ReportController(); // สร้าง instance ของ controller
 
   @override
   void initState() {
     super.initState();
+
     // ตรวจสอบ locale ปัจจุบันเพื่อแสดงรูปแบบวันที่ที่เหมาะสม
-    _dateController.text = widget.isEnglish ? DateFormat('MM/dd/yyyy').format(DateTime.now()) : DateFormat('dd/MM/yyyy').format(DateTime.now());
+    _dateController.text = widget.isEnglish
+        ? DateFormat('MM/dd/yyyy').format(DateTime.now())
+        : DateFormat('dd/MM/yyyy').format(DateTime.now());
   }
 
   @override
@@ -48,7 +53,9 @@ class _ReportMemberPageState extends State<ReportMemberPage> {
 
   String _formatDate(DateTime date) {
     // ใช้รูปแบบวันที่ตามภาษาที่เลือก
-    return widget.isEnglish ? DateFormat('MM/dd/yyyy').format(date) : DateFormat('dd/MM/yyyy').format(date);
+    return widget.isEnglish
+        ? DateFormat('MM/dd/yyyy').format(date)
+        : DateFormat('dd/MM/yyyy').format(date);
   }
 
   void _handleIssueSelected(String value) {
@@ -61,12 +68,14 @@ class _ReportMemberPageState extends State<ReportMemberPage> {
   Future<void> _selectDate(BuildContext context) async {
     FocusScope.of(context).requestFocus(FocusNode()); // ซ่อน keyboard
     DateTime currentDate = DateTime.now();
+
     DateTime? picked = await showDatePicker(
       context: context,
       initialDate: currentDate,
       firstDate: DateTime(2000),
       lastDate: currentDate, // สามารถเลือกวันที่ไม่เกินวันนี้
     );
+
     if (picked != null) {
       setState(() {
         _dateController.text = _formatDate(picked);
@@ -93,7 +102,9 @@ class _ReportMemberPageState extends State<ReportMemberPage> {
     // 2. แปลงวันที่จาก String เป็น DateTime
     DateTime? parsedDate;
     try {
-      parsedDate = widget.isEnglish ? DateFormat('MM/dd/yyyy').parseStrict(_dateController.text) : DateFormat('dd/MM/yyyy').parseStrict(_dateController.text);
+      parsedDate = widget.isEnglish
+          ? DateFormat('MM/dd/yyyy').parseStrict(_dateController.text)
+          : DateFormat('dd/MM/yyyy').parseStrict(_dateController.text);
     } catch (e) {
       debugPrint('Error parsing date: $e');
       ScaffoldMessenger.of(context).showSnackBar(
@@ -109,20 +120,9 @@ class _ReportMemberPageState extends State<ReportMemberPage> {
       return;
     }
 
-    // --- START OF CRITICAL FIX ---
-
-    // 3. สร้าง Reporter Object (Housekeeper) - ซึ่งเป็นผู้รายงาน
-    // `widget.housekeeper` คือข้อมูลของแม่บ้านที่เข้าสู่ระบบและเป็นผู้รายงาน
-    Housekeeper? reporterHousekeeper;
-    if (widget.housekeeper != null && widget.housekeeper!.id != null) {
-      reporterHousekeeper = Housekeeper(
-        id: widget.housekeeper!.id,
-        type: "housekeeper", // ต้องตรงกับ @JsonTypeInfo DiscriminatorValue ใน backend
-        person: widget.housekeeper!.person, // ส่ง Person object ไปด้วย (ถ้า Backend ต้องการ detail ของ Person สำหรับ Reporter)
-        // ถ้า Backend ต้องการแค่ id และ type ของ Reporter ก็ไม่จำเป็นต้องส่ง field อื่นๆ ของ Housekeeper ไปทั้งหมด
-        // แต่การส่ง person ไปด้วยก็ไม่เสียหายถ้า model ถูกออกแบบมารองรับ
-      );
-    } else {
+    // 3. เตรียม Reporter Object (Housekeeper) - ซึ่งเป็นผู้รายงาน
+    final Housekeeper? reporterHousekeeper = widget.housekeeper;
+    if (reporterHousekeeper == null || reporterHousekeeper.id == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -136,16 +136,10 @@ class _ReportMemberPageState extends State<ReportMemberPage> {
       return;
     }
 
-    // 4. สร้าง Hirer Object (ผู้ถูกรายงาน)
-    // `widget.hire.hirer` คือข้อมูลของผู้ว่าจ้าง (Hirer) ที่ถูกรายงาน
-    Hirer? reportedHirer; // เปลี่ยนชื่อตัวแปรจาก reportHirer เป็น reportedHirer เพื่อความชัดเจน
-    if (widget.hire.hirer != null && widget.hire.hirer!.id != null) {
-      reportedHirer = Hirer(
-        id: widget.hire.hirer!.id,
-        type: "hirer", // ต้องตรงกับ @JsonTypeInfo DiscriminatorValue ใน backend
-        person: widget.hire.hirer!.person, // ส่ง Person object ไปด้วย (ถ้า Backend ต้องการ detail ของ Person สำหรับผู้ถูกรายงาน)
-      );
-    } else {
+    // 4. เตรียม Hirer Object (ผู้ถูกรายงาน)
+    // ใช้ Hirer ที่ได้รับมาจาก Hire object โดยตรง (widget.hire.hirer)
+    final Hirer? reportedHirer = widget.hire.hirer as Hirer?;
+    if (reportedHirer == null || reportedHirer.id == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -165,13 +159,16 @@ class _ReportMemberPageState extends State<ReportMemberPage> {
       reportMessage: _detailsController.text,
       reportDate: parsedDate,
       reportStatus: 'pending', // กำหนดสถานะเริ่มต้นของรายงาน
-      reporter: reporterHousekeeper, // <-- CORRECTED: ใช้ reporterHousekeeper ที่สร้างขึ้น
-      housekeeper: null, // <-- CORRECTED: ตั้งค่าเป็น null เพราะหน้านี้เป็นการรายงานผู้ว่าจ้าง ไม่ใช่แม่บ้าน
-      hirer: reportedHirer, // <-- CORRECTED: ผู้ถูกรายงานคือ Hirer
-      penalty: null, // กำหนดค่าเริ่มต้นเป็น null หรือตามความเหมาะสม
+      hireId: widget.hire.hireId, // ✅ FIX: เพิ่ม hireId จาก Hire object
+      reporter: reporterHousekeeper, // <-- ผู้รายงานคือ Housekeeper
+      
+      // ✅ FIX: ต้องกำหนด Housekeeper ที่เกี่ยวข้องกับงานจ้าง (ซึ่งคือผู้รายงานเอง)
+      // เพื่อให้ Report entity ใน Backend มีความสัมพันธ์กับ Housekeeper ด้วย
+      housekeeper: reporterHousekeeper, 
+      
+      hirer: reportedHirer, // <-- ผู้ถูกรายงานคือ Hirer
+      penalty: null, // กำหนดค่าเริ่มต้นเป็น null
     );
-
-    // --- END OF CRITICAL FIX ---
 
     // Debugging: พิมพ์ข้อมูล Report ที่จะส่ง
     debugPrint('Report object created: ${newReport.toJson()}');
@@ -179,22 +176,26 @@ class _ReportMemberPageState extends State<ReportMemberPage> {
     // 6. ส่ง Report ไปยัง Backend
     try {
       final savedReport = await _reportController.addReport(newReport);
+
       debugPrint('Report submitted successfully: ${savedReport.toJson()}');
 
       // แสดงข้อความสำเร็จ
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(widget.isEnglish
-              ? 'Report submitted successfully.'
-              : 'ส่งรายงานสำเร็จแล้ว'),
+          content: Text(
+            widget.isEnglish
+                ? 'Report submitted successfully.'
+                : 'ส่งรายงานสำเร็จแล้ว',
+          ),
           backgroundColor: Colors.green,
         ),
       );
 
-      // กลับไปยังหน้าจอก่อนหน้า พร้อมส่งข้อมูล report ที่บันทึกสำเร็จกลับไปด้วย (ถ้าจำเป็น)
+      // กลับไปยังหน้าจอก่อนหน้า พร้อมส่งข้อมูล report ที่บันทึกสำเร็จกลับไปด้วย
       Navigator.pop(context, savedReport);
     } catch (e) {
       debugPrint('Error submitting report: $e');
+
       // แสดงข้อความผิดพลาด
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -225,7 +226,10 @@ class _ReportMemberPageState extends State<ReportMemberPage> {
           // **ปรับหัวข้อ AppBar ให้เป็น "รายงานผู้ว่าจ้าง"**
           widget.isEnglish ? 'Report Hirer' : 'รายงานผู้ว่าจ้าง',
           style: const TextStyle(
-              color: Colors.black, fontSize: 18, fontWeight: FontWeight.w500),
+            color: Colors.black,
+            fontSize: 18,
+            fontWeight: FontWeight.w500,
+          ),
         ),
       ),
       body: SingleChildScrollView(
@@ -235,64 +239,72 @@ class _ReportMemberPageState extends State<ReportMemberPage> {
           children: [
             Text(
               widget.isEnglish ? 'Select Issue Type' : 'เลือกประเภทปัญหา',
-              style:
-                  const TextStyle(fontSize: 16.0, fontWeight: FontWeight.w500),
+              style: const TextStyle(
+                fontSize: 16.0,
+                fontWeight: FontWeight.w500,
+              ),
             ),
             const SizedBox(height: 8.0),
             // **ปรับปรุงรายการประเภทปัญหาให้เป็นสำหรับแม่บ้านรายงานผู้ว่าจ้าง**
             _CircularRadioListTile(
-                title: widget.isEnglish
-                    ? 'Non-payment or delayed payment'
-                    : 'ไม่ชำระเงินหรือชำระล่าช้า',
-                value: 'non_payment_delayed_payment',
-                groupValue: _selectedIssue,
-                onChanged: _handleIssueSelected),
+              title: widget.isEnglish
+                  ? 'Non-payment or delayed payment'
+                  : 'ไม่ชำระเงินหรือชำระล่าช้า',
+              value: 'non_payment_delayed_payment',
+              groupValue: _selectedIssue,
+              onChanged: _handleIssueSelected,
+            ),
             _CircularRadioListTile(
-                title: widget.isEnglish
-                    ? 'Harassment or inappropriate behavior'
-                    : 'การคุกคามหรือพฤติกรรมไม่เหมาะสม',
-                value: 'harassment_inappropriate_behavior',
-                groupValue: _selectedIssue,
-                onChanged: _handleIssueSelected),
+              title: widget.isEnglish
+                  ? 'Harassment or inappropriate behavior'
+                  : 'การคุกคามหรือพฤติกรรมไม่เหมาะสม',
+              value: 'harassment_inappropriate_behavior',
+              groupValue: _selectedIssue,
+              onChanged: _handleIssueSelected,
+            ),
             _CircularRadioListTile(
-                title: widget.isEnglish
-                    ? 'Unsafe working conditions'
-                    : 'สภาพแวดล้อมการทำงานไม่ปลอดภัย',
-                value: 'unsafe_working_conditions',
-                groupValue: _selectedIssue,
-                onChanged: _handleIssueSelected),
+              title: widget.isEnglish
+                  ? 'Unsafe working conditions'
+                  : 'สภาพแวดล้อมการทำงานไม่ปลอดภัย',
+              value: 'unsafe_working_conditions',
+              groupValue: _selectedIssue,
+              onChanged: _handleIssueSelected,
+            ),
             _CircularRadioListTile(
-                title:
-                    widget.isEnglish ? 'Job scope mismatch' : 'ขอบเขตงานไม่ตรงตามที่ตกลง',
-                value: 'job_scope_mismatch',
-                groupValue: _selectedIssue,
-                onChanged: _handleIssueSelected),
+              title: widget.isEnglish
+                  ? 'Job scope mismatch'
+                  : 'ขอบเขตงานไม่ตรงตามที่ตกลง',
+              value: 'job_scope_mismatch',
+              groupValue: _selectedIssue,
+              onChanged: _handleIssueSelected,
+            ),
             _CircularRadioListTile(
-                title: widget.isEnglish
-                    ? 'False accusation'
-                    : 'การกล่าวหาเท็จ',
-                value: 'false_accusation',
-                groupValue: _selectedIssue,
-                onChanged: _handleIssueSelected),
+              title: widget.isEnglish ? 'False accusation' : 'การกล่าวหาเท็จ',
+              value: 'false_accusation',
+              groupValue: _selectedIssue,
+              onChanged: _handleIssueSelected,
+            ),
             _CircularRadioListTile(
-                title: widget.isEnglish
-                    ? 'Violation of terms'
-                    : 'การละเมิดข้อตกลง',
-                value: 'violation_of_terms',
-                groupValue: _selectedIssue,
-                onChanged: _handleIssueSelected),
+              title: widget.isEnglish ? 'Violation of terms' : 'การละเมิดข้อตกลง',
+              value: 'violation_of_terms',
+              groupValue: _selectedIssue,
+              onChanged: _handleIssueSelected,
+            ),
             _CircularRadioListTile(
-                title: widget.isEnglish ? 'Other issues' : 'ปัญหาอื่นๆ',
-                value: 'other_issues',
-                groupValue: _selectedIssue,
-                onChanged: _handleIssueSelected),
+              title: widget.isEnglish ? 'Other issues' : 'ปัญหาอื่นๆ',
+              value: 'other_issues',
+              groupValue: _selectedIssue,
+              onChanged: _handleIssueSelected,
+            ),
             const SizedBox(height: 16.0),
             Text(
               widget.isEnglish
                   ? 'Date and Time of Incident'
                   : 'วันที่และเวลาเกิดเหตุ',
-              style:
-                  const TextStyle(fontSize: 16.0, fontWeight: FontWeight.w500),
+              style: const TextStyle(
+                fontSize: 16.0,
+                fontWeight: FontWeight.w500,
+              ),
             ),
             const SizedBox(height: 8.0),
             TextField(
@@ -301,7 +313,8 @@ class _ReportMemberPageState extends State<ReportMemberPage> {
                 // เปลี่ยน hintText ให้เหมาะสมกับรูปแบบวันที่
                 hintText: widget.isEnglish ? 'MM/DD/YYYY' : 'วว/ดด/ปปปป',
                 border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(15.0)),
+                  borderRadius: BorderRadius.circular(15.0),
+                ),
                 focusedBorder: OutlineInputBorder(
                   borderSide: const BorderSide(color: Colors.red, width: 2.0),
                   borderRadius: BorderRadius.circular(15.0),
@@ -317,8 +330,10 @@ class _ReportMemberPageState extends State<ReportMemberPage> {
             const SizedBox(height: 16.0),
             Text(
               widget.isEnglish ? 'Additional Details' : 'รายละเอียดเพิ่มเติม',
-              style:
-                  const TextStyle(fontSize: 16.0, fontWeight: FontWeight.w500),
+              style: const TextStyle(
+                fontSize: 16.0,
+                fontWeight: FontWeight.w500,
+              ),
             ),
             const SizedBox(height: 8.0),
             TextField(
@@ -329,7 +344,8 @@ class _ReportMemberPageState extends State<ReportMemberPage> {
                     ? 'Please provide any additional details about the incident...'
                     : 'โปรดระบุรายละเอียดเพิ่มเติมเกี่ยวกับเหตุการณ์...',
                 border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(15.0)),
+                  borderRadius: BorderRadius.circular(15.0),
+                ),
                 focusedBorder: OutlineInputBorder(
                   borderSide: const BorderSide(color: Colors.red, width: 2.0),
                   borderRadius: BorderRadius.circular(15.0),
@@ -421,6 +437,7 @@ class _CircularRadioListTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     bool isSelected = groupValue == value;
+
     return InkWell(
       onTap: () {
         onChanged(value);

@@ -234,7 +234,7 @@ class _HomeAdminPageState extends State<HomeAdminPage> {
         appBarTitle = widget.isEnglish ? 'Verify Accounts' : 'ยืนยันบัญชี';
         break;
       case 2:
-        appBarTitle = widget.isEnglish ? 'Reported Users' : 'ผู้ใช้ที่ถูกรายงาน';
+        appBarTitle = widget.isEnglish ? 'Report' : 'ผู้ใช้ที่ถูกรายงาน';
         break;
       case 3:
         appBarTitle = widget.isEnglish ? 'Admin Profile' : 'โปรไฟล์ผู้ดูแล';

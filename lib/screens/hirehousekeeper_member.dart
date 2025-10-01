@@ -1,15 +1,13 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
-import 'package:maebanjumpen/constant/constant_value.dart';
-import 'package:maebanjumpen/model/hire.dart';
+import 'package:maebanjumpen/controller/hireController.dart';
 import 'package:maebanjumpen/model/hirer.dart';
 import 'package:maebanjumpen/model/housekeeper.dart';
 import 'package:maebanjumpen/model/housekeeper_skill.dart';
+import 'package:maebanjumpen/model/hire.dart';
 import 'package:maebanjumpen/screens/hirelist_member.dart';
 import 'package:maebanjumpen/screens/home_member.dart';
+import 'package:maebanjumpen/styles/finishJobStyles.dart';
 import 'package:maebanjumpen/styles/hire_form_styles.dart';
 import 'package:maebanjumpen/widgets/hire_dropdown_form_field.dart';
 
@@ -17,186 +15,79 @@ class HireHousekeeperPage extends StatefulWidget {
   final Hirer user;
   final Housekeeper housekeeper;
   final bool isEnglish;
+
   const HireHousekeeperPage({
     super.key,
     required this.user,
     required this.housekeeper,
     required this.isEnglish,
   });
+
   @override
-  _HireHousekeeperPageState createState() => _HireHousekeeperPageState();
+  State<HireHousekeeperPage> createState() => HireHousekeeperPageState();
 }
 
-class _HireHousekeeperPageState extends State<HireHousekeeperPage> {
-  bool _isDefaultAddress = false;
-  final FocusNode _phoneFocusNode = FocusNode();
-  final FocusNode _provinceFocusNode = FocusNode();
-  final FocusNode _subdistrictFocusNode = FocusNode();
-  final FocusNode _districtFocusNode = FocusNode();
-  final FocusNode _villageFocusNode = FocusNode();
-  final FocusNode _houseNumberFocusNode = FocusNode();
-  final FocusNode _detailWorkFocusNode = FocusNode();
-  final FocusNode _startDateFocusNode = FocusNode();
-  final FocusNode _startTimeFocusNode = FocusNode();
-  final TextEditingController _phoneController = TextEditingController();
-  final TextEditingController _subdistrictController = TextEditingController();
-  final TextEditingController _provinceController = TextEditingController();
-  final TextEditingController _districtController = TextEditingController();
-  final TextEditingController _villageController = TextEditingController();
-  final TextEditingController _houseNumberController = TextEditingController();
-  final TextEditingController _detailWorkController = TextEditingController();
-  final TextEditingController _startDateController = TextEditingController();
-  final TextEditingController _startTimeController = TextEditingController();
-  DateTime? _selectedStartDate;
-  TimeOfDay? _selectedStartTime;
-  String? _selectedHireName;
-  final Map<HousekeeperSkill, bool> _selectedAdditionalServices = {};
-  double _totalPaymentAmount = 0.0;
+class HireHousekeeperPageState extends State<HireHousekeeperPage> {
   final _formKey = GlobalKey<FormState>();
+
+  String? _selectedHireName;
+  late Map<HousekeeperSkill, bool> _selectedAdditionalServices;
+  double _totalPaymentAmount = 0.0;
+
+  final TextEditingController _startDateController = TextEditingController();
+  final FocusNode _startDateFocusNode = FocusNode();
+  final TextEditingController _startTimeController = TextEditingController();
+  final FocusNode _startTimeFocusNode = FocusNode();
+
+  final TextEditingController _detailWorkController = TextEditingController();
+  final FocusNode _detailWorkFocusNode = FocusNode();
+
+  bool _isDefaultAddress = true;
+  final TextEditingController _phoneController = TextEditingController();
+  final FocusNode _phoneFocusNode = FocusNode();
+  final TextEditingController _houseNumberController = TextEditingController();
+  final FocusNode _houseNumberFocusNode = FocusNode();
+  final TextEditingController _villageController = TextEditingController();
+  final FocusNode _villageFocusNode = FocusNode();
+  final TextEditingController _subdistrictController = TextEditingController();
+  final FocusNode _subdistrictFocusNode = FocusNode();
+  final TextEditingController _districtController = TextEditingController();
+  final FocusNode _districtFocusNode = FocusNode();
+  final TextEditingController _provinceController = TextEditingController();
+  final FocusNode _provinceFocusNode = FocusNode();
+
   @override
   void initState() {
     super.initState();
-    _phoneFocusNode.addListener(_handleFocusChange);
-    _provinceFocusNode.addListener(_handleFocusChange);
-    _subdistrictFocusNode.addListener(_handleFocusChange);
-    _districtFocusNode.addListener(_handleFocusChange);
-    _villageFocusNode.addListener(_handleFocusChange);
-    _houseNumberFocusNode.addListener(_handleFocusChange);
-    _detailWorkFocusNode.addListener(_handleFocusChange);
-    _startDateFocusNode.addListener(_handleFocusChange);
-    _startTimeFocusNode.addListener(_handleFocusChange);
-    if (widget.housekeeper.housekeeperSkills != null &&
-        widget.housekeeper.housekeeperSkills!.isNotEmpty) {
-      for (var skill in widget.housekeeper.housekeeperSkills!) {
-        _selectedAdditionalServices[skill] = false;
-      }
-      final mainSkill = widget.housekeeper.housekeeperSkills!.first;
-      _selectedHireName = mainSkill.skillType?.skillTypeName;
-      _selectedAdditionalServices[mainSkill] = true;
-    }
-    _isDefaultAddress =
-        widget.user.person?.address != null &&
-        (widget.user.person?.address?.isNotEmpty ?? false) &&
-        (widget.user.person?.phoneNumber?.isNotEmpty ?? false);
+    _initializeServices();
     if (_isDefaultAddress) {
       _fillDefaultAddress();
+    }
+  }
+
+  void _initializeServices() {
+    final firstSkill = widget.housekeeper.housekeeperSkills?.firstOrNull;
+    _selectedHireName = firstSkill?.skillType?.skillTypeName;
+
+    _selectedAdditionalServices = {};
+    if (widget.housekeeper.housekeeperSkills != null) {
+      for (var skill in widget.housekeeper.housekeeperSkills!) {
+        final isMainService =
+            skill.skillType?.skillTypeName == _selectedHireName;
+        _selectedAdditionalServices[skill] = isMainService;
+      }
     }
     _calculateTotalPayment();
   }
 
-  void _fillDefaultAddress() {
-    _phoneController.text = widget.user.person?.phoneNumber ?? '';
-    List<String> addressParts =
-        (widget.user.person?.address ?? '')
-            .split(' ')
-            .map((e) => e.trim())
-            .toList();
-    _houseNumberController.text =
-        addressParts.isNotEmpty ? addressParts[0] : '';
-    _villageController.text = addressParts.length > 1 ? addressParts[1] : '';
-    _subdistrictController.text =
-        addressParts.length > 2 ? addressParts[2] : '';
-    _districtController.text = addressParts.length > 3 ? addressParts[3] : '';
-    _provinceController.text = addressParts.length > 4 ? addressParts[4] : '';
-  }
-
-  Future<void> _selectDate(BuildContext context) async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: _selectedStartDate ?? DateTime.now(),
-      firstDate: DateTime.now(),
-      lastDate: DateTime(2030),
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(
-              primary: Colors.red,
-              onPrimary: Colors.white,
-              onSurface: Colors.black,
-            ),
-            textButtonTheme: TextButtonThemeData(
-              style: TextButton.styleFrom(foregroundColor: Colors.red),
-            ),
-          ),
-          child: child!,
-        );
-      },
-    );
-    if (picked != null && picked != _selectedStartDate) {
-      setState(() {
-        _selectedStartDate = picked;
-        _startDateController.text = DateFormat('dd/MM/yyyy').format(picked);
-        _selectedStartTime = null;
-        _startTimeController.clear();
-        _calculateTotalPayment();
-      });
-    }
-  }
-
-  Future<void> _selectTime(BuildContext context) async {
-    if (_selectedStartDate == null) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              widget.isEnglish
-                  ? 'Please select a date first.'
-                  : 'กรุณาเลือกวันที่ก่อน',
-            ),
-          ),
-        );
-      }
+  void _onSkillChanged(bool? value, HousekeeperSkill skill) {
+    if (skill.skillType?.skillTypeName == _selectedHireName && value == false) {
       return;
     }
-    final now = DateTime.now();
-    final TimeOfDay? picked = await showTimePicker(
-      context: context,
-      initialTime: (_selectedStartTime ?? TimeOfDay.now()),
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(
-              primary: Colors.red,
-              onPrimary: Colors.white,
-              onSurface: Colors.black,
-            ),
-            textButtonTheme: TextButtonThemeData(
-              style: TextButton.styleFrom(foregroundColor: Colors.red),
-            ),
-          ),
-          child: child!,
-        );
-      },
-    );
-
-    if (picked != null) {
-      final selectedDateTime = DateTime(
-        _selectedStartDate!.year,
-        _selectedStartDate!.month,
-        _selectedStartDate!.day,
-        picked.hour,
-        picked.minute,
-      );
-      if (selectedDateTime.isBefore(now)) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                widget.isEnglish
-                    ? 'Start time cannot be in the past.'
-                    : 'เวลาเริ่มต้นไม่สามารถย้อนหลังได้',
-              ),
-            ),
-          );
-        }
-        return;
-      }
-      setState(() {
-        _selectedStartTime = picked;
-        _startTimeController.text = picked.format(context);
-        _calculateTotalPayment();
-      });
-    }
+    setState(() {
+      _selectedAdditionalServices[skill] = value ?? false;
+      _calculateTotalPayment();
+    });
   }
 
   void _calculateTotalPayment() {
@@ -206,424 +97,340 @@ class _HireHousekeeperPageState extends State<HireHousekeeperPage> {
         total += skill.pricePerDay ?? 0.0;
       }
     });
-
     setState(() {
       _totalPaymentAmount = total;
     });
   }
 
-  void _onSkillChanged(bool? isSelected, HousekeeperSkill skill) {
-    setState(() {
-      if (_selectedHireName == skill.skillType?.skillTypeName &&
-          isSelected == false) {
-        return;
-      }
-      _selectedAdditionalServices[skill] = isSelected ?? false;
-      _calculateTotalPayment();
-    });
-  }
-
-  @override
-  void dispose() {
-    _phoneController.dispose();
-    _subdistrictController.dispose();
-    _provinceController.dispose();
-    _districtController.dispose();
-    _villageController.dispose();
-    _houseNumberController.dispose();
-    _detailWorkController.dispose();
-    _startDateController.dispose();
-    _startTimeController.dispose();
-
-    _phoneFocusNode.removeListener(_handleFocusChange);
-    _provinceFocusNode.removeListener(_handleFocusChange);
-    _subdistrictFocusNode.removeListener(_handleFocusChange);
-    _districtFocusNode.removeListener(_handleFocusChange);
-    _villageFocusNode.removeListener(_handleFocusChange);
-    _houseNumberFocusNode.removeListener(_handleFocusChange);
-    _detailWorkFocusNode.removeListener(_handleFocusChange);
-    _startDateFocusNode.removeListener(_handleFocusChange);
-    _startTimeFocusNode.removeListener(_handleFocusChange);
-
-    _phoneFocusNode.dispose();
-    _provinceFocusNode.dispose();
-    _subdistrictFocusNode.dispose();
-    _districtFocusNode.dispose();
-    _villageFocusNode.dispose();
-    _houseNumberFocusNode.dispose();
-    _detailWorkFocusNode.dispose();
-    _startDateFocusNode.dispose();
-    _startTimeFocusNode.dispose();
-    super.dispose();
-  }
-
-  void _handleFocusChange() {
-    setState(() {});
-  }
-
-  Future<void> _createAndSaveHire() async {
-    String? phoneNumber;
-    String? location;
-    String hireName;
-    String hireDetail = _detailWorkController.text;
-
-    phoneNumber =
-        _isDefaultAddress
-            ? (widget.user.person?.phoneNumber ?? '')
-            : _phoneController.text;
-
-    location =
-        _isDefaultAddress
-            ? (widget.user.person?.address ?? '')
-            : '${_houseNumberController.text} ${_villageController.text} ${_subdistrictController.text} ${_districtController.text} ${_provinceController.text}';
-
-    hireName = _selectedHireName ?? '';
-
-    final List<int> additionalSkillTypeIds = [];
-    final List<String> additionalServiceNames = [];
-    _selectedAdditionalServices.forEach((skill, isSelected) {
-      if (isSelected && skill.skillType?.skillTypeName != _selectedHireName) {
-        if (skill.skillType?.skillTypeId != null) {
-          additionalSkillTypeIds.add(skill.skillType!.skillTypeId!);
-          additionalServiceNames.add(
-            SkillTranslator.getLocalizedSkillName(
-              skill.skillType?.skillTypeName,
-              widget.isEnglish,
+  Future<void> _selectDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now().add(const Duration(days: 1)),
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: Theme.of(context).colorScheme.copyWith(
+              primary:
+                  AppColors
+                      .primaryRed, // สีแดงหลักสำหรับวันที่เลือกและหัวปฏิทิน
+              onPrimary: Colors.white,
+              onSurface: Colors.black,
             ),
-          );
-        }
-      }
-    });
-
-    if (hireDetail.isEmpty) {
-      final mainServiceName =
-          _selectedHireName != null
-              ? SkillTranslator.getLocalizedSkillName(
-                _selectedHireName,
-                widget.isEnglish,
-              )
-              : '';
-      if (additionalServiceNames.isNotEmpty) {
-        hireDetail =
-            (widget.isEnglish ? 'Hired for ' : 'จ้างงานสำหรับ ') +
-            mainServiceName +
-            (widget.isEnglish
-                ? ' with additional services: '
-                : ' พร้อมบริการเสริม: ') +
-            additionalServiceNames.join(', ');
-      } else {
-        hireDetail =
-            (widget.isEnglish ? 'Hired for ' : 'จ้างงานสำหรับ ') +
-            mainServiceName +
-            (widget.isEnglish ? '.' : '.');
-      }
-    } else {
-      if (additionalServiceNames.isNotEmpty) {
-        hireDetail +=
-            (hireDetail.isNotEmpty ? '\n' : '') +
-            (widget.isEnglish ? 'Additional Services: ' : 'บริการเพิ่มเติม: ') +
-            additionalServiceNames.join(', ');
-      }
-    }
-
-    String? formattedStartTime;
-    if (_selectedStartTime != null) {
-      formattedStartTime =
-          '${_selectedStartTime!.hour.toString().padLeft(2, '0')}:${_selectedStartTime!.minute.toString().padLeft(2, '0')}';
-    }
-
-    DateTime? fullStartDate;
-    if (_selectedStartDate != null) {
-      fullStartDate = DateTime(
-        _selectedStartDate!.year,
-        _selectedStartDate!.month,
-        _selectedStartDate!.day,
-        _selectedStartTime?.hour ?? 0,
-        _selectedStartTime?.minute ?? 0,
-      );
-    }
-
-    if (fullStartDate == null) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              widget.isEnglish
-                  ? 'Please select a start date.'
-                  : 'กรุณาเลือกวันที่เริ่มงาน',
-            ),
-          ),
-        );
-      }
-      return;
-    }
-
-    final mainSkill = widget.housekeeper.housekeeperSkills?.firstWhere(
-      (s) => s.skillType?.skillTypeName == _selectedHireName,
-      orElse: () => throw Exception('Main skill not found'),
-    );
-
-    if (mainSkill == null) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              widget.isEnglish
-                  ? 'Please select a main service.'
-                  : 'กรุณาเลือกบริการหลัก',
-            ),
-          ),
-        );
-      }
-      return;
-    }
-
-    final newHire = Hire(
-      hireName: hireName,
-      hireDetail: hireDetail,
-      paymentAmount: _totalPaymentAmount,
-      hireDate: DateTime.now(),
-      startDate: fullStartDate,
-      startTime: formattedStartTime,
-      endTime: '',
-      location: location,
-      jobStatus: 'pending',
-      progressionImageUrls: null,
-      hirer: widget.user,
-      housekeeper: widget.housekeeper,
-      skillTypeId: mainSkill.skillType?.skillTypeId,
-      additionalSkillTypeIds: additionalSkillTypeIds,
-    );
-
-    print('New Hire created: ${newHire.toJson()}');
-
-    try {
-      final response = await http.post(
-        Uri.parse('$baseURL/maeban/hires'),
-        headers: <String, String>{
-          'Content-Type': 'application/json; charset=UTF-8',
-        },
-        body: jsonEncode(newHire.toJson()),
-      );
-
-      if (!mounted) {
-        return;
-      }
-
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        print('Hire saved successfully!');
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              widget.isEnglish
-                  ? 'Hire request sent successfully!'
-                  : 'ส่งคำขอจ้างสำเร็จ!',
-            ),
-          ),
-        );
-      } else {
-        print('Failed to save hire. Status code: ${response.statusCode}');
-        print('Request body sent: ${jsonEncode(newHire.toJson())}');
-        print('Response body: ${response.body}');
-        String errorMessage =
-            widget.isEnglish
-                ? 'Unknown error occurred.'
-                : 'เกิดข้อผิดพลาดไม่ทราบสาเหตุ';
-        try {
-          if (response.body.isNotEmpty) {
-            final responseJson = jsonDecode(response.body);
-            if (responseJson is Map && responseJson.containsKey('error')) {
-              errorMessage = responseJson['error'];
-            } else {
-              errorMessage = response.body;
-            }
-          }
-        } catch (e) {
-          errorMessage = response.body;
-        }
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                widget.isEnglish
-                    ? 'Failed to send hire request: $errorMessage'
-                    : 'ส่งคำขอจ้างไม่สำเร็จ: $errorMessage',
+            textButtonTheme: TextButtonThemeData(
+              style: TextButton.styleFrom(
+                foregroundColor:
+                    AppColors.primaryRed, // สีแดงหลักสำหรับปุ่มยกเลิก/ตกลง
               ),
             ),
-          );
-        }
-      }
-    } catch (e) {
-      print('Error saving hire: $e');
-      if (!mounted) {
-        return;
-      }
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null) {
+      setState(() {
+        // ✅ แก้ไข: ใช้รูปแบบ 'dd-MM-yyyy' ให้ตรงกับที่คุณระบุ
+        _startDateController.text = DateFormat('dd-MM-yyyy').format(picked);
+      });
+    }
+    _startDateFocusNode.unfocus();
+  }
+
+  Future<void> _selectTime(BuildContext context) async {
+    final TimeOfDay? picked = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.now(),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: Theme.of(context).colorScheme.copyWith(
+              // Primary ควบคุมสีเข็มนาฬิกา และสีวงกลมนาฬิกา
+              primary: AppColors.primaryRed,
+              onPrimary: Colors.white,
+              onSurface: Colors.black,
+            ),
+            textButtonTheme: TextButtonThemeData(
+              style: TextButton.styleFrom(
+                foregroundColor: AppColors.primaryRed, // สีปุ่มยกเลิก/ตกลง
+              ),
+            ),
+            // ✅ แก้ไข: ใช้ TimePickerThemeData
+            timePickerTheme: TimePickerThemeData(
+              // 1. ควบคุมสีพื้นหลังของชั่วโมง/นาทีด้านบน (hour/minute segments)
+              hourMinuteColor: MaterialStateColor.resolveWith(
+                (Set<MaterialState> states) =>
+                    states.contains(MaterialState.selected)
+                        ? AppColors.primaryRed.withOpacity(
+                          0.12,
+                        ) // สีพื้นหลังเมื่อถูกเลือก (อ่อนๆ)
+                        : Theme.of(context).colorScheme.onSurface.withOpacity(
+                          0.12,
+                        ), // สีพื้นหลังเมื่อไม่ได้เลือก
+              ),
+
+              // 2. ควบคุมสีตัวอักษรของชั่วโมง/นาทีด้านบน (hour/minute text)
+              hourMinuteTextColor: MaterialStateColor.resolveWith(
+                (Set<MaterialState> states) =>
+                    states.contains(MaterialState.selected)
+                        ? AppColors
+                            .primaryRed // สีตัวอักษรเมื่อถูกเลือก (สีแดงหลัก)
+                        : Theme.of(context)
+                            .colorScheme
+                            .onSurface, // สีตัวอักษรเมื่อไม่ได้เลือก (สีดำ/เทา)
+              ),
+
+              // 3. ควบคุมสีตัวเลขคั่นกลาง (:)
+              timeSelectorSeparatorColor: MaterialStateProperty.resolveWith(
+                (Set<MaterialState> states) => AppColors.primaryRed,
+              ),
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null) {
+      setState(() {
+        _startTimeController.text = picked.format(context);
+      });
+    }
+    _startTimeFocusNode.unfocus();
+  }
+
+
+  void _fillDefaultAddress() {
+    final address = widget.user.person?.address ?? '';
+    final parts = address.split(' ').map((p) => p.trim()).toList();
+
+    _phoneController.text = widget.user.person?.phoneNumber ?? '';
+
+    _houseNumberController.text = parts.length > 0 ? parts[0] : '';
+    _villageController.text = parts.length > 1 ? parts[1] : '';
+    _subdistrictController.text = parts.length > 2 ? parts[2] : '';
+    _districtController.text = parts.length > 3 ? parts[3] : '';
+    _provinceController.text = parts.length > 4 ? parts[4] : '';
+  }
+
+  String _getAddressString() {
+    return [
+      _houseNumberController.text,
+      _villageController.text,
+      _subdistrictController.text,
+      _districtController.text,
+      _provinceController.text,
+    ].where((part) => part.isNotEmpty).join(', ');
+  }
+
+  String _getFormattedAdditionalServices() {
+    final selectedSkills =
+        _selectedAdditionalServices.entries
+            .where((entry) => entry.value == true)
+            .map((entry) => entry.key)
+            .toList();
+
+    if (selectedSkills.isEmpty) return '';
+
+    final serviceNames =
+        selectedSkills
+            .map((skill) {
+              return widget.isEnglish
+                  ? skill.skillType?.skillTypeDetail ??
+                      skill.skillType?.skillTypeName
+                  : skill.skillType?.skillTypeName;
+            })
+            .where((name) => name != null && name.isNotEmpty)
+            .cast<String>()
+            .toList();
+
+    final header =
+        widget.isEnglish
+            ? '--- Additional Services ---\n'
+            : '--- รายการบริการเสริม ---\n';
+
+    return header + serviceNames.map((name) => '• $name').join('\n');
+  }
+
+  Future<void> _createHire(Hire hire) async {
+    final result = await Hirecontroller().addHire(hire);
+
+    if (!mounted) return;
+
+    if (result != null) {
+      // ✅ SUCCESS: API คืนค่า Hire Object กลับมา (201 Created)
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
             widget.isEnglish
-                ? 'Network error or unable to connect to server.'
-                : 'ข้อผิดพลาดเครือข่าย หรือไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้',
+                ? 'Hire created successfully!'
+                : 'สร้างรายการจ้างงานสำเร็จ!',
           ),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+
+      // นำทางไปยังหน้าถัดไป (หน้า Hire List)
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder:
+              (context) =>
+                  HireListPage(user: widget.user, isEnglish: widget.isEnglish),
+        ),
+      );
+    } else {
+      // ❌ FAILURE: API คืนค่า null (เช่น 400 Bad Request หรือ 500 Internal Server Error)
+
+      // Note: เนื่องจากเราไม่ได้ส่งข้อความ Error จาก Back-end มาตรงๆ (เป็นแค่ null)
+      // เราจะแจ้ง Error ทั่วไป แต่ข้อความ Error จริงจะอยู่ใน Log ของ Java
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            widget.isEnglish
+                ? 'Failed to create hire. Check server logs.'
+                : 'สร้างรายการจ้างงานไม่สำเร็จ! กรุณาตรวจสอบ Log บนเซิร์ฟเวอร์',
+          ),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 4),
         ),
       );
     }
   }
 
   void _showConfirmationDialog() {
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
+    if (_formKey.currentState!.validate()) {
+      final servicesString = _getFormattedAdditionalServices();
+      final existingDetail = _detailWorkController.text.trim();
+      final String finalHireDetail =
+          existingDetail.isEmpty
+              ? servicesString
+              : '$existingDetail\n\n$servicesString';
+      final selectedMainSkill = widget.housekeeper.housekeeperSkills
+          ?.firstWhere(
+            (s) => s.skillType?.skillTypeName == _selectedHireName,
+            orElse: () => HousekeeperSkill(),
+          );
 
-    if (_totalPaymentAmount > (widget.user.balance ?? 0.0)) {
+      // 1. จัดการวันที่ (startDate)
+      DateTime? hireStartDate;
+      String startDateText = _startDateController.text.trim();
+      if (startDateText.isNotEmpty) {
+        try {
+          // แปลง 'dd-MM-yyyy' ให้เป็น DateTime
+          hireStartDate = DateFormat('dd-MM-yyyy').parse(startDateText);
+        } catch (e) {
+          print('Error parsing startDate: $e');
+          // จัดการ Error หรือ return
+        }
+      }
+
+      // 2. 🏆 จุดที่แก้ไข: จัดการเวลา (startTime และ endTime) ให้เป็น HH:mm:ss
+      String? finalStartTime;
+      String? finalEndTime;
+
+      DateTime? parsedStartTime;
+      String startTimeText = _startTimeController.text.trim();
+
+      if (startTimeText.isNotEmpty) {
+        try {
+          // ลอง Parse ด้วยรูปแบบ jm (12-hour เช่น 7:00 AM)
+          parsedStartTime = DateFormat.jm().parse(startTimeText);
+        } catch (e) {
+          try {
+            // ถ้าไม่ได้ ลอง Parse ด้วยรูปแบบ 24-hour (เช่น 20:35)
+            parsedStartTime = DateFormat('HH:mm').parse(startTimeText);
+          } catch (e) {
+            parsedStartTime = null;
+            print("Error parsing time: $e");
+          }
+        }
+
+        if (parsedStartTime != null) {
+          // 🎯 แก้ไข: จัดรูปแบบเวลาเริ่มต้นให้เป็น HH:mm:ss
+          finalStartTime = DateFormat('HH:mm:ss').format(parsedStartTime);
+
+          // คำนวณเวลาสิ้นสุด
+          DateTime parsedEndTime = parsedStartTime.add(
+            const Duration(hours: 1),
+          );
+
+          // 🎯 แก้ไข: จัดรูปแบบเวลาสิ้นสุดให้เป็น HH:mm:ss
+          finalEndTime = DateFormat('HH:mm:ss').format(parsedEndTime);
+        }
+      }
+
+      // 3. สร้าง Hire Object ด้วยค่าที่จัดรูปแบบแล้ว
+      final newHire = Hire(
+        hireName: _selectedHireName,
+        hireDetail: finalHireDetail,
+        paymentAmount: _totalPaymentAmount,
+        startDate: hireStartDate,
+        startTime: finalStartTime,
+        endTime: finalEndTime,
+        skillType: selectedMainSkill?.skillType,
+        location: _getAddressString(),
+        hirer: widget.user,
+        housekeeper: widget.housekeeper,
+        jobStatus: 'Pending',
+        hireDate: DateTime.now(),
+      );
+
+      // แสดง Dialog ยืนยัน... (โค้ดส่วนนี้เหมือนเดิม)
       showDialog(
         context: context,
-        builder: (BuildContext dialogContext) {
+        builder: (BuildContext context) {
           return AlertDialog(
             title: Text(
-              widget.isEnglish ? 'Insufficient Balance' : 'ยอดเงินไม่เพียงพอ',
+              widget.isEnglish ? 'Confirm Hire?' : 'ยืนยันการจ้างงาน?',
             ),
             content: Text(
               widget.isEnglish
-                  ? 'Your balance is not enough to make this payment.'
-                  : 'ยอดเงินคงเหลือของคุณไม่เพียงพอ',
+                  ? 'Total amount: ${NumberFormat.currency(locale: 'th_TH', symbol: '฿').format(_totalPaymentAmount)}'
+                  : 'ยอดชำระรวม: ${NumberFormat.currency(locale: 'th_TH', symbol: '฿').format(_totalPaymentAmount)}',
             ),
             actions: <Widget>[
               TextButton(
+                // ✅ แก้ไข: ปุ่มยกเลิกใช้ AppColors.primaryRed
+                child: Text(
+                  widget.isEnglish ? 'Cancel' : 'ยกเลิก',
+                  style: TextStyle(color: AppColors.primaryRed),
+                ),
                 onPressed: () {
-                  Navigator.of(dialogContext).pop();
+                  Navigator.of(context).pop();
                 },
-                child: Text(widget.isEnglish ? 'OK' : 'ตกลง'),
+              ),
+              ElevatedButton(
+                // ✅ แก้ไข: ปุ่มยืนยันใช้ AppColors.primaryRed
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primaryRed,
+                ),
+                child: Text(
+                  widget.isEnglish ? 'Confirm' : 'ยืนยัน',
+                  style: const TextStyle(color: Colors.white),
+                ),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  _createHire(newHire);
+                },
               ),
             ],
           );
         },
       );
-      return;
     }
-
-    final currentContext = context;
-
-    showDialog(
-      context: currentContext,
-      barrierDismissible: false,
-      builder: (BuildContext dialogContext) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10.0),
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              Container(
-                width: 70.0,
-                height: 70.0,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.red.shade100,
-                ),
-                child: const Center(
-                  child: Icon(Icons.check, color: Colors.red, size: 40.0),
-                ),
-              ),
-              const SizedBox(height: 16.0),
-              Text(
-                widget.isEnglish ? 'Confirm Hire' : 'ยืนยันการจ้างแม่บ้าน',
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18.0,
-                ),
-              ),
-              const SizedBox(height: 8.0),
-              Text(
-                widget.isEnglish
-                    ? 'Are you sure you want to send a hire request?'
-                    : 'คุณแน่ใจหรือไม่ที่ต้องการส่ง\nคำขอจ้างแม่บ้าน?',
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 14.0),
-              ),
-              const SizedBox(height: 24.0),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: <Widget>[
-                  OutlinedButton(
-                    onPressed: () {
-                      Navigator.of(dialogContext).pop();
-                    },
-                    style: HireFormStyles.cancelButtonDialogStyle,
-                    child: Text(
-                      widget.isEnglish ? 'Cancel' : 'ยกเลิก',
-                      style: HireFormStyles.cancelButtonDialogTextStyle,
-                    ),
-                  ),
-                  ElevatedButton(
-                    onPressed: () async {
-                      Navigator.of(dialogContext).pop();
-
-                      showDialog(
-                        context: currentContext,
-                        barrierDismissible: false,
-                        builder:
-                            (context) => const Center(
-                              child: CircularProgressIndicator(
-                                color: Colors.red,
-                              ),
-                            ),
-                      );
-
-                      await _createAndSaveHire();
-
-                      if (currentContext.mounted) {
-                        Navigator.of(currentContext).pop();
-                      }
-
-                      if (currentContext.mounted) {
-                        Navigator.pushAndRemoveUntil(
-                          currentContext,
-                          MaterialPageRoute(
-                            builder:
-                                (context) => HireListPage(
-                                  isEnglish: widget.isEnglish,
-                                  user: widget.user,
-                                ),
-                          ),
-                          (Route<dynamic> route) => route.isFirst,
-                        );
-                      }
-                    },
-                    style: HireFormStyles.confirmButtonDialogStyle,
-                    child: Text(
-                      widget.isEnglish ? 'Confirm' : 'ยืนยัน',
-                      style: HireFormStyles.confirmButtonDialogTextStyle,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        );
-      },
-    );
   }
+
+  // 6. Build Method
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Color(0xFFFF9800)),
-          onPressed:
-              () => Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(
-                  builder:
-                      (context) => HomePage(
-                        user: widget.user,
-                        isEnglish: widget.isEnglish,
-                      ),
-                ),
-              ),
+          icon: const Icon(Icons.arrow_back, color: AppColors.primaryRed),
+          onPressed: () => Navigator.pop(context),
         ),
         title: Text(
           widget.isEnglish
@@ -640,6 +447,7 @@ class _HireHousekeeperPageState extends State<HireHousekeeperPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // ------------------- SERVICE SELECTION SECTION -------------------
               _ServiceSelectionSection(
                 housekeeperSkills: widget.housekeeper.housekeeperSkills,
                 selectedHireName: _selectedHireName,
@@ -651,12 +459,16 @@ class _HireHousekeeperPageState extends State<HireHousekeeperPage> {
                     _selectedAdditionalServices.updateAll(
                       (key, value) => false,
                     );
+
                     final mainSkill = widget.housekeeper.housekeeperSkills
                         ?.firstWhere(
                           (s) => s.skillType?.skillTypeName == newValue,
+                          orElse: () => HousekeeperSkill(),
                         );
-                    if (mainSkill != null) {
-                      _selectedAdditionalServices[mainSkill] = true;
+                    if (mainSkill?.skillType != null) {
+                      if (mainSkill != null) {
+                        _selectedAdditionalServices[mainSkill] = true;
+                      }
                     }
                     _calculateTotalPayment();
                   });
@@ -664,11 +476,15 @@ class _HireHousekeeperPageState extends State<HireHousekeeperPage> {
                 onAdditionalServiceChanged: _onSkillChanged,
               ),
               const SizedBox(height: 16.0),
+
+              // ------------------- PAYMENT SUMMARY -------------------
               _PaymentSummary(
                 totalPaymentAmount: _totalPaymentAmount,
                 isEnglish: widget.isEnglish,
               ),
               const SizedBox(height: 16.0),
+
+              // ------------------- DATE & TIME SECTION -------------------
               _DateTimeSection(
                 startDateController: _startDateController,
                 startDateFocusNode: _startDateFocusNode,
@@ -679,25 +495,33 @@ class _HireHousekeeperPageState extends State<HireHousekeeperPage> {
                 onTapTime: () => _selectTime(context),
               ),
               const SizedBox(height: 16.0),
+
+              // ------------------- WORK DETAILS -------------------
               HireTextFormField(
                 controller: _detailWorkController,
                 focusNode: _detailWorkFocusNode,
-                labelText: widget.isEnglish ? 'Work Details' : 'รายละเอียดงาน',
+                labelText:
+                    widget.isEnglish
+                        ? 'Work Details (Optional)'
+                        : 'รายละเอียดงานเพิ่มเติม (ไม่บังคับ)',
                 hintText:
                     widget.isEnglish
-                        ? 'e.g., specific tasks, special instructions'
-                        : 'เช่น รายการงานที่ต้องการ, คำแนะนำพิเศษ',
+                        ? 'e.g. special instructions location details (The services list will be automatically appended here)'
+                        : 'เช่น รายการงานที่ต้องการ คำแนะนำพิเศษ (รายการบริการที่เลือกจะถูกเพิ่มอัตโนมัติด้านล่างนี้)',
                 maxLines: 3,
               ),
               const SizedBox(height: 16.0),
+
+              // ------------------- ADDRESS SECTION -------------------
               _AddressSection(
                 isDefaultAddress: _isDefaultAddress,
                 onChanged: (bool? value) {
                   setState(() {
                     _isDefaultAddress = value!;
                     if (_isDefaultAddress) {
-                      _fillDefaultAddress();
+                      _fillDefaultAddress(); // ✅ เติมข้อมูลเมื่อเลือก Default
                     } else {
+                      // ✅ ล้างข้อมูลเมื่อยกเลิก Default เพื่อให้ผู้ใช้กรอกใหม่
                       _phoneController.clear();
                       _provinceController.clear();
                       _subdistrictController.clear();
@@ -722,11 +546,13 @@ class _HireHousekeeperPageState extends State<HireHousekeeperPage> {
                 provinceFocusNode: _provinceFocusNode,
               ),
               const SizedBox(height: 24.0),
+
+              // ------------------- CONFIRM BUTTON -------------------
               Center(
                 child: ElevatedButton(
                   onPressed: _showConfirmationDialog,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red,
+                    backgroundColor: AppColors.primaryRed,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(
                       horizontal: 40,
@@ -755,168 +581,6 @@ class _HireHousekeeperPageState extends State<HireHousekeeperPage> {
   }
 }
 
-// Separate widget for the address input fields.
-class _AddressSection extends StatelessWidget {
-  final bool isDefaultAddress;
-  final ValueChanged<bool?> onChanged;
-  final bool isEnglish;
-  final TextEditingController phoneController;
-  final FocusNode phoneFocusNode;
-  final TextEditingController houseNumberController;
-  final FocusNode houseNumberFocusNode;
-  final TextEditingController villageController;
-  final FocusNode villageFocusNode;
-  final TextEditingController subdistrictController;
-  final FocusNode subdistrictFocusNode;
-  final TextEditingController districtController;
-  final FocusNode districtFocusNode;
-  final TextEditingController provinceController;
-  final FocusNode provinceFocusNode;
-
-  const _AddressSection({
-    required this.isDefaultAddress,
-    required this.onChanged,
-    required this.isEnglish,
-    required this.phoneController,
-    required this.phoneFocusNode,
-    required this.houseNumberController,
-    required this.houseNumberFocusNode,
-    required this.villageController,
-    required this.villageFocusNode,
-    required this.subdistrictController,
-    required this.subdistrictFocusNode,
-    required this.districtController,
-    required this.districtFocusNode,
-    required this.provinceController,
-    required this.provinceFocusNode,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Checkbox(
-              value: isDefaultAddress,
-              activeColor: Colors.red,
-              onChanged: onChanged,
-            ),
-            Text(
-              isEnglish ? 'Use default address' : 'ใช้ที่อยู่เริ่มต้น',
-              style: TextStyle(
-                color: isDefaultAddress ? Colors.red : Colors.black,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16.0),
-        HireTextFormField(
-          controller: phoneController,
-          focusNode: phoneFocusNode,
-          enabled: !isDefaultAddress,
-          keyboardType: TextInputType.phone,
-          labelText: isEnglish ? 'Phone Number' : 'เบอร์โทรศัพท์',
-          hintText:
-              isEnglish
-                  ? 'Please enter phone number'
-                  : 'กรุณากรอกเบอร์โทรศัพท์',
-          validator: (value) {
-            if (!isDefaultAddress && (value == null || value.isEmpty)) {
-              return isEnglish
-                  ? 'Please enter phone number.'
-                  : 'กรุณากรอกเบอร์โทรศัพท์';
-            }
-            if (!isDefaultAddress &&
-                value != null &&
-                !RegExp(r'^[0-9]+$').hasMatch(value)) {
-              return isEnglish
-                  ? 'Please enter numbers only for phone number.'
-                  : 'กรุณาพิมพ์เฉพาะตัวเลขสำหรับเบอร์โทรศัพท์';
-            }
-            return null;
-          },
-        ),
-        const SizedBox(height: 16.0),
-        HireTextFormField(
-          controller: houseNumberController,
-          focusNode: houseNumberFocusNode,
-          enabled: !isDefaultAddress,
-          labelText: isEnglish ? 'House Number' : 'เลขที่บ้าน',
-          hintText:
-              isEnglish ? 'Please enter house number' : 'กรุณากรอกเลขที่บ้าน',
-          validator: (value) {
-            if (!isDefaultAddress && (value == null || value.isEmpty)) {
-              return isEnglish
-                  ? 'Please enter house number.'
-                  : 'กรุณากรอกเลขที่บ้าน';
-            }
-            return null;
-          },
-        ),
-        const SizedBox(height: 16.0),
-        HireTextFormField(
-          controller: villageController,
-          focusNode: villageFocusNode,
-          enabled: !isDefaultAddress,
-          labelText: isEnglish ? 'Village' : 'หมู่บ้าน',
-          hintText: isEnglish ? 'Please enter village' : 'กรุณากรอกหมู่บ้าน',
-          validator: (value) {
-            if (!isDefaultAddress && (value == null || value.isEmpty)) {
-              return isEnglish ? 'Please enter village.' : 'กรุณากรอกหมู่บ้าน';
-            }
-            return null;
-          },
-        ),
-        const SizedBox(height: 16.0),
-        HireTextFormField(
-          controller: subdistrictController,
-          focusNode: subdistrictFocusNode,
-          enabled: !isDefaultAddress,
-          labelText: isEnglish ? 'Subdistrict' : 'ตำบล',
-          hintText: isEnglish ? 'Please enter subdistrict' : 'กรุณากรอกตำบล',
-          validator: (value) {
-            if (!isDefaultAddress && (value == null || value.isEmpty)) {
-              return isEnglish ? 'Please enter subdistrict.' : 'กรุณากรอกตำบล';
-            }
-            return null;
-          },
-        ),
-        const SizedBox(height: 16.0),
-        HireTextFormField(
-          controller: districtController,
-          focusNode: districtFocusNode,
-          enabled: !isDefaultAddress,
-          labelText: isEnglish ? 'District' : 'อำเภอ',
-          hintText: isEnglish ? 'Please enter district' : 'กรุณากรอกอำเภอ',
-          validator: (value) {
-            if (!isDefaultAddress && (value == null || value.isEmpty)) {
-              return isEnglish ? 'Please enter district.' : 'กรุณากรอกอำเภอ';
-            }
-            return null;
-          },
-        ),
-        const SizedBox(height: 16.0),
-        HireTextFormField(
-          controller: provinceController,
-          focusNode: provinceFocusNode,
-          enabled: !isDefaultAddress,
-          labelText: isEnglish ? 'Province' : 'จังหวัด',
-          hintText: isEnglish ? 'Please enter province' : 'กรุณากรอกจังหวัด',
-          validator: (value) {
-            if (!isDefaultAddress && (value == null || value.isEmpty)) {
-              return isEnglish ? 'Please enter province.' : 'กรุณากรอกจังหวัด';
-            }
-            return null;
-          },
-        ),
-      ],
-    );
-  }
-}
-
-// Separate widget for service selection.
 class _ServiceSelectionSection extends StatelessWidget {
   final List<HousekeeperSkill>? housekeeperSkills;
   final String? selectedHireName;
@@ -979,6 +643,7 @@ class _ServiceSelectionSection extends StatelessWidget {
         if (housekeeperSkills != null && housekeeperSkills!.isNotEmpty)
           ...housekeeperSkills!.map((skill) {
             final serviceName = skill.skillType?.skillTypeName ?? '';
+            // ซ่อนบริการหลักออกจากรายการบริการเสริม
             if (serviceName == selectedHireName) {
               return const SizedBox.shrink();
             }
@@ -1008,7 +673,7 @@ class _ServiceSelectionSection extends StatelessWidget {
   }
 }
 
-// Separate widget for the payment summary.
+// ------------------- _PaymentSummary -------------------
 class _PaymentSummary extends StatelessWidget {
   final double totalPaymentAmount;
   final bool isEnglish;
@@ -1058,7 +723,7 @@ class _PaymentSummary extends StatelessWidget {
   }
 }
 
-// Separate widget for the date and time selection.
+// ------------------- _DateTimeSection -------------------
 class _DateTimeSection extends StatelessWidget {
   final TextEditingController startDateController;
   final FocusNode startDateFocusNode;
@@ -1113,6 +778,184 @@ class _DateTimeSection extends StatelessWidget {
               return isEnglish
                   ? 'Please select a start time.'
                   : 'กรุณาเลือกเวลาเริ่มงาน';
+            }
+            return null;
+          },
+        ),
+      ],
+    );
+  }
+}
+
+// ------------------- _AddressSection (Requested in full) -------------------
+class _AddressSection extends StatelessWidget {
+  final bool isDefaultAddress;
+  final ValueChanged<bool?> onChanged;
+  final bool isEnglish;
+  final TextEditingController phoneController;
+  final FocusNode phoneFocusNode;
+  final TextEditingController houseNumberController;
+  final FocusNode houseNumberFocusNode;
+  final TextEditingController villageController;
+  final FocusNode villageFocusNode;
+  final TextEditingController subdistrictController;
+  final FocusNode subdistrictFocusNode;
+  final TextEditingController districtController;
+  final FocusNode districtFocusNode;
+  final TextEditingController provinceController;
+  final FocusNode provinceFocusNode;
+
+  const _AddressSection({
+    super.key,
+    required this.isDefaultAddress,
+    required this.onChanged,
+    required this.isEnglish,
+    required this.phoneController,
+    required this.phoneFocusNode,
+    required this.houseNumberController,
+    required this.houseNumberFocusNode,
+    required this.villageController,
+    required this.villageFocusNode,
+    required this.subdistrictController,
+    required this.subdistrictFocusNode,
+    required this.districtController,
+    required this.districtFocusNode,
+    required this.provinceController,
+    required this.provinceFocusNode,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    // กำหนดว่าฟอร์มควรถูกเปิดใช้งานหรือไม่
+    final bool isFormEnabled = !isDefaultAddress;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Checkbox: ใช้ที่อยู่เริ่มต้น
+        Row(
+          children: [
+            Checkbox(
+              value: isDefaultAddress,
+              activeColor: Colors.red,
+              onChanged: onChanged,
+            ),
+            Text(
+              isEnglish ? 'Use default address' : 'ใช้ที่อยู่เริ่มต้น',
+              style: TextStyle(
+                color: isDefaultAddress ? Colors.red : Colors.black,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16.0),
+
+        // Phone Number
+        HireTextFormField(
+          controller: phoneController,
+          focusNode: phoneFocusNode,
+          enabled: isFormEnabled,
+          keyboardType: TextInputType.phone,
+          labelText: isEnglish ? 'Phone Number' : 'เบอร์โทรศัพท์',
+          hintText:
+              isEnglish
+                  ? 'Please enter phone number'
+                  : 'กรุณากรอกเบอร์โทรศัพท์',
+          validator: (value) {
+            if (isFormEnabled && (value == null || value.isEmpty)) {
+              return isEnglish
+                  ? 'Please enter phone number.'
+                  : 'กรุณากรอกเบอร์โทรศัพท์';
+            }
+            if (isFormEnabled &&
+                value != null &&
+                !RegExp(r'^[0-9]+$').hasMatch(value)) {
+              return isEnglish
+                  ? 'Please enter numbers only for phone number.'
+                  : 'กรุณาพิมพ์เฉพาะตัวเลขสำหรับเบอร์โทรศัพท์';
+            }
+            return null;
+          },
+        ),
+        const SizedBox(height: 16.0),
+
+        // House Number
+        HireTextFormField(
+          controller: houseNumberController,
+          focusNode: houseNumberFocusNode,
+          enabled: isFormEnabled,
+          labelText: isEnglish ? 'House Number' : 'เลขที่บ้าน',
+          hintText:
+              isEnglish ? 'Please enter house number' : 'กรุณากรอกเลขที่บ้าน',
+          validator: (value) {
+            if (isFormEnabled && (value == null || value.isEmpty)) {
+              return isEnglish
+                  ? 'Please enter house number.'
+                  : 'กรุณากรอกเลขที่บ้าน';
+            }
+            return null;
+          },
+        ),
+        const SizedBox(height: 16.0),
+
+        // Village
+        HireTextFormField(
+          controller: villageController,
+          focusNode: villageFocusNode,
+          enabled: isFormEnabled,
+          labelText: isEnglish ? 'Village' : 'หมู่บ้าน',
+          hintText: isEnglish ? 'Please enter village' : 'กรุณากรอกหมู่บ้าน',
+          validator: (value) {
+            if (isFormEnabled && (value == null || value.isEmpty)) {
+              return isEnglish ? 'Please enter village.' : 'กรุณากรอกหมู่บ้าน';
+            }
+            return null;
+          },
+        ),
+        const SizedBox(height: 16.0),
+
+        // Subdistrict
+        HireTextFormField(
+          controller: subdistrictController,
+          focusNode: subdistrictFocusNode,
+          enabled: isFormEnabled,
+          labelText: isEnglish ? 'Subdistrict' : 'ตำบล',
+          hintText: isEnglish ? 'Please enter subdistrict' : 'กรุณากรอกตำบล',
+          validator: (value) {
+            if (isFormEnabled && (value == null || value.isEmpty)) {
+              return isEnglish ? 'Please enter subdistrict.' : 'กรุณากรอกตำบล';
+            }
+            return null;
+          },
+        ),
+        const SizedBox(height: 16.0),
+
+        // District
+        HireTextFormField(
+          controller: districtController,
+          focusNode: districtFocusNode,
+          enabled: isFormEnabled,
+          labelText: isEnglish ? 'District' : 'อำเภอ',
+          hintText: isEnglish ? 'Please enter district' : 'กรุณากรอกอำเภอ',
+          validator: (value) {
+            if (isFormEnabled && (value == null || value.isEmpty)) {
+              return isEnglish ? 'Please enter district.' : 'กรุณากรอกอำเภอ';
+            }
+            return null;
+          },
+        ),
+        const SizedBox(height: 16.0),
+
+        // Province
+        HireTextFormField(
+          controller: provinceController,
+          focusNode: provinceFocusNode,
+          enabled: isFormEnabled,
+          labelText: isEnglish ? 'Province' : 'จังหวัด',
+          hintText: isEnglish ? 'Please enter province' : 'กรุณากรอกจังหวัด',
+          validator: (value) {
+            if (isFormEnabled && (value == null || value.isEmpty)) {
+              return isEnglish ? 'Please enter province.' : 'กรุณากรอกจังหวัด';
             }
             return null;
           },

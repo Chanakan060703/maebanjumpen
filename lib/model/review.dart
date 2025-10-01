@@ -1,11 +1,14 @@
-import 'package:maebanjumpen/model/hire_lite.dart'; // import HireLite
+import 'package:maebanjumpen/model/hire_lite.dart'; // ใช้ HireLite ตามที่คุณระบุ
 
 class Review {
   final int? reviewId;
   final String? reviewMessage;
   final double? score;
   final DateTime? reviewDate;
-  final HireLite? hire; // เปลี่ยนจาก Hire? เป็น HireLite?
+  final HireLite? hire;
+  final String? hirerFirstName;
+  final String? hirerLastName;
+  final String? hirerPictureUrl; 
 
   Review({
     this.reviewId,
@@ -13,6 +16,9 @@ class Review {
     this.score,
     this.reviewDate,
     this.hire,
+    this.hirerFirstName,
+    this.hirerLastName,
+    this.hirerPictureUrl,
   });
 
   factory Review.fromJson(Map<String, dynamic> json) {
@@ -21,12 +27,15 @@ class Review {
       reviewMessage: json['reviewMessage'] as String?,
       score: (json['score'] as num?)?.toDouble(),
       reviewDate: json['reviewDate'] != null
-          ? DateTime.parse(json['reviewDate'])
+          ? DateTime.tryParse(json['reviewDate']) // ใช้ tryParse เพื่อความปลอดภัย
           : null,
       // ตรวจสอบ hire ไม่ให้เป็น int และ parse เป็น HireLite
       hire: json['hire'] != null && json['hire'] is! int
           ? HireLite.fromJson(json['hire'] as Map<String, dynamic>)
           : null,
+      hirerFirstName: json['hirerFirstName'] as String?,
+      hirerLastName: json['hirerLastName'] as String?,
+      hirerPictureUrl: json['hirerPictureUrl'] as String?,
     );
   }
 
@@ -36,13 +45,15 @@ class Review {
     data['reviewMessage'] = reviewMessage;
     data['score'] = score;
     data['reviewDate'] = reviewDate?.toIso8601String();
-    // ใน toJson เรามักจะส่งแค่ ID ของ Hire กลับไปหาก Backend ต้องการ
-    // หรือส่งเป็น HireLite object ถ้า Backend รองรับ
+    
+    // สำหรับการส่งกลับ: ให้ส่ง ID หรือ null หากไม่มี
     if (hire != null && hire!.hireId != null) {
-      data['hire'] = {'hireId': hire!.hireId}; // ส่งแค่ ID
-    } else {
-      data['hire'] = null;
+      data['hireId'] = hire!.hireId;
     }
+    data['hirerFirstName'] = hirerFirstName;
+    data['hirerLastName'] = hirerLastName;
+    data['hirerPictureUrl'] = hirerPictureUrl;
+
     return data;
   }
 }

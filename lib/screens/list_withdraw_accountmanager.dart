@@ -4,50 +4,9 @@ import 'package:maebanjumpen/model/transaction.dart';
 import 'package:maebanjumpen/model/account_manager.dart'; // ตรวจสอบว่ามี AccountManager model ที่ถูกต้อง
 import 'package:intl/intl.dart'; // Import for date formatting
 import 'package:maebanjumpen/screens/home_accountmanager.dart';
+import 'package:maebanjumpen/screens/listrequestwithdraw_housekeeper.dart';
 import 'package:maebanjumpen/screens/request_withdrawdetail_accountmanager.dart'; // นำเข้าหน้าจอรายละเอียดสำหรับ Account Manager
 
-
-class TransactionStatusHelper {
-  static String getLocalizedStatus(String status, bool isEnglish) {
-    if (isEnglish) {
-      return status;
-    } else {
-      switch (status.toLowerCase()) {
-        case 'pending approve':
-          return 'กำลังรอตรวจสอบ';
-        case 'approved':
-          return 'อนุมัติแล้ว';
-        case 'rejected':
-          return 'ถูกปฏิเสธ';
-        case 'completed':
-          return 'เสร็จสิ้น';
-        default:
-          return 'ไม่ทราบสถานะ';
-      }
-    }
-  }
-
-  static Color getStatusColor(String status) {
-    if (status.toLowerCase() == 'pending approve' ||
-        status.toLowerCase() == 'กำลังรอตรวจสอบ') {
-      return Colors.orange;
-    } else if (status.toLowerCase() == 'approved' ||
-        status.toLowerCase() == 'เสร็จสิ้น' ||
-        status.toLowerCase() == 'completed') {
-      return Colors.green;
-    } else if (status.toLowerCase() == 'rejected' ||
-        status.toLowerCase() == 'ถูกปฏิเสธ') {
-      return Colors.red;
-    } else {
-      return Colors.grey;
-    }
-  }
-}
-
-// ---
-// ## ListWithdrawalRequestsScreen
-// หน้าจอสำหรับแสดงรายการคำขอถอนเงินของ Account Manager
-// ---
 class ListWithdrawalRequestsScreen extends StatefulWidget {
   final bool isEnglish;
   final AccountManager user; // สำหรับ AccountManager
@@ -73,7 +32,6 @@ class _ListWithdrawalRequestsState extends State<ListWithdrawalRequestsScreen> {
     _fetchWithdrawalRequests();
   }
 
-  /// Fetches withdrawal requests that are of 'withdraw' type and 'Pending Approve' status.
   void _fetchWithdrawalRequests() {
     _withdrawalRequestsFuture = _transactionController
         .getAllTransactions()
@@ -81,23 +39,25 @@ class _ListWithdrawalRequestsState extends State<ListWithdrawalRequestsScreen> {
           return transactions
               .where(
                 (transaction) =>
+                    // ตรวจสอบประเภท Transaction
                     (transaction.transactionType?.toLowerCase() == 'withdraw' ||
                         transaction.transactionType?.toLowerCase() ==
                             'withdrawal' ||
                         transaction.transactionType == 'ถอนเงิน') &&
+                    // ตรวจสอบสถานะ: Pending Approve เท่านั้น
                     (transaction.transactionStatus?.toLowerCase() ==
                             'pending approve' ||
                         transaction.transactionStatus == 'กำลังรอตรวจสอบ'),
               )
               .toList();
         });
+    // ใช้ if (mounted) เพื่อป้องกันการเรียก setState หลัง dispose
     if (mounted) {
       setState(() {});
     }
   }
 
   /// Navigates to the transaction detail screen for Account Manager.
-  /// This screen allows Account Manager to approve or reject the request.
   void _navigateToTransactionDetailScreen(
     BuildContext context,
     Transaction transaction,
@@ -107,16 +67,14 @@ class _ListWithdrawalRequestsState extends State<ListWithdrawalRequestsScreen> {
       MaterialPageRoute(
         builder:
             (context) => RequestWithdrawDetailAccountManager(
-              // ใช้หน้าจอสำหรับ Account Manager
-              transaction: transaction, // ส่ง transaction object เข้าไป
-              isEnglish: widget.isEnglish,
-              transactionController:
-                  _transactionController, // ส่ง AccountManager user เข้าไป
-            ),
+                  transaction: transaction, 
+                  isEnglish: widget.isEnglish,
+                  transactionController: _transactionController, 
+                  accountManagerId: widget.user.id!, // ส่ง ID ของ AccountManager
+                ),
       ),
     ).then((result) {
-      // เมื่อกลับมาจากหน้าจอรายละเอียด ให้รีเฟรชรายการ
-      // result อาจจะเป็น true ถ้ามีการอนุมัติ/ปฏิเสธและต้องการให้รีเฟรช
+      // เมื่อกลับมาจากหน้าจอรายละเอียด ให้รีเฟรชรายการหากมีการเปลี่ยนแปลง
       if (result == true) {
         _fetchWithdrawalRequests();
       }
@@ -158,6 +116,8 @@ class _ListWithdrawalRequestsState extends State<ListWithdrawalRequestsScreen> {
                 widget.isEnglish
                     ? 'Error: ${snapshot.error}'
                     : 'เกิดข้อผิดพลาด: ${snapshot.error}',
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.red),
               ),
             );
           } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
@@ -182,11 +142,11 @@ class _ListWithdrawalRequestsState extends State<ListWithdrawalRequestsScreen> {
                   final formattedDate =
                       transaction.transactionDate != null
                           ? DateFormat(
-                            widget.isEnglish
-                                ? 'd MMM y, HH:mm'
-                                : 'd MMM y, HH:mm',
-                            widget.isEnglish ? 'en_US' : 'th_TH',
-                          ).format(transaction.transactionDate!.toLocal())
+                              widget.isEnglish
+                                  ? 'd MMM y, HH:mm'
+                                  : 'd MMM y, HH:mm',
+                              widget.isEnglish ? 'en_US' : 'th_TH',
+                            ).format(transaction.transactionDate!.toLocal())
                           : (widget.isEnglish ? 'N/A Date' : 'ไม่มีวันที่');
 
                   final String displayStatus =
@@ -208,7 +168,6 @@ class _ListWithdrawalRequestsState extends State<ListWithdrawalRequestsScreen> {
                       statusColor: statusColor,
                       isEnglish: widget.isEnglish,
                       onView: () {
-                        // เมื่อกดดู ให้ไปที่หน้า RequestWithdrawDetailAccountManager
                         _navigateToTransactionDetailScreen(
                           context,
                           transaction,
@@ -226,10 +185,6 @@ class _ListWithdrawalRequestsState extends State<ListWithdrawalRequestsScreen> {
   }
 }
 
-// ---
-// ## Withdrawal Request Card Widget
-// This stateless widget displays a single withdrawal request in a card format.
-// ---
 class WithdrawalRequestCard extends StatelessWidget {
   final Transaction transaction;
   final String formattedDate;
@@ -247,6 +202,20 @@ class WithdrawalRequestCard extends StatelessWidget {
     required this.isEnglish,
     required this.onView,
   });
+
+  String _getMemberName(bool isEnglish) {
+    final firstName = transaction.member?.person?.firstName;
+    final lastName = transaction.member?.person?.lastName;
+    final memberId = transaction.memberId ?? 'N/A';
+    
+    // ตรวจสอบว่ามีชื่อจริงอยู่หรือไม่
+    if (firstName != null && firstName.isNotEmpty) {
+      return '${isEnglish ? 'Name' : 'ชื่อ'} : $firstName ${lastName ?? ''}';
+    } else {
+      // แสดง Member ID เป็นข้อมูลสำรอง
+      return '${isEnglish ? 'Member ID' : 'รหัสสมาชิก'} : $memberId';
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -267,6 +236,7 @@ class WithdrawalRequestCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
+                        // 🚩 แสดงจำนวนเงิน
                         '${transaction.transactionAmount?.toStringAsFixed(2) ?? '0.00'} ฿',
                         style: const TextStyle(
                           fontSize: 24,
@@ -276,8 +246,8 @@ class WithdrawalRequestCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        // ตรวจสอบให้แน่ใจว่า member และ person ใน transaction มีข้อมูล
-                        '${isEnglish ? 'Name' : 'ชื่อ'} : ${transaction.member?.person?.firstName ?? 'N/A'} ${transaction.member?.person?.lastName ?? ''}',
+                        // 🚩 แสดงชื่อสมาชิก/รหัสสมาชิก
+                        _getMemberName(isEnglish),
                         style: const TextStyle(
                           fontSize: 16,
                           color: Colors.black87,
@@ -287,6 +257,7 @@ class WithdrawalRequestCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
+                        // 🚩 แสดงวันที่
                         formattedDate,
                         style: const TextStyle(
                           fontSize: 14,
@@ -299,7 +270,7 @@ class WithdrawalRequestCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 10),
-                // แสดงเฉพาะปุ่ม View
+                // 🚩 ปุ่มสำหรับดูรายละเอียด
                 ElevatedButton.icon(
                   onPressed: onView,
                   icon: const Icon(
@@ -325,6 +296,7 @@ class WithdrawalRequestCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 10),
+            // 🚩 แสดงสถานะ
             Align(
               alignment: Alignment.centerRight,
               child: Container(

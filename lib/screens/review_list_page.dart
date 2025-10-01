@@ -1,14 +1,13 @@
-// lib/screens/review_list_page.dart
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:maebanjumpen/model/hire.dart';
-import 'package:maebanjumpen/model/housekeeper.dart'; // ตรวจสอบให้แน่ใจว่า import ถูกต้อง
+import 'package:maebanjumpen/model/review.dart';
+import 'package:maebanjumpen/styles/finishJobStyles.dart'; // ตรวจสอบให้แน่ใจว่า import ถูกต้อง
 
 class ReviewListPage extends StatelessWidget {
   final String housekeeperName;
-  final List<Hire> reviews; // ใช้ List<Hire> เพราะ review อยู่ใน Hire object
+  final List<Review> reviews;
   final bool isEnglish;
 
   const ReviewListPage({
@@ -18,7 +17,6 @@ class ReviewListPage extends StatelessWidget {
     required this.isEnglish,
   });
 
-  // ฟังก์ชันสำหรับแปลง String เป็น ImageProvider
   ImageProvider _getImageProvider(String? imageData) {
     if (imageData == null || imageData.isEmpty) {
       return const AssetImage('assets/image/icon_user.png');
@@ -41,18 +39,14 @@ class ReviewListPage extends StatelessWidget {
     return const AssetImage('assets/image/icon_user.png');
   }
 
-  // ฟังก์ชันสำหรับคำนวณคะแนนที่ใช้แสดงผลดาว
+  // ฟังก์ชันสำหรับคำนวณคะแนนที่ใช้แสดงผลดาว (โค้ดเดิม)
   double _getDisplayScore(double? actualScore) {
-    if (actualScore == null) return 0.0;
-    double scoreAsDouble = actualScore.toDouble();
-    if (scoreAsDouble % 1 == 0) {
-      return scoreAsDouble;
-    } else {
-      return scoreAsDouble.floorToDouble() + 0.5;
-    }
+    if (actualScore == null || actualScore <= 0.0) return 0.0;
+    // ปัดเศษให้ใกล้เคียง 0.5 ที่สุด: 4.2 -> 4.0, 4.3 -> 4.5
+    return (actualScore * 2).round() / 2.0;
   }
 
-  // ฟังก์ชันสำหรับสร้าง Widget แสดงผลดาว
+  // ฟังก์ชันสำหรับสร้าง Widget แสดงผลดาว (โค้ดเดิม)
   Widget _buildStarRating(double displayRating, {double iconSize = 16.0}) {
     List<Widget> stars = [];
     int fullStars = displayRating.floor();
@@ -74,74 +68,96 @@ class ReviewListPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(isEnglish ? 'All Reviews' : 'รีวิวทั้งหมด'),
+        title: Text(isEnglish ? 'All Reviews' : 'รีวิวทั้งหมด',
+        style: const TextStyle(color: Colors.black),
+        ),
         centerTitle: true,
         backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
+        foregroundColor: AppColors.primaryRed,
         elevation: 0,
       ),
-      body: reviews.isEmpty
-          ? Center(
-              child: Text(
-                isEnglish
-                    ? 'No reviews found for this housekeeper.'
-                    : 'ไม่พบรีวิวสำหรับแม่บ้านคนนี้',
-                style: const TextStyle(fontSize: 16, color: Colors.grey),
-              ),
-            )
-          : ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: reviews.length,
-              itemBuilder: (context, index) {
-                final hire = reviews[index];
-                final review = hire.review;
-                final hirer = hire.hirer;
-                
-                if (review == null || hirer == null || hirer.person == null) {
-                  return const SizedBox.shrink(); // ข้ามไปถ้ารีวิวหรือข้อมูลผู้จ้างหายไป
-                }
 
-                String formattedDate = '';
-                if (review.reviewDate != null) {
-                  formattedDate = DateFormat(
-                    'MMM dd, yyyy',
-                    isEnglish ? 'en_US' : 'th_TH',
-                  ).format(review.reviewDate!.toLocal());
-                }
+      body:
+          reviews.isEmpty
+              ? Center(
+                child: Text(
+                  isEnglish
+                      ? 'No reviews found for this housekeeper.'
+                      : 'ไม่พบรีวิวสำหรับแม่บ้านคนนี้',
+                  style: const TextStyle(fontSize: 16, color: Colors.grey),
+                ),
+              )
+              : ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: reviews.length,
+                itemBuilder: (context, index) {
+                  final review = reviews[index];
 
-                return Card(
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                  elevation: 2,
-                  margin: const EdgeInsets.only(bottom: 12),
-                  child: ListTile(
-                    leading: CircleAvatar(
-                      backgroundImage: _getImageProvider(hirer.person?.pictureUrl),
-                      onBackgroundImageError: (exception, stackTrace) {
-                        debugPrint(
-                            'Error loading reviewer avatar image: $exception');
-                      },
+                  if (review.reviewMessage == null || review.score == null) {
+                    return const SizedBox.shrink();
+                  }
+
+                  final String reviewerFirstName = review.hirerFirstName ?? '';
+                  final String reviewerLastName = review.hirerLastName ?? '';
+                  final String reviewerName =
+                      (reviewerFirstName.isEmpty && reviewerLastName.isEmpty)
+                          ? (isEnglish ? 'Anonymous User' : 'ผู้ใช้ไม่ระบุชื่อ')
+                          : "$reviewerFirstName $reviewerLastName";
+
+                  String formattedDate = '';
+                  if (review.reviewDate != null) {
+                    formattedDate = DateFormat(
+                      isEnglish ? 'MMM dd, yyyy' : 'd MMMM yyyy',
+                      isEnglish ? 'en_US' : 'th_TH',
+                    ).format(review.reviewDate!.toLocal());
+                  }
+
+                  return Card(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    title: Text(
-                      "${hirer.person?.firstName ?? ''} ${hirer.person?.lastName ?? ''}",
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildStarRating(_getDisplayScore(review.score)),
-                        const SizedBox(height: 4),
-                        Text(review.reviewMessage ?? ''),
-                        Text(
-                          formattedDate,
-                          style: const TextStyle(fontSize: 12, color: Colors.grey),
+                    elevation: 2,
+                    margin: const EdgeInsets.only(bottom: 12),
+                    child: ListTile(
+                      leading: CircleAvatar(
+                        // 🛑 แก้ไข: ดึงรูปภาพจากฟิลด์ใหม่ hirerPictureUrl
+                        backgroundImage: _getImageProvider(
+                          review.hirerPictureUrl,
                         ),
-                      ],
+                        onBackgroundImageError: (exception, stackTrace) {
+                          debugPrint(
+                            'Error loading reviewer avatar image: $exception',
+                          );
+                        },
+                      ),
+                      title: Text(
+                        reviewerName, // ✅ ใช้ชื่อที่ดึงมาจากฟิลด์ใหม่
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildStarRating(_getDisplayScore(review.score)),
+                          const SizedBox(height: 4),
+                          Text(
+                            review.reviewMessage ??
+                                (isEnglish
+                                    ? 'No comment provided.'
+                                    : 'ไม่มีข้อความรีวิว'),
+                          ),
+                          Text(
+                            formattedDate,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                );
-              },
-            ),
+                  );
+                },
+              ),
     );
   }
 }

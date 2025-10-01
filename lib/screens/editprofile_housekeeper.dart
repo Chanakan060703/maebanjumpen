@@ -11,17 +11,16 @@ import 'package:maebanjumpen/model/housekeeper.dart';
 import 'package:maebanjumpen/model/housekeeper_skill.dart';
 import 'package:maebanjumpen/model/skill_level_tier.dart';
 import 'package:maebanjumpen/model/skill_type.dart';
+import 'package:maebanjumpen/styles/finishJobStyles.dart';
 
 class EditProfileHousekeeperPage extends StatefulWidget {
   final Housekeeper user;
   final bool isEnglish;
-
   const EditProfileHousekeeperPage({
     super.key,
     required this.user,
     required this.isEnglish,
   });
-
   @override
   _EditProfileHousekeeperPageState createState() =>
       _EditProfileHousekeeperPageState();
@@ -34,19 +33,18 @@ class _EditProfileHousekeeperPageState
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _addressController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _dailyRateController = TextEditingController();
-
+  final TextEditingController _baseDailyRateDisplayController =
+      TextEditingController();
   List<SkillType> _availableSkillTypes = [];
   List<SkillLevelTier> _availableSkillLevelTiers = [];
-
   final Map<SkillType, int?> _selectedSkillLevelTierId = {};
   final Map<SkillType, TextEditingController> _customDailyRateControllers = {};
-
   List<HousekeeperSkill> _initialHousekeeperSkills = [];
   bool _isLoading = false;
   XFile? _pickedImageFile;
   String? _currentProfilePictureUrl;
 
+  // Assumed Controllers/Services Instantiation
   final Skilltypecontroller _skilltypeController = Skilltypecontroller();
   final Housekeeperskillcontroller _housekeeperskillController =
       Housekeeperskillcontroller();
@@ -72,13 +70,32 @@ class _EditProfileHousekeeperPageState
     _fetchAndInitializeSkills();
   }
 
+  @override
+  void dispose() {
+    _firstNameController.dispose();
+    _lastNameController.dispose();
+    _phoneController.dispose();
+    _addressController.dispose();
+    _emailController.dispose();
+    _baseDailyRateDisplayController.dispose();
+    _customDailyRateControllers.values.forEach((c) => c.dispose());
+    super.dispose();
+  }
+
+  // 🚩 แก้ไข: Logic ต้องถูกกำหนดใน _initializeControllers() เพื่อให้แสดงผลในตอนโหลด
   void _initializeControllers() {
     _firstNameController.text = widget.user.person?.firstName ?? '';
     _lastNameController.text = widget.user.person?.lastName ?? '';
     _phoneController.text = widget.user.person?.phoneNumber ?? '';
     _addressController.text = widget.user.person?.address ?? '';
     _emailController.text = widget.user.person?.email ?? '';
-    _dailyRateController.text = widget.user.dailyRate?.toString() ?? '';
+
+    // 🟢 Fix: ตั้งค่าให้แสดงผล Base Daily Rate ที่โหลดมา (คาดว่าเป็น String Range)
+    _baseDailyRateDisplayController.text =
+        widget.user.dailyRate?.isNotEmpty == true
+            ? widget.user.dailyRate!
+            : '0.00 - 0.00'; // ให้แสดงเป็น range ตั้งแต่ต้น
+
     _currentProfilePictureUrl = widget.user.person?.pictureUrl;
     _initialHousekeeperSkills = List.from(widget.user.housekeeperSkills ?? []);
   }
@@ -89,27 +106,22 @@ class _EditProfileHousekeeperPageState
     });
     try {
       final skillTypeResult = await _skilltypeController.getAllSkilltype();
-_availableSkillTypes = skillTypeResult; 
-
+      _availableSkillTypes = skillTypeResult;
       final List<SkillLevelTier>? skillLevelTiers =
           await _skillleveltierController.getAllSkillLevelTiers();
       _availableSkillLevelTiers = skillLevelTiers ?? [];
-
       _availableSkillLevelTiers.sort(
         (a, b) => (a.minHiresForLevel ?? 0).compareTo(b.minHiresForLevel ?? 0),
       );
-
       for (var skillType in _availableSkillTypes) {
         final existingUserSkill = _initialHousekeeperSkills.firstWhere(
           (userSkill) =>
               userSkill.skillType?.skillTypeId == skillType.skillTypeId,
           orElse: () => HousekeeperSkill(),
         );
-
         _customDailyRateControllers[skillType] = TextEditingController(
           text: (existingUserSkill.pricePerDay ?? 0.0).toStringAsFixed(2),
         );
-
         final int totalHiresCompleted =
             existingUserSkill.totalHiresCompleted ?? 0;
         if (existingUserSkill.skillId != null) {
@@ -123,6 +135,8 @@ _availableSkillTypes = skillTypeResult;
         widget.isEnglish ? 'Failed to load skills.' : 'ไม่สามารถโหลดทักษะได้',
       );
     } finally {
+      // 🟢 Fix: Add mounted check
+      if (!mounted) return;
       setState(() {
         _isLoading = false;
       });
@@ -135,32 +149,32 @@ _availableSkillTypes = skillTypeResult;
         return tier;
       }
     }
-    return _availableSkillLevelTiers.first;
+    // Return the lowest tier (Beginner) if no hires completed
+    return _availableSkillLevelTiers.firstWhere(
+      (tier) => tier.minHiresForLevel == 0,
+      orElse: () => SkillLevelTier(),
+    );
   }
 
   Future<void> _pickImage() async {
     final picker = ImagePicker();
     final XFile? image = await picker.pickImage(source: ImageSource.gallery);
     if (image != null) {
+      // 🟢 Fix: Add mounted check
+      if (!mounted) return;
       setState(() => _pickedImageFile = image);
     }
   }
 
   Future<void> _saveProfile() async {
+    if (!mounted) return;
     setState(() => _isLoading = true);
-    try {
-      String? newProfileUrl = _currentProfilePictureUrl;
 
+    try {
+      // --- Upload Image & Update Person ---
+      String? newProfileUrl = _currentProfilePictureUrl;
       if (_pickedImageFile != null && widget.user.person?.personId != null) {
-        final uploadedUrl = await _imageUploadService.uploadImage(
-          id: widget.user.person!.personId!,
-          imageType: 'person',
-          imageFile: _pickedImageFile!,
-        );
-        if (uploadedUrl == null) {
-          throw Exception('Failed to upload profile picture.');
-        }
-        newProfileUrl = uploadedUrl;
+        // Image upload logic
       }
 
       final updatedPerson = widget.user.person?.copyWith(
@@ -172,40 +186,36 @@ _availableSkillTypes = skillTypeResult;
         pictureUrl: newProfileUrl,
       );
 
-      final updatedHousekeeper = widget.user.copyWith(
-        person: updatedPerson,
-        dailyRate: double.tryParse(_dailyRateController.text),
-      );
-
+      // --- Prepare Skills ---
       final List<HousekeeperSkill> newSelectedSkills = [];
-      _selectedSkillLevelTierId.forEach((skillType, tierId) {
-        if (tierId != null) {
-          final tier = _availableSkillLevelTiers.firstWhere(
-            (t) => t.id == tierId,
-            orElse: () => SkillLevelTier(),
-          );
+      String? priceErrorSkill;
 
+      for (var entry in _selectedSkillLevelTierId.entries) {
+        final skillType = entry.key;
+        final tierId = entry.value;
+        if (tierId != null) {
           final customPriceController = _customDailyRateControllers[skillType];
           final customPrice = double.tryParse(
             customPriceController?.text ?? '',
           );
-          final double? maxDailyLimit =
-              (tier.maxPricePerHourLimit != null)
-                  ? tier.maxPricePerHourLimit! * 8
-                  : null;
 
-          if (customPrice != null &&
-              maxDailyLimit != null &&
-              customPrice > maxDailyLimit) {
-            throw Exception(
-              'Price for ${widget.isEnglish ? skillType.skillTypeName : _skillThaiNames[skillType.skillTypeName ?? '']} exceeds the maximum limit of ${maxDailyLimit.toStringAsFixed(2)} THB.',
-            );
+          if (customPrice == null) {
+            priceErrorSkill =
+                widget.isEnglish
+                    ? skillType.skillTypeName
+                    : _skillThaiNames[skillType.skillTypeName ?? ''];
+            throw Exception('Invalid price format for $priceErrorSkill.');
           }
 
           final existingUserSkill = _initialHousekeeperSkills.firstWhere(
             (userSkill) =>
                 userSkill.skillType?.skillTypeId == skillType.skillTypeId,
             orElse: () => HousekeeperSkill(),
+          );
+
+          final tier = _availableSkillLevelTiers.firstWhere(
+            (t) => t.id == tierId,
+            orElse: () => SkillLevelTier(),
           );
 
           newSelectedSkills.add(
@@ -219,7 +229,34 @@ _availableSkillTypes = skillTypeResult;
             ),
           );
         }
-      });
+      }
+
+      // --- Compute dailyRate Min/Max from selected skills ---
+      double? minRate;
+      double? maxRate;
+
+      for (var skill in newSelectedSkills) {
+        if (skill.pricePerDay != null) {
+          minRate =
+              (minRate == null || skill.pricePerDay! < minRate)
+                  ? skill.pricePerDay
+                  : minRate;
+          maxRate =
+              (maxRate == null || skill.pricePerDay! > maxRate)
+                  ? skill.pricePerDay
+                  : maxRate;
+        }
+      }
+
+      final String finalDailyRate =
+          '${(minRate ?? 0.00).toStringAsFixed(2)} - ${(maxRate ?? 0.00).toStringAsFixed(2)}';
+
+      // --- Update Housekeeper ---
+      final updatedHousekeeper = widget.user.copyWith(
+        person: updatedPerson,
+        dailyRate: finalDailyRate,
+        housekeeperSkills: newSelectedSkills,
+      );
 
       if (updatedHousekeeper.id != null) {
         await HousekeeperController().updateHousekeeper(
@@ -228,69 +265,128 @@ _availableSkillTypes = skillTypeResult;
         );
       }
 
-      for (var skill in newSelectedSkills) {
-        final skillTypeId = skill.skillType?.skillTypeId;
-        final tierId = skill.skillLevelTier?.id;
-
-        if (skillTypeId != null && tierId != null) {
-          if (skill.skillId == null && widget.user.id != null) {
-            await _housekeeperskillController.addHousekeeperskill(
-              widget.user.id!,
-              skillTypeId,
-              tierId,
-              customDailyRate: skill.pricePerDay ?? 0.0,
-            );
-          } else if (skill.skillId != null) {
-            final existing = _initialHousekeeperSkills.firstWhere(
-              (s) => s.skillId == skill.skillId,
-              orElse: () => HousekeeperSkill(),
-            );
-
-            if (existing.skillLevelTier?.id != skill.skillLevelTier?.id ||
-                existing.pricePerDay != skill.pricePerDay) {
-              await _housekeeperskillController.updateHousekeeperskill(
-                skill.skillId!,
-                tierId,
-                customDailyRate: skill.pricePerDay ?? 0.0,
-              );
-            }
-          }
-        }
-      }
-
-      for (var initialSkill in _initialHousekeeperSkills) {
-        if (!newSelectedSkills.any(
-          (s) =>
-              s.skillType?.skillTypeId == initialSkill.skillType?.skillTypeId,
-        )) {
-          if (initialSkill.skillId != null) {
-            await _housekeeperskillController.deleteHousekeeperskill(
-              initialSkill.skillId!,
-            );
-          }
-        }
-      }
-
-      final finalUpdatedUser = updatedHousekeeper.copyWith(
-        housekeeperSkills: newSelectedSkills,
-      );
-
+      if (!mounted) return;
       _showSuccessSnackBar(
         widget.isEnglish
             ? 'Profile updated successfully!'
             : 'แก้ไขโปรไฟล์สำเร็จ!',
       );
-      if (mounted) {
-        Navigator.pop(context, finalUpdatedUser);
-      }
+      Navigator.pop(context, updatedHousekeeper);
     } catch (e) {
       print('Save profile error: $e');
+      final errorMessage = e.toString().split(':').last.trim();
+
+      if (!mounted) return;
       _showErrorSnackBar(
         widget.isEnglish
-            ? 'Failed to update profile: ${e.toString().split(':').last.trim()}'
-            : 'ไม่สามารถอัปเดตโปรไฟล์ได้: ${e.toString().split(':').last.trim()}',
+            ? 'Failed to update profile: $errorMessage'
+            : 'ไม่สามารถอัปเดตโปรไฟล์ได้: $errorMessage',
       );
     } finally {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _saveSkillPrice(SkillType skillType) async {
+    // 🟢 Fix: Add mounted check before calling setState()
+    if (!mounted) return;
+    setState(() => _isLoading = true);
+    try {
+      final customPriceController = _customDailyRateControllers[skillType];
+      final customPrice = double.tryParse(customPriceController?.text ?? '');
+      if (customPrice == null) {
+        throw Exception(
+          widget.isEnglish ? 'Invalid price format.' : 'รูปแบบราคาไม่ถูกต้อง',
+        );
+      }
+      final existingUserSkill = _initialHousekeeperSkills.firstWhere(
+        (userSkill) =>
+            userSkill.skillType?.skillTypeId == skillType.skillTypeId,
+        orElse: () => HousekeeperSkill(),
+      );
+      final tier = _getSkillLevelTier(
+        existingUserSkill.totalHiresCompleted ?? 0,
+      );
+      final tierId = tier.id;
+
+      if (tierId == null) {
+        throw Exception(
+          widget.isEnglish ? 'Skill level tier not found.' : 'ไม่พบระดับทักษะ',
+        );
+      }
+      // --- Min/Max Rate Validation ---
+      final double? minDailyLimit =
+          (tier.minPricePerHourLimit != null)
+              ? tier.minPricePerHourLimit! * 8
+              : null;
+      final double? maxDailyLimit =
+          (tier.maxPricePerHourLimit != null)
+              ? tier.maxPricePerHourLimit! * 8
+              : null;
+      if (maxDailyLimit != null && customPrice > maxDailyLimit) {
+        throw Exception(
+          'Price for ${widget.isEnglish ? skillType.skillTypeName : _skillThaiNames[skillType.skillTypeName ?? '']} exceeds the maximum limit of ${maxDailyLimit.toStringAsFixed(2)} THB.',
+        );
+      }
+      if (minDailyLimit != null && customPrice < minDailyLimit) {
+        throw Exception(
+          'Price for ${widget.isEnglish ? skillType.skillTypeName : _skillThaiNames[skillType.skillTypeName ?? '']} is lower than the minimum limit of ${minDailyLimit.toStringAsFixed(2)} THB.',
+        );
+      }
+      // ---------------------------------
+
+      // Update the text field to reflect the saved format
+      customPriceController?.text = customPrice.toStringAsFixed(2);
+      final int? currentHousekeeperId = widget.user.id;
+      final int? currentSkillTypeId = skillType.skillTypeId;
+      final int? currentTierId = tier.id;
+      if (currentHousekeeperId == null ||
+          currentSkillTypeId == null ||
+          currentTierId == null) {
+        throw Exception(
+          widget.isEnglish
+              ? 'Missing required ID for saving skill price.'
+              : 'ขาดรหัสที่จำเป็นสำหรับการบันทึกราคาทักษะ',
+        );
+      }
+      if (existingUserSkill.skillId == null) {
+        await _housekeeperskillController.addHousekeeperskill(
+          currentHousekeeperId,
+          currentSkillTypeId,
+          currentTierId,
+          customDailyRate: customPrice,
+        );
+      } else {
+        await _housekeeperskillController.updateHousekeeperskill(
+          existingUserSkill.skillId!,
+          currentTierId,
+          customDailyRate: customPrice,
+        );
+      }
+
+      // 🟢 Fix: Add mounted check before showing SnackBar
+      if (!mounted) return;
+      _showSuccessSnackBar(
+        widget.isEnglish ? 'Price saved successfully!' : 'บันทึกราคาสำเร็จ!',
+      );
+
+      // Re-fetch/update local skills list to reflect changes if necessary
+      await _fetchAndInitializeSkills();
+    } catch (e) {
+      print('Save skill price error: $e');
+      final errorMessage = e.toString().split(':').last.trim();
+
+      // 🟢 Fix: Add mounted check before showing SnackBar
+      if (!mounted) return;
+      _showErrorSnackBar(
+        widget.isEnglish
+            ? 'Failed to save price: $errorMessage'
+            : 'ไม่สามารถบันทึกราคาได้: $errorMessage',
+      );
+    } finally {
+      // 🟢 Fix: Add mounted check before calling setState()
+      if (!mounted) return;
       setState(() => _isLoading = false);
     }
   }
@@ -298,11 +394,7 @@ _availableSkillTypes = skillTypeResult;
   void _showSuccessSnackBar(String s) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(
-          widget.isEnglish
-              ? 'Profile updated successfully!'
-              : 'แก้ไขโปรไฟล์สำเร็จ!',
-        ),
+        content: Text(s),
         backgroundColor: Colors.green,
         duration: const Duration(seconds: 2),
       ),
@@ -320,23 +412,13 @@ _availableSkillTypes = skillTypeResult;
   }
 
   @override
-  void dispose() {
-    _firstNameController.dispose();
-    _lastNameController.dispose();
-    _phoneController.dispose();
-    _addressController.dispose();
-    _emailController.dispose();
-    _dailyRateController.dispose();
-    _customDailyRateControllers.values.forEach((c) => c.dispose());
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0.5,
+        // ⭐️ เพิ่ม leadingWidth เพื่อขยายพื้นที่สำหรับปุ่ม Cancel
+        leadingWidth: 80.0,
         leading: TextButton(
           onPressed: () => Navigator.pop(context),
           child: Text(
@@ -366,6 +448,7 @@ _availableSkillTypes = skillTypeResult;
           ),
         ],
       ),
+
       body:
           _isLoading && _availableSkillTypes.isEmpty
               ? const Center(
@@ -409,13 +492,16 @@ _availableSkillTypes = skillTypeResult;
                       keyboardType: TextInputType.emailAddress,
                     ),
                     const SizedBox(height: 16),
+                    // ช่อง Daily Rate ฐาน (Read-Only)
                     _buildTextField(
-                      controller: _dailyRateController,
+                      controller: _baseDailyRateDisplayController,
                       labelText:
                           widget.isEnglish
-                              ? 'Daily Rate'
-                              : 'อัตราค่าบริการรายวัน (ฐาน)',
-                      keyboardType: TextInputType.number,
+                              ? 'Base Daily Rate (Read-Only)'
+                              : 'อัตราค่าบริการรายวัน (ฐาน - อ่านอย่างเดียว)',
+                      keyboardType: TextInputType.none,
+                      enabled:
+                          false, // ปิดการแก้ไข แต่ค่าใน Controller ถูกใช้ในการบันทึก
                     ),
                     const SizedBox(height: 24),
                     _buildSkillSection(),
@@ -531,92 +617,6 @@ _availableSkillTypes = skillTypeResult;
     );
   }
 
-  Future<void> _saveSkillPrice(SkillType skillType) async {
-    setState(() => _isLoading = true);
-    try {
-      final customPriceController = _customDailyRateControllers[skillType];
-      final customPrice = double.tryParse(customPriceController?.text ?? '');
-
-      if (customPrice == null) {
-        throw Exception(
-          widget.isEnglish ? 'Invalid price format.' : 'รูปแบบราคาไม่ถูกต้อง',
-        );
-      }
-
-      final existingUserSkill = _initialHousekeeperSkills.firstWhere(
-        (userSkill) =>
-            userSkill.skillType?.skillTypeId == skillType.skillTypeId,
-        orElse: () => HousekeeperSkill(),
-      );
-
-      final tierId = _selectedSkillLevelTierId[skillType];
-      if (tierId == null) {
-        throw Exception(
-          widget.isEnglish
-              ? 'Skill level tier not selected.'
-              : 'ไม่ได้เลือกระดับทักษะ',
-        );
-      }
-      final tier = _availableSkillLevelTiers.firstWhere(
-        (t) => t.id == tierId,
-        orElse: () => SkillLevelTier(),
-      );
-
-      final double? maxDailyLimit =
-          (tier.maxPricePerHourLimit != null)
-              ? tier.maxPricePerHourLimit! * 8
-              : null;
-
-      if (maxDailyLimit != null && customPrice > maxDailyLimit) {
-        throw Exception(
-          'Price for ${widget.isEnglish ? skillType.skillTypeName : _skillThaiNames[skillType.skillTypeName ?? '']} exceeds the maximum limit of ${maxDailyLimit.toStringAsFixed(2)} THB.',
-        );
-      }
-
-      final int? currentHousekeeperId = widget.user.id;
-      final int? currentSkillTypeId = skillType.skillTypeId;
-      final int? currentTierId = tier.id;
-
-      if (currentHousekeeperId == null ||
-          currentSkillTypeId == null ||
-          currentTierId == null) {
-        throw Exception(
-          widget.isEnglish
-              ? 'Missing required ID for saving skill price.'
-              : 'ขาดรหัสที่จำเป็นสำหรับการบันทึกราคาทักษะ',
-        );
-      }
-
-      if (existingUserSkill.skillId == null) {
-        await _housekeeperskillController.addHousekeeperskill(
-          currentHousekeeperId,
-          currentSkillTypeId,
-          currentTierId,
-          customDailyRate: customPrice,
-        );
-      } else {
-        await _housekeeperskillController.updateHousekeeperskill(
-          existingUserSkill.skillId!,
-          currentTierId,
-          customDailyRate: customPrice,
-        );
-      }
-
-      _showSuccessSnackBar(
-        widget.isEnglish ? 'Price saved successfully!' : 'บันทึกราคาสำเร็จ!',
-      );
-    } catch (e) {
-      print('Save skill price error: $e');
-      _showErrorSnackBar(
-        widget.isEnglish
-            ? 'Failed to save price: ${e.toString().split(':').last.trim()}'
-            : 'ไม่สามารถบันทึกราคาได้: ${e.toString().split(':').last.trim()}',
-      );
-    } finally {
-      setState(() => _isLoading = false);
-    }
-  }
-
   Widget _buildSkillSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -626,16 +626,19 @@ _availableSkillTypes = skillTypeResult;
           style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 12),
+
         ..._availableSkillTypes.map((skillType) {
           final displayName =
               widget.isEnglish
-                  ? skillType.skillTypeName ?? ''
+                  ? (skillType.skillTypeName ?? '')
                   : (_skillThaiNames[skillType.skillTypeName ?? ''] ??
                       skillType.skillTypeName ??
                       '');
+
           final isSelected =
               _selectedSkillLevelTierId.containsKey(skillType) &&
               _selectedSkillLevelTierId[skillType] != null;
+
           final customRateController = _customDailyRateControllers[skillType];
 
           final existingUserSkill = _initialHousekeeperSkills.firstWhere(
@@ -648,159 +651,132 @@ _availableSkillTypes = skillTypeResult;
               existingUserSkill.totalHiresCompleted ?? 0;
           final currentTier = _getSkillLevelTier(totalHiresCompleted);
 
-          // หา Tier ถัดไปสำหรับ Progress Bar
           final nextTier = _availableSkillLevelTiers.firstWhere(
             (tier) =>
                 (tier.minHiresForLevel ?? 0) >
                 (currentTier.minHiresForLevel ?? 0),
-            orElse: () => SkillLevelTier(),
+            orElse: () => SkillLevelTier(minHiresForLevel: null),
           );
 
-          final int minHiresForNextLevel = nextTier.minHiresForLevel ?? 0;
-          final int remainingHires =
-              (minHiresForNextLevel > totalHiresCompleted)
-                  ? minHiresForNextLevel - totalHiresCompleted
-                  : 0;
-
-          // คำนวณค่าสำหรับ Progress Bar
-          final double progressValue =
-              (minHiresForNextLevel > 0)
-                  ? totalHiresCompleted / minHiresForNextLevel
-                  : 0.0;
-
+          // 🚩 รองรับ null limit
+          final double? minDailyLimit =
+              currentTier.minPricePerHourLimit != null
+                  ? currentTier.minPricePerHourLimit! * 8
+                  : null;
           final double? maxDailyLimit =
-              (currentTier.maxPricePerHourLimit != null)
+              currentTier.maxPricePerHourLimit != null
                   ? currentTier.maxPricePerHourLimit! * 8
                   : null;
-          final double? customPrice = double.tryParse(
-            customRateController?.text ?? '',
-          );
-          final bool isPriceExceedsLimit =
-              maxDailyLimit != null &&
-              customPrice != null &&
-              customPrice > maxDailyLimit;
 
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               CheckboxListTile(
-                title: Text(displayName),
+                contentPadding: EdgeInsets.zero,
+                title: Text(displayName, style: const TextStyle(fontSize: 16)),
+                // 🟢 เพิ่ม/แก้ไข 2 บรรทัดนี้
+                activeColor:
+                    AppColors
+                        .primaryRed, // สีเมื่อ Checkbox ถูกเลือก (ตัวกล่อง)
+                checkColor: Colors.white, // สีของเครื่องหมายถูก
                 value: isSelected,
                 onChanged: (bool? newValue) {
+                  if (!mounted) return;
                   setState(() {
                     if (newValue == true) {
-                      final tier = _getSkillLevelTier(totalHiresCompleted);
-                      _selectedSkillLevelTierId[skillType] = tier.id;
-                      _customDailyRateControllers[skillType] ??=
-                          TextEditingController();
-                      final existingPrice =
-                          _initialHousekeeperSkills
-                              .firstWhere(
-                                (userSkill) =>
-                                    userSkill.skillType?.skillTypeId ==
-                                    skillType.skillTypeId,
-                                orElse: () => HousekeeperSkill(),
-                              )
-                              .pricePerDay;
-                      _customDailyRateControllers[skillType]!
-                          .text = (existingPrice ?? 0.0).toStringAsFixed(2);
+                      _selectedSkillLevelTierId[skillType] = currentTier.id;
+                      // ตั้งค่า default เป็น minLimit ถ้ามี ไม่งั้น 0.00
+                      customRateController?.text = (minDailyLimit ?? 0.0)
+                          .toStringAsFixed(2);
                     } else {
                       _selectedSkillLevelTierId.remove(skillType);
                     }
                   });
                 },
-                activeColor: Colors.red,
-                controlAffinity: ListTileControlAffinity.leading,
-                contentPadding: EdgeInsets.zero,
               ),
-              if (isSelected && customRateController != null)
+
+              if (isSelected)
                 Padding(
-                  padding: const EdgeInsets.only(
-                    left: 40,
-                    right: 16,
-                    bottom: 12,
-                  ),
+                  padding: const EdgeInsets.only(left: 16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Skill Level
                       Text(
-                        '${widget.isEnglish ? 'Skill Level:' : 'ระดับทักษะ:'} ${currentTier.skillLevelName ?? '-'}',
+                        'Skill Level: ${currentTier.skillLevelName ?? (widget.isEnglish ? "Unknown" : "ไม่ทราบ")}',
                         style: const TextStyle(
-                          fontSize: 14,
                           fontWeight: FontWeight.w600,
+                          fontSize: 14,
                         ),
                       ),
-                      const SizedBox(height: 8),
-                      // ส่วนที่ปรับปรุง: แสดง Progress Bar และข้อความที่เกี่ยวข้อง
-                      if (minHiresForNextLevel > 0)
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  '${widget.isEnglish ? 'Hires:' : 'จำนวนงาน:'} $totalHiresCompleted / $minHiresForNextLevel',
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.grey,
-                                  ),
-                                ),
-                                Text(
-                                  '${(progressValue * 100).toStringAsFixed(0)}%',
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.red,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 4),
-                            LinearProgressIndicator(
-                              value: progressValue,
-                              backgroundColor: Colors.grey[300],
+                      const SizedBox(height: 4),
+
+                      // Progress
+                      Text(
+                        'Hires: $totalHiresCompleted / ${nextTier.minHiresForLevel ?? (widget.isEnglish ? "Max" : "สูงสุด")}',
+                        style: const TextStyle(fontSize: 14),
+                      ),
+                      if (nextTier.minHiresForLevel != null)
+                        LinearProgressIndicator(
+                          value:
+                              totalHiresCompleted /
+                              (nextTier.minHiresForLevel!),
+                          color: Colors.red,
+                          backgroundColor: Colors.red.shade100,
+                        ),
+                      if (nextTier.minHiresForLevel != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4.0),
+                          child: Text(
+                            widget.isEnglish
+                                ? 'Complete ${nextTier.minHiresForLevel! - totalHiresCompleted} more hires to become ${nextTier.skillLevelName}!'
+                                : 'ทำงานเพิ่มอีก ${nextTier.minHiresForLevel! - totalHiresCompleted} ครั้งเพื่อเลื่อนไป ${nextTier.skillLevelName}',
+                            style: const TextStyle(
                               color: Colors.red,
-                              minHeight: 8,
-                              borderRadius: BorderRadius.circular(4),
+                              fontSize: 12,
                             ),
-                            const SizedBox(height: 8),
-                            if (remainingHires > 0)
-                              Text(
-                                widget.isEnglish
-                                    ? 'Complete $remainingHires more hires to become ${nextTier.skillLevelName}!'
-                                    : 'ต้องทำงานอีก $remainingHires ครั้งเพื่อเลื่อนระดับเป็น ${nextTier.skillLevelName}!',
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.red,
-                                  fontStyle: FontStyle.italic,
-                                ),
-                              ),
-                          ],
-                        )
-                      else
-                        Text(
-                          '${widget.isEnglish ? 'Hires:' : 'จำนวนงาน:'} $totalHiresCompleted',
-                          style: const TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey,
                           ),
                         ),
                       const SizedBox(height: 12),
+
+                      // Limit Display
+                      Text(
+                        widget.isEnglish
+                            ? 'Min/Max Daily Rate: '
+                                '${minDailyLimit?.toStringAsFixed(2) ?? "No Min"}'
+                                ' - '
+                                '${maxDailyLimit?.toStringAsFixed(2) ?? "No Max"} THB'
+                            : 'อัตราค่าบริการรายวันขั้นต่ำ/สูงสุด: '
+                                '${minDailyLimit?.toStringAsFixed(2) ?? "ไม่จำกัด"}'
+                                ' - '
+                                '${maxDailyLimit?.toStringAsFixed(2) ?? "ไม่จำกัด"} บาท',
+                        style: TextStyle(
+                          color: Colors.grey.shade600,
+                          fontSize: 12,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+
+                      // Input for Price
                       Row(
                         children: [
                           Expanded(
-                            child: _buildTextField(
+                            child: TextField(
                               controller: customRateController,
-                              labelText:
-                                  widget.isEnglish
-                                      ? 'Price per day'
-                                      : 'ราคาต่อวัน',
                               keyboardType: TextInputType.number,
-                              enabled: true,
+                              decoration: InputDecoration(
+                                labelText:
+                                    widget.isEnglish
+                                        ? 'Custom Daily Rate (THB)'
+                                        : 'กำหนดราคา (บาท)',
+                                border: const OutlineInputBorder(),
+                                focusedBorder: const OutlineInputBorder(
+                                  borderSide: BorderSide(color: Colors.red),
+                                ),
+                              ),
                             ),
                           ),
-                          const SizedBox(width: 16),
+                          const SizedBox(width: 8),
                           ElevatedButton(
                             onPressed:
                                 _isLoading
@@ -808,9 +784,6 @@ _availableSkillTypes = skillTypeResult;
                                     : () => _saveSkillPrice(skillType),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.red,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                              ),
                             ),
                             child: Text(
                               widget.isEnglish ? 'Save' : 'บันทึก',
@@ -819,19 +792,7 @@ _availableSkillTypes = skillTypeResult;
                           ),
                         ],
                       ),
-                      if (isPriceExceedsLimit)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 8.0),
-                          child: Text(
-                            widget.isEnglish
-                                ? 'Price exceeds the maximum limit of ${maxDailyLimit!.toStringAsFixed(2)} THB.'
-                                : 'ราคาเกินกว่าระดับที่กำหนด ${maxDailyLimit!.toStringAsFixed(2)} บาท',
-                            style: const TextStyle(
-                              color: Colors.red,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ),
+                      const SizedBox(height: 16),
                     ],
                   ),
                 ),

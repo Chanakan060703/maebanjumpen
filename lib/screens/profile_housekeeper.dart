@@ -150,7 +150,9 @@ class _ProfilePageState extends State<ProfilePage> {
         housekeeper.person?.phoneNumber ?? (isEnglish ? 'No phone' : 'ไม่มีเบอร์โทรศัพท์');
     String address =
         housekeeper.person?.address ?? (isEnglish ? 'No address provided' : 'ไม่มีที่อยู่');
-    String dailyRate = housekeeper.dailyRate?.toStringAsFixed(2) ?? '0.00';
+    String dailyRate = (housekeeper.dailyRate is num)
+        ? (housekeeper.dailyRate as num).toStringAsFixed(2)
+        : '0.00';
 
     Widget profileImageWidget;
     if (housekeeper.person?.pictureUrl != null &&
@@ -203,38 +205,6 @@ class _ProfilePageState extends State<ProfilePage> {
     }
 
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0.5,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.red),
-          onPressed: () => Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) => HousekeeperPage(
-                user: _currentUser,
-                isEnglish: widget.isEnglish,
-              ),
-            ),
-          ),
-        ),
-        title: Center(
-          child: Text(
-            isEnglish ? 'Profile' : 'โปรไฟล์',
-            style: const TextStyle(
-              color: Colors.black,
-              fontSize: 18,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout, color: Colors.red),
-            onPressed: _handleLogout,
-          ),
-        ],
-      ),
       backgroundColor: Colors.white,
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),

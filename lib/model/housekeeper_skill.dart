@@ -18,21 +18,13 @@ class HousekeeperSkill {
 
   HousekeeperSkill({
     this.skillId,
-
     this.skillLevelTierId,
-
     this.housekeeperId,
-
     this.skillTypeId,
-
     this.skillLevelTier,
-
     this.housekeeper,
-
     this.skillType,
-
     this.totalHiresCompleted,
-
     this.pricePerDay,
   });
 

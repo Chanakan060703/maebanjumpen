@@ -282,15 +282,9 @@ class HousekeeperController {
 
         return null;
       }
-
-      // ใช้ copyWith เพื่อสร้าง Object ใหม่ที่มี rating ที่อัปเดตแล้ว
-
       Housekeeper updatedHousekeeper = originalHousekeeper.copyWith(
         rating: newRating,
       );
-
-      // ส่ง Object ที่อัปเดตแล้วไปที่ updateHousekeeper
-
       return await updateHousekeeper(housekeeperId, updatedHousekeeper);
     } catch (e) {
       print("Error updating housekeeper rating: $e");

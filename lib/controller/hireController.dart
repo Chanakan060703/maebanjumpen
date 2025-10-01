@@ -72,10 +72,7 @@ class Hirecontroller {
     }
   }
 
-  /**
-   * 💡 เมธอดใหม่: ดึงรายการงานจ้างที่ 'Completed' แล้วสำหรับ Housekeeper ID
-   * Endpoint สมมติ: /maeban/hires/housekeepers/{housekeeperId}/completed
-   */
+  
   Future<List<Hire>?> getCompletedHiresByHousekeeperId(int housekeeperId) async {
     final url = Uri.parse('$baseURL/maeban/hires/housekeepers/$housekeeperId/completed'); 
     try {

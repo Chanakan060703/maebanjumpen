@@ -12,10 +12,9 @@ class Housekeeper extends Member {
   final List<Hire>? hires;
   final List<HousekeeperSkill>? housekeeperSkills;
   final String? username;
-  final double? dailyRate;
-  
-  // ⭐️ เพิ่มฟิลด์ใหม่สำหรับรับ List ของรีวิวโดยตรงจาก Backend
+  final String? dailyRate;
   final List<Review>? reviews;
+  final int? jobsCompleted; 
 
   Housekeeper({
     this.photoVerifyUrl,
@@ -29,18 +28,17 @@ class Housekeeper extends Member {
     super.balance,
     this.dailyRate,
     this.reviews, // ⭐️ เพิ่มใน Constructor
+    this.jobsCompleted,
+
     String? type,
   }) : super(type: type ?? 'housekeeper');
 
   factory Housekeeper.fromJson(Map<String, dynamic> json) {
-    // 1. Parse Hires List (ตามโค้ดเดิม)
     var hiresList = json['hires'] as List?;
     List<Hire>? parsedHires;
     if (hiresList != null) {
       parsedHires = hiresList.map((i) => Hire.fromJson(i)).toList();
     }
-
-    // 2. Parse Housekeeper Skills List (ตามโค้ดเดิม)
     var skillsList = json['housekeeperSkills'] as List?;
     List<HousekeeperSkill>? parsedSkills;
     if (skillsList != null) {
@@ -49,23 +47,22 @@ class Housekeeper extends Member {
               .map((i) => HousekeeperSkill.fromJson(i as Map<String, dynamic>))
               .toList();
     }
-    
-    // ⭐️ 3. Parse Reviews List (ส่วนที่เพิ่มเข้ามา)
+
     var reviewsList = json['reviews'] as List?;
     List<Review>? parsedReviews;
     if (reviewsList != null) {
       // ตรวจสอบว่าแต่ละ item เป็น Map<String, dynamic> ก่อนทำการแปลง
-      parsedReviews = reviewsList
-          .whereType<Map<String, dynamic>>()
-          .map((i) => Review.fromJson(i))
-          .toList();
+      parsedReviews =
+          reviewsList
+              .whereType<Map<String, dynamic>>()
+              .map((i) => Review.fromJson(i))
+              .toList();
     }
 
     final Person? personFromJson =
         json['person'] != null
             ? Person.fromJson(json['person'] as Map<String, dynamic>)
             : null;
-
     return Housekeeper(
       id: json['id'] as int?,
       person: personFromJson,
@@ -77,9 +74,13 @@ class Housekeeper extends Member {
       hires: parsedHires,
       housekeeperSkills: parsedSkills,
       username: personFromJson?.login?.username,
-      dailyRate: (json['dailyRate'] as num?)?.toDouble(),
+      // 🎯 แก้ไข: รับค่า dailyRate เป็น String? โดยตรง เพื่อแก้ Error
+      dailyRate: json['dailyRate'] as String?,
       reviews: parsedReviews, // ⭐️ ใส่ parsedReviews
+      jobsCompleted: json['jobsCompleted'] as int?, 
+
     );
+
   }
 
   @override
@@ -89,10 +90,9 @@ class Housekeeper extends Member {
     data['statusVerify'] = statusVerify;
     data['rating'] = rating;
     data['dailyRate'] = dailyRate;
-    // ไม่จำเป็นต้องใส่ hires, housekeeperSkills, reviews ในการส่งข้อมูลกลับ (toJson)
+
     return data;
   }
-
   @override
   Housekeeper copyWith({
     int? id,
@@ -109,8 +109,9 @@ class Housekeeper extends Member {
     String? facebookLink,
     String? bankAccountNumber,
     String? bankAccountName,
-    double? dailyRate,
+    String? dailyRate,    
     List<Review>? reviews, // ⭐️ เพิ่มใน copyWith parameter
+    int? jobsCompleted,
   }) {
     final Member memberCopy = super.copyWith(
       id: id,
@@ -132,6 +133,7 @@ class Housekeeper extends Member {
       username: username ?? this.username,
       dailyRate: dailyRate ?? this.dailyRate,
       reviews: reviews ?? this.reviews, // ⭐️ ใส่ reviews
+      jobsCompleted: jobsCompleted ?? this.jobsCompleted,
     );
   }
 

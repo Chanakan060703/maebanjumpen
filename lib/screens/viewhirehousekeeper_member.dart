@@ -171,10 +171,25 @@ class _ViewhireHousekeeperPageState extends State<ViewhireHousekeeperPage> {
         : thMap[lowerStatus] ?? lowerStatus;
   }
 
+String _formatTimeWithoutSeconds(String timeString) {
+    if (timeString.isEmpty) return '';
+    
+    // จัดการกรณีที่มีช่วงเวลา เช่น "10:00:00 - 12:00:00"
+    return timeString.split(' - ').map((part) {
+      final parts = part.split(':');
+      if (parts.length >= 2) {
+        return '${parts[0]}:${parts[1]}';
+      }
+      return part;
+    }).join(' - ');
+  }
+
   @override
   Widget build(BuildContext context) {
     final hire = _currentHire; // ใช้ _currentHire ที่เป็น mutable state
-
+    final String displayTime = _formatTimeWithoutSeconds(
+            '${hire.startTime ?? ''} '
+          );
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.white,
@@ -221,7 +236,7 @@ class _ViewhireHousekeeperPageState extends State<ViewhireHousekeeperPage> {
                       style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                     ),
                     Text(
-                      '${hire.startTime ?? ''}',
+                      displayTime,
                       style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                     ),
                   ],
@@ -377,8 +392,7 @@ class _ViewhireHousekeeperPageState extends State<ViewhireHousekeeperPage> {
     );
   }
 
-  // Card สำหรับแสดงรายการบริการที่รวม
-  // Modified to include hireName and hireDetail
+
   Widget _buildServiceIncludedCard(Hire hire) {
     return Container(
       padding: const EdgeInsets.all(16),

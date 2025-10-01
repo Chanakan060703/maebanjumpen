@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:maebanjumpen/styles/hire_form_styles.dart';
 // ไม่จำเป็นต้อง import model/hire.dart, hirer.dart, person.dart ใน widget นี้
 // เพราะข้อมูลถูกส่งมาเป็น String/Color แล้ว
 
 class JobCardHistory extends StatelessWidget {
+  final String serviceName; // เพิ่ม serviceName
   final String name;
   final String date;
   final String time;
@@ -36,6 +38,7 @@ class JobCardHistory extends StatelessWidget {
     this.showViewReviewButton = false, // กำหนดค่าเริ่มต้นเป็น false
     this.onReportPressed,
     this.onViewReviewPressed,
+    required this.serviceName, // เพิ่ม serviceName ใน constructor
   });
 
   // Helper function เพื่อดึง ImageProvider ที่ถูกต้อง
@@ -45,11 +48,33 @@ class JobCardHistory extends StatelessWidget {
         (url.startsWith('http://') || url.startsWith('https://'))) {
       return NetworkImage(url);
     }
-    return const AssetImage('assets/profile.jpg'); // ตรวจสอบว่ามีไฟล์นี้ใน assets/ ของคุณ
+    return const AssetImage(
+      'assets/profile.jpg',
+    ); // ตรวจสอบว่ามีไฟล์นี้ใน assets/ ของคุณ
   }
 
   @override
   Widget build(BuildContext context) {
+    final localizedServiceName = SkillTranslator.getLocalizedSkillName(
+      serviceName,
+      isEnglish,
+    );
+
+    String _formatTimeWithoutSeconds(String timeString) {
+      if (timeString.isEmpty) return '';
+
+      return timeString
+          .split(' - ')
+          .map((part) {
+            final parts = part.split(':');
+            if (parts.length >= 2) {
+              return '${parts[0]}:${parts[1]}';
+            }
+            return part;
+          })
+          .join(' - ');
+    }
+
     return Card(
       margin: const EdgeInsets.all(0),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -75,15 +100,15 @@ class JobCardHistory extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        name,
+                        localizedServiceName,
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
-                      if (details.isNotEmpty)
+                      if (name.isNotEmpty)
                         Text(
-                          details,
+                          isEnglish ? "Hirer: $name" : "ผู้จ้าง: $name",
                           style: TextStyle(
                             fontSize: 12,
                             color: Colors.grey[600],
@@ -92,26 +117,30 @@ class JobCardHistory extends StatelessWidget {
                       const SizedBox(height: 4),
                       Text(
                         date,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[600],
-                        ),
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                       ),
                       Text(
-                        time,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[600],
-                        ),
+                        _formatTimeWithoutSeconds(
+                          time,
+                        ), // <-- ใช้ฟังก์ชันตัดวินาที
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                       ),
                       Text(
                         address,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[600],
-                        ),
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                       ),
                       const SizedBox(height: 8),
+                      if (details.isNotEmpty)
+                        Text(
+                          isEnglish
+                              ? "Job Details: $details"
+                              : "รายละเอียดงาน: $details",
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      const SizedBox(height: 4),
                       Row(
                         children: [
                           Container(
@@ -163,7 +192,9 @@ class JobCardHistory extends StatelessWidget {
                               borderRadius: BorderRadius.circular(8),
                             ),
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 16.0, vertical: 8.0),
+                              horizontal: 16.0,
+                              vertical: 8.0,
+                            ),
                           ),
                           child: Text(
                             isEnglish ? 'Report' : 'รายงาน',
@@ -171,7 +202,8 @@ class JobCardHistory extends StatelessWidget {
                           ),
                         ),
                       ),
-                    if (showReportButton && showViewReviewButton) // เพิ่มระยะห่างเมื่อมีทั้งสองปุ่ม
+                    if (showReportButton &&
+                        showViewReviewButton) // เพิ่มระยะห่างเมื่อมีทั้งสองปุ่ม
                       const SizedBox(width: 8),
                     if (showViewReviewButton) // แสดงปุ่ม View Review เมื่อ showViewReviewButton เป็น true
                       Expanded(
@@ -184,7 +216,9 @@ class JobCardHistory extends StatelessWidget {
                               borderRadius: BorderRadius.circular(8),
                             ),
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 16.0, vertical: 8.0),
+                              horizontal: 16.0,
+                              vertical: 8.0,
+                            ),
                           ),
                           child: Text(
                             isEnglish ? 'View Review' : 'ดูรีวิว',

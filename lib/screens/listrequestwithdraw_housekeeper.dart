@@ -180,29 +180,6 @@ class _ListRequestsWithdrawalScreenState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.red),
-          onPressed: () => Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) => HousekeeperPage(
-                isEnglish: widget.isEnglish,
-                user: widget.user, // Pass the user object
-              ),
-            ),
-          ),
-        ),
-        title: Text(
-          widget.isEnglish
-              ? 'Withdrawal Requests History'
-              : 'ประวัติคำขอถอนเงิน',
-          style: const TextStyle(color: Colors.black),
-        ),
-        backgroundColor: Colors.white,
-        elevation: 0,
-        centerTitle: false,
-      ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _errorMessage != null

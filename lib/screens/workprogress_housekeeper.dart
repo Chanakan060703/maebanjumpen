@@ -8,12 +8,6 @@ import 'package:maebanjumpen/controller/image_uploadController.dart';
 import 'package:maebanjumpen/model/hire.dart';
 import 'dart:typed_data';
 
-// These are assumed to be external classes and models.
-// If you are missing these, you will need to define them.
-// class HireController { ... }
-// class ImageUploadService { ... }
-// class Hire { ... }
-
 class WorkProgressScreen extends StatefulWidget {
   final Hire hire;
   final bool isEnglish;

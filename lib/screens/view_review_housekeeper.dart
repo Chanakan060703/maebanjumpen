@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:maebanjumpen/model/hire.dart'; 
-import 'package:intl/intl.dart'; 
+import 'package:intl/intl.dart';
+import 'package:maebanjumpen/styles/finishJobStyles.dart'; 
 
 class ViewReviewScreen extends StatelessWidget {
   final Hire hire;
@@ -12,22 +13,34 @@ class ViewReviewScreen extends StatelessWidget {
     required this.isEnglish,
   });
 
+  // Helper function to format time (HH:MM:SS to HH:MM)
+  String _formatTime(String? time) {
+    if (time == null || time.isEmpty) {
+      return '';
+    }
+    // Assumes time format is 'HH:MM:SS' and takes the first 5 characters ('HH:MM')
+    final parts = time.split(':');
+    if (parts.length >= 2) {
+      return '${parts[0].padLeft(2, '0')}:${parts[1].padLeft(2, '0')}';
+    }
+    return time; // Fallback if format is unexpected
+  }
+
   @override
   Widget build(BuildContext context) {
     // ตรวจสอบว่ามีรีวิวหรือไม่
     if (hire.review == null) {
       return Scaffold(
         appBar: AppBar(
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back_ios, color: Colors.black),
+        elevation: 0.5,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.red),
             onPressed: () => Navigator.pop(context),
           ),
           title: Text(
             isEnglish ? 'Review Details' : 'รายละเอียดรีวิว',
             style: const TextStyle(color: Colors.black),
           ),
-          backgroundColor: Colors.white,
-          elevation: 0,
           centerTitle: false,
         ),
         body: Center(
@@ -53,9 +66,17 @@ class ViewReviewScreen extends StatelessWidget {
         ? DateFormat(isEnglish ? 'd MMM y' : 'd MMM y', isEnglish ? 'en_US' : 'th_TH')
             .format(hire.startDate!)
         : (isEnglish ? 'N/A Date' : 'ไม่มีวันที่');
-    final jobTime = '${hire.startTime ?? ''} - ${hire.endTime ?? ''}';
-    final serviceDescription = hire.hireDetail ?? (isEnglish ? 'No description' : 'ไม่มีรายละเอียด');
 
+    // **START: Updated Job Time to remove seconds**
+    final formattedStartTime = _formatTime(hire.startTime);
+    final formattedEndTime = _formatTime(hire.endTime);
+    final jobTime = '$formattedStartTime - $formattedEndTime';
+    // **END: Updated Job Time to remove seconds**
+    
+    final serviceDescription = hire.hireDetail ?? (isEnglish ? 'No description' : 'ไม่มีรายละเอียด');
+    final jobLocation = hire.location ?? (isEnglish ? 'Location not specified' : 'ไม่ระบุสถานที่');
+    final mainServiceName = hire.hireName ?? (isEnglish ? 'Unspecified Service' : 'ไม่ระบุชื่อบริการ');
+    
     // คำนวณ 'timeAgo' (ตัวอย่าง)
     String timeAgoText = '';
     if (review.reviewDate != null) {
@@ -76,8 +97,9 @@ class ViewReviewScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
+        elevation: 0.5,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.black),
+          icon: const Icon(Icons.arrow_back, color: Colors.red),
           onPressed: () {
             Navigator.pop(context); // Pop the current screen
           },
@@ -88,7 +110,7 @@ class ViewReviewScreen extends StatelessWidget {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.share, color: Colors.black), // เปลี่ยน icon เป็น share แทน upload
+            icon: const Icon(Icons.share, color: AppColors.primaryRed), // เปลี่ยน icon เป็น share แทน upload
             onPressed: () {
               // Handle share action
               print('Share button pressed');
@@ -99,7 +121,6 @@ class ViewReviewScreen extends StatelessWidget {
           ),
         ],
         backgroundColor: Colors.white,
-        elevation: 0,
         centerTitle: false,
       ),
       body: SingleChildScrollView(
@@ -112,10 +133,11 @@ class ViewReviewScreen extends StatelessWidget {
               name: hirerName,
               rating: (review.score ?? 0).toInt(),
               date: jobDate,
-              time: jobTime,
-              serviceDescription: serviceDescription,
+              time: jobTime, // ใช้ Job Time ที่ถูก Format แล้ว
+              serviceName: mainServiceName, 
               reviewText: review.reviewMessage ?? (isEnglish ? 'No comment provided.' : 'ไม่มีความคิดเห็น'),
               timeAgo: timeAgoText,
+              location: jobLocation, 
               isEnglish: isEnglish,
             ),
           ],
@@ -131,9 +153,10 @@ class ReviewCard extends StatelessWidget {
   final int rating;
   final String date;
   final String time;
-  final String serviceDescription;
+  final String serviceName; 
   final String reviewText;
   final String timeAgo;
+  final String location; 
   final bool isEnglish; // เพิ่ม isEnglish
 
   const ReviewCard({
@@ -143,9 +166,10 @@ class ReviewCard extends StatelessWidget {
     required this.rating,
     required this.date,
     required this.time,
-    required this.serviceDescription,
+    required this.serviceName, 
     required this.reviewText,
     required this.timeAgo,
+    required this.location, 
     required this.isEnglish, 
   });
 
@@ -194,29 +218,41 @@ class ReviewCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 15),
+            // **START: Added Main Service Name**
             Text(
-              '${isEnglish ? 'Job Date' : 'วันที่จ้างงาน'}: $date', // เพิ่ม Label
+              '${isEnglish ? 'Service Name' : 'ชื่อบริการ'}: $serviceName', 
               style: const TextStyle(
-                fontSize: 14,
-                color: Colors.grey,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              '${isEnglish ? 'Job Time' : 'เวลาจ้างงาน'}: $time', // เพิ่ม Label
-              style: const TextStyle(
-                fontSize: 14,
-                color: Colors.grey,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              '${isEnglish ? 'Service' : 'บริการ'}: $serviceDescription', // เพิ่ม Label
-              style: const TextStyle(
-                fontSize: 15,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
                 color: Colors.black87,
               ),
             ),
+            const SizedBox(height: 8),
+            // **END: Added Main Service Name**
+            Text(
+              '${isEnglish ? 'Job Date' : 'วันที่จ้างงาน'}: $date', 
+              style: const TextStyle(
+                fontSize: 14,
+                color: Colors.grey,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '${isEnglish ? 'Job Time' : 'เวลาจ้างงาน'}: $time', 
+              style: const TextStyle(
+                fontSize: 14,
+                color: Colors.grey,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '${isEnglish ? 'Location' : 'สถานที่'}: $location', 
+              style: const TextStyle(
+                fontSize: 14,
+                color: Colors.grey,
+              ),
+            ),
+            const SizedBox(height: 4),
             const SizedBox(height: 15),
             Text(
               reviewText,
