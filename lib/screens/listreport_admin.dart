@@ -1,75 +1,50 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+// Note: Assuming these imports are correct within the project structure
 import 'package:maebanjumpen/controller/reportController.dart';
+import 'package:maebanjumpen/model/ReportedPersonSummary.dart';
 import 'package:maebanjumpen/model/admin.dart';
 import 'package:maebanjumpen/model/person.dart';
 import 'package:maebanjumpen/model/report.dart';
-import 'package:maebanjumpen/screens/view_detail_report_admin.dart';
+import 'package:maebanjumpen/screens/ReportedPersonReportsListScreen.dart';
 import 'package:maebanjumpen/styles/report_titles.dart';
 
 class ListReportScreen extends StatefulWidget {
+  
   final Person user;
   final Admin admin;
   final bool isEnglish;
-
   const ListReportScreen({
     super.key,
     required this.user,
     required this.admin,
     required this.isEnglish,
   });
-
   @override
   State<ListReportScreen> createState() => _ListReportScreenState();
 }
 
 class _ListReportScreenState extends State<ListReportScreen> {
   String _selectedFilterValue = 'all';
-  // ใช้อินสแตนซ์จริงของ ReportController หากไม่ได้ใช้ Dummy Class
   final ReportController _reportController = ReportController();
-  List<Report>? _reports;
+  List<Report>? _reports; // เก็บรายการรายงานทั้งหมดที่ดึงมาจาก API
+  List<ReportedPersonSummary> _aggregatedReports =
+      []; 
   bool _isLoading = true;
   String? _error;
-
-  // ตัวเลือกการกรอง
+  // ตัวเลือกการกรอง (เพิ่ม 'Resolved' และ 'Blocked')
   final List<Map<String, String>> _filterOptions = const [
     {'display': 'All Reports', 'value': 'all'},
     {'display': 'Member', 'value': 'hirer'},
     {'display': 'Housekeeper', 'value': 'housekeeper'},
     {'display': 'Pending', 'value': 'pending'},
-    {'display': 'Resolved', 'value': 'resolved'},
-    {'display': 'Blocked', 'value': 'blocked'},
+    {'display': 'Resolved', 'value': 'resolved'}, // เพิ่มตัวกรอง Resolved
+    {'display': 'Blocked', 'value': 'blocked'}, // เพิ่มตัวกรอง Blocked
   ];
-
   @override
   void initState() {
     super.initState();
     _fetchReports();
-  }
-
-  // ฟังก์ชันดึงข้อมูลรายงานทั้งหมด
-  Future<void> _fetchReports() async {
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
-    try {
-      List<Report> fetchedReports = await _reportController.getAllReport();
-      // จัดเรียงรายงานตามวันที่ล่าสุดก่อนแสดงผล
-      fetchedReports.sort((a, b) => (b.reportDate ?? DateTime(0)).compareTo(a.reportDate ?? DateTime(0)));
-
-      setState(() {
-        _reports = fetchedReports;
-        _isLoading = false;
-      });
-      debugPrint('Fetched ${fetchedReports.length} reports successfully.');
-    } catch (e) {
-      setState(() {
-        _error = widget.isEnglish ? 'Failed to load reports: $e' : 'ไม่สามารถโหลดรายงานได้: $e';
-        _isLoading = false;
-      });
-      debugPrint('Error fetching reports: $e');
-    }
   }
 
   // Helper เพื่อดึง Person ที่ถูกรายงาน
@@ -102,43 +77,138 @@ class _ListReportScreenState extends State<ListReportScreen> {
     return widget.isEnglish ? 'Unknown' : 'ไม่ระบุ';
   }
 
+  // ฟังก์ชันรวมกลุ่มรายงานตาม Reported Person ID
+  void _aggregateReports(List<Report> reports) {
+    if (reports.isEmpty) {
+      _aggregatedReports = [];
+      return;
+    }
+    // Map: Reported Person ID (String) -> List of Reports
+    final Map<String, List<Report>> groupedReports = {};
+    for (final report in reports) {
+      final reportedPerson = _getReportedPerson(report);
+      final reportedPersonId =
+          reportedPerson?.personId; // นี่คือตัวแปรที่อาจเป็น int?
+      // 1. แปลง reportedPersonId เป็น String เสมอสำหรับใช้เป็น Map Key
+      // ใช้ null-aware access (?.) และ null coalescing (??) เพื่อจัดการค่า null
+      final mapKey = reportedPersonId?.toString() ?? '';
+      // 2. ตรวจสอบว่า mapKey ไม่ใช่ค่าว่างเปล่า
+      if (mapKey.isNotEmpty) {
+        if (!groupedReports.containsKey(mapKey)) {
+          groupedReports[mapKey] = [];
+        }
+        // รายงานถูกจัดเรียงตามวันที่ล่าสุดแล้ว, เราจะเพิ่มเข้าไปเพื่อให้รายการย่อยยังคงถูกจัดเรียง
+        groupedReports[mapKey]!.add(report);
+      } else {
+        debugPrint(
+          'Skipping report ID ${report.reportId ?? 'N/A'} due to missing or invalid reported person ID.',
+        );
+      }
+    }
+    // ใช้ ReportedPersonSummary
+    final List<ReportedPersonSummary> aggregatedList = [];
+    for (final entry in groupedReports.entries) {
+      final personReports = entry.value;
+      // รายงานถูกจัดเรียงตามวันที่ล่าสุดแล้ว, รายงานแรกคือรายงานล่าสุด
+      final latestReport = personReports.first;
+      final reportedPerson = _getReportedPerson(latestReport);
+      // ตรวจสอบข้อมูลที่จำเป็นก่อนสร้าง AggregatedReport
+      if (reportedPerson == null ||
+          reportedPerson.personId == null ||
+          reportedPerson.firstName == null ||
+          reportedPerson.firstName!.isEmpty) {
+        debugPrint(
+          'Skipping aggregated entry for person ID ${entry.key} due to missing essential Person data.',
+        );
+        continue;
+      }
+      aggregatedList.add(
+        ReportedPersonSummary(
+          reportedPerson: reportedPerson,
+          userTypeForDisplay: _getReportedUserTypeForDisplay(latestReport),
+          totalReportCount: personReports.length,
+          latestReport: latestReport,
+          allReports: personReports,
+        ),
+      );
+    }
+    // ตั้งค่า Aggregated Reports ใน State
+    _aggregatedReports = aggregatedList;
+    debugPrint(
+      'Aggregated ${_aggregatedReports.length} unique reported persons.',
+    );
+  }
+
+  // ฟังก์ชันดึงข้อมูลรายงานทั้งหมด
+  Future<void> _fetchReports() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+      _aggregatedReports = []; // ล้างรายการที่รวมกลุ่มก่อนเริ่มโหลด
+    });
+    try {
+      List<Report> fetchedReports = await _reportController.getAllReport();
+      // 1. จัดเรียงรายงานตามวันที่ล่าสุด (สำคัญสำหรับการกำหนด 'latestReport' สำหรับแสดงสถานะและข้อมูล)
+      fetchedReports.sort(
+        (a, b) => (b.reportDate ?? DateTime(0)).compareTo(
+          a.reportDate ?? DateTime(0),
+        ),
+      );
+      // 2. รวมกลุ่มรายงาน
+      _aggregateReports(fetchedReports);
+      setState(() {
+        _reports = fetchedReports; // เก็บรายการทั้งหมดไว้
+        _isLoading = false;
+      });
+      debugPrint('Fetched ${fetchedReports.length} reports successfully.');
+    } catch (e) {
+      setState(() {
+        _error =
+            widget.isEnglish
+                ? 'Failed to load reports: $e'
+                : 'ไม่สามารถโหลดรายงานได้: $e';
+        _isLoading = false;
+      });
+      debugPrint('Error fetching reports: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    List<Report> filteredReports = [];
-    if (_reports != null) {
-      filteredReports = _reports!.where((report) {
-        final String userTypeForFilter = _getReportedUserTypeForFilter(report);
-        final String reportStatusLower = report.reportStatus?.toLowerCase() ?? 'unknown';
-
-        switch (_selectedFilterValue) {
-          case 'all':
-            return true;
-          case 'hirer':
-            return userTypeForFilter == 'hirer';
-          case 'housekeeper':
-            return userTypeForFilter == 'housekeeper';
-          case 'pending':
-            return reportStatusLower == 'pending';
-          case 'resolved':
-            return reportStatusLower == 'resolved';
-          case 'blocked':
-            return reportStatusLower == 'blocked';
-          default:
-            return false;
-        }
-      }).toList();
+    // เปลี่ยนไปใช้ ReportedPersonSummary
+    List<ReportedPersonSummary> filteredReports = [];
+    if (!_isLoading && _error == null) {
+      // ใช้รายการที่รวมกลุ่มแล้วในการกรอง
+      filteredReports =
+          _aggregatedReports.where((aggregatedData) {
+            final Report latestReport = aggregatedData.latestReport;
+            final String userTypeForFilter = _getReportedUserTypeForFilter(
+              latestReport,
+            );
+            final String reportStatusLower =
+                latestReport.reportStatus?.toLowerCase() ?? 'unknown';
+            switch (_selectedFilterValue) {
+              case 'all':
+                return true;
+              case 'hirer':
+                return userTypeForFilter == 'hirer';
+              case 'housekeeper':
+                return userTypeForFilter == 'housekeeper';
+              case 'pending':
+                return reportStatusLower == 'pending';
+              case 'resolved':
+                return reportStatusLower == 'resolved';
+              case 'blocked':
+                return reportStatusLower == 'blocked';
+              default:
+                return false;
+            }
+          }).toList();
     }
-
     return Scaffold(
-      // appBar: AppBar(
-      //   title: Text(widget.isEnglish ? 'All Reports' : 'รายงานทั้งหมด'),
-      //   elevation: 0,
-      // ),
       body: SingleChildScrollView(
-        // ปิดการเลื่อนถ้าไม่มีรายการหรือกำลังโหลด/มีข้อผิดพลาด เพื่อป้องกันการเลื่อนที่ว่างเปล่า
-        physics: _isLoading || _error != null || filteredReports.isEmpty
-            ? const NeverScrollableScrollPhysics()
-            : const AlwaysScrollableScrollPhysics(),
+        // ปรับปรุง: ใช้ AlwaysScrollableScrollPhysics เพื่อรองรับการเลื่อนเสมอ
+        physics: const AlwaysScrollableScrollPhysics(),
         child: Column(
           children: [
             // ส่วนปุ่ม Filter
@@ -150,109 +220,128 @@ class _ListReportScreenState extends State<ListReportScreen> {
               child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: Row(
-                  children: _filterOptions.map((option) {
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 8.0),
-                      child: _buildFilterButton(
-                        option['display']!,
-                        option['value']!,
-                      ),
-                    );
-                  }).toList(),
+                  children:
+                      _filterOptions.map((option) {
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 8.0),
+                          child: _buildFilterButton(
+                            option['display']!,
+                            option['value']!,
+                          ),
+                        );
+                      }).toList(),
                 ),
               ),
             ),
-            // ส่วนแสดงรายการ
+            // ส่วนแสดงรายการ (Loading/Error/Empty/Data)
             _isLoading
                 ? const Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(50.0),
-                      child: CircularProgressIndicator(color: Colors.red),
-                    ),
-                  )
+                  child: Padding(
+                    padding: EdgeInsets.all(50.0),
+                    child: CircularProgressIndicator(color: Colors.red),
+                  ),
+                )
                 : _error != null
-                    ? Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(20.0),
-                          child: Text('Error: $_error', style: const TextStyle(color: Colors.red)),
-                        ),
-                      )
-                    : filteredReports.isEmpty
-                        ? Center(
-                            child: Padding(
-                              padding: const EdgeInsets.all(40.0),
-                              child: Text(
-                                widget.isEnglish
-                                    ? 'No reports found for this filter.'
-                                    : 'ไม่พบการรายงานในตัวกรองนี้',
-                                style: const TextStyle(fontSize: 16, color: Colors.grey),
-                                textAlign: TextAlign.center,
+                ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(20.0),
+                    child: Text(
+                      'Error: $_error',
+                      style: const TextStyle(color: Colors.red),
+                    ),
+                  ),
+                )
+                : filteredReports.isEmpty
+                ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(40.0),
+                    child: Text(
+                      widget.isEnglish
+                          ? 'No reports found for this filter.'
+                          : 'ไม่พบการรายงานในตัวกรองนี้',
+                      style: const TextStyle(fontSize: 16, color: Colors.grey),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                )
+                : Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16.0,
+                    vertical: 10.0,
+                  ),
+                  // ปรับปรุง: ใช้ ListView.builder สำหรับประสิทธิภาพที่ดีขึ้น
+                  child: ListView.builder(
+                    shrinkWrap:
+                        true, // ทำให้ ListView ใช้พื้นที่เท่าที่จำเป็นภายใน SingleChildScrollView
+                    physics:
+                        const NeverScrollableScrollPhysics(), // ปิดการเลื่อนของ ListView ให้ SingleChildScrollView จัดการ
+                    itemCount: filteredReports.length,
+                    itemBuilder: (context, index) {
+                      final aggregatedData = filteredReports[index];
+                      final Person reportedPerson =
+                          aggregatedData.reportedPerson;
+                      final Report latestReport = aggregatedData.latestReport;
+                      
+
+                      if (reportedPerson.firstName == null ||
+                          reportedPerson.firstName!.isEmpty ||
+                          reportedPerson.lastName == null ||
+                          reportedPerson.lastName!.isEmpty) {
+                        return const SizedBox.shrink();
+                      }
+                      final String reportTitle =
+                          latestReport.reportTitle != null
+                              ? ReportTitles.getTitle(
+                                latestReport.reportTitle!,
+                                widget.isEnglish,
+                              )
+                              : (widget.isEnglish
+                                  ? 'No description'
+                                  : 'ไม่มีคำอธิบาย');
+                      final String formattedDate =
+                          latestReport.reportDate != null
+                              ? (widget.isEnglish
+                                  ? DateFormat(
+                                    'MM/dd/yyyy',
+                                  ).format(latestReport.reportDate!.toLocal())
+                                  : DateFormat(
+                                    'dd/MM/yyyy',
+                                  ).format(latestReport.reportDate!.toLocal()))
+                              : (widget.isEnglish ? 'No date' : 'ไม่มีวันที่');
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 15.0),
+                        child: ReportedUserCard(
+                          imageUrl:
+                              reportedPerson.pictureUrl?.isNotEmpty == true
+                                  ? reportedPerson.pictureUrl!
+                                  : 'assets/images/default_profile.png',
+                          username:
+                              '${reportedPerson.firstName!} ${reportedPerson.lastName!}',
+                          reportDescription: reportTitle,
+                          date: formattedDate,
+                          reportStatus:
+                              latestReport.reportStatus?.toLowerCase() ??
+                              'unknown',
+                          reportCount: aggregatedData.totalReportCount,
+                          userType: aggregatedData.userTypeForDisplay,
+                          isEnglish: widget.isEnglish,
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder:
+                                    (context) => ReportedPersonReportsListScreen(
+                                      reportedPersonSummary: aggregatedData,
+                                      isEnglish: widget.isEnglish, 
+                                    ),
                               ),
-                            ),
-                          )
-                        : Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16.0,
-                              vertical: 10.0,
-                            ),
-                            child: Column(
-                              children: filteredReports.map((report) {
-                                final Person? reportedPerson = _getReportedPerson(report);
-                                final String userType = _getReportedUserTypeForDisplay(report);
-
-                                // ตรวจสอบข้อมูลที่จำเป็นก่อนสร้าง ReportedUserCard
-                                if (reportedPerson == null ||
-                                    reportedPerson.firstName == null ||
-                                    reportedPerson.firstName!.isEmpty ||
-                                    reportedPerson.lastName == null ||
-                                    reportedPerson.lastName!.isEmpty) {
-                                  debugPrint(
-                                      'Skipping report ID ${report.reportId ?? 'N/A'} due to missing or incomplete reported person data.');
-                                  return const SizedBox.shrink(); // ไม่แสดงถ้าหาข้อมูล Person ไม่เจอ หรือไม่สมบูรณ์
-                                }
-
-                                final String reportTitle = report.reportTitle != null
-                                    ? ReportTitles.getTitle(report.reportTitle!, widget.isEnglish)
-                                    : (widget.isEnglish ? 'No description' : 'ไม่มีคำอธิบาย');
-
-                                final String formattedDate = report.reportDate != null
-                                    ? (widget.isEnglish
-                                        ? DateFormat('MM/dd/yyyy').format(report.reportDate!.toLocal())
-                                        : DateFormat('dd/MM/yyyy').format(report.reportDate!.toLocal()))
-                                    : (widget.isEnglish ? 'No date' : 'ไม่มีวันที่');
-
-                                return Padding(
-                                  padding: const EdgeInsets.only(bottom: 15.0),
-                                  child: ReportedUserCard(
-                                    imageUrl: reportedPerson.pictureUrl != null &&
-                                        reportedPerson.pictureUrl!.isNotEmpty
-                                            ? reportedPerson.pictureUrl!
-                                            : 'assets/images/default_profile.png',
-                                    username:
-                                        '${reportedPerson.firstName!} ${reportedPerson.lastName!}',
-                                    reportDescription: reportTitle,
-                                    date: formattedDate,
-                                    reportStatus: report.reportStatus?.toLowerCase() ?? 'unknown',
-                                    reportCount: report.reportCount ?? 1, // ใช้ค่าจาก API, ถ้าไม่มีให้ใช้ 1
-                                    userType: userType,
-                                    isEnglish: widget.isEnglish,
-                                    onTap: () {
-                                      // นำทางไปยังหน้ารายละเอียด
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) => ViewDetailReportScreen(
-                                            report: report,
-                                            isEnglish: widget.isEnglish,
-                                          ),
-                                        ),
-                                      );
-                                    },
-                                  ),
-                                );
-                              }).toList(),
-                            ),
-                          ),
+                            );
+                          },
+                        ),
+                      );
+                    },
+                  ),
+                ),
             const SizedBox(height: 20),
           ],
         ),
@@ -312,18 +401,17 @@ class _ListReportScreenState extends State<ListReportScreen> {
   }
 }
 
-// วิดเจ็ตการ์ดแสดงผู้ใช้ที่ถูกรายงาน
+// วิดเจ็ตการ์ดแสดงผู้ใช้ที่ถูกรายงาน (ไม่เปลี่ยนแปลง)
 class ReportedUserCard extends StatelessWidget {
   final String imageUrl;
   final String username;
   final String reportDescription;
   final String date;
-  final int reportCount;
+  final int reportCount; // รับจำนวนรายงานที่ถูกรวมกลุ่ม
   final String userType;
   final String reportStatus;
   final bool isEnglish;
   final VoidCallback onTap;
-
   const ReportedUserCard({
     super.key,
     required this.imageUrl,
@@ -336,7 +424,6 @@ class ReportedUserCard extends StatelessWidget {
     required this.isEnglish,
     required this.onTap,
   });
-
   // กำหนดสีตามสถานะ
   Color _getStatusColor(String status) {
     switch (status.toLowerCase()) {
@@ -354,7 +441,9 @@ class ReportedUserCard extends StatelessWidget {
   // แปลสถานะเป็นภาษาไทย
   String _getLocalizedStatus(String status) {
     if (isEnglish) {
-      return status.substring(0, 1).toUpperCase() + status.substring(1).toLowerCase();
+      // ทำให้ตัวอักษรแรกเป็นตัวใหญ่
+      return status.substring(0, 1).toUpperCase() +
+          status.substring(1).toLowerCase();
     }
     switch (status.toLowerCase()) {
       case 'pending':
@@ -384,16 +473,26 @@ class ReportedUserCard extends StatelessWidget {
               // รูปโปรไฟล์
               CircleAvatar(
                 radius: 30,
-                backgroundImage: imageUrl.startsWith('http')
-                    ? NetworkImage(imageUrl) as ImageProvider
-                    : AssetImage(imageUrl),
+                backgroundImage:
+                    imageUrl.startsWith('http')
+                        ? NetworkImage(imageUrl) as ImageProvider
+                        : AssetImage(imageUrl),
                 backgroundColor: Colors.grey[200],
                 onBackgroundImageError: (exception, stackTrace) {
                   // Fallback to default if network image fails
-                  debugPrint('DEBUG(ReportedUserCard): Error loading image: $exception');
+                  debugPrint(
+                    'DEBUG(ReportedUserCard): Error loading image: $exception',
+                  );
                   // This is where you might set a state to use a fallback asset if this was a stateful widget
                 },
-                child: imageUrl.startsWith('http') ? null : const Icon(Icons.person, color: Colors.grey, size: 30),
+                child:
+                    imageUrl.startsWith('http')
+                        ? null
+                        : const Icon(
+                          Icons.person,
+                          color: Colors.grey,
+                          size: 30,
+                        ),
               ),
               const SizedBox(width: 15),
               // รายละเอียด
@@ -431,10 +530,12 @@ class ReportedUserCard extends StatelessWidget {
                       spacing: 8.0,
                       runSpacing: 4.0,
                       children: [
-                        // จำนวนรายงาน
+                        // จำนวนรายงาน (ใช้ reportCount ที่ถูกรวมกลุ่ม)
                         Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 4),
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.red.shade400,
                             borderRadius: BorderRadius.circular(5),
@@ -451,7 +552,9 @@ class ReportedUserCard extends StatelessWidget {
                         // สถานะรายงาน
                         Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 4),
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
                           decoration: BoxDecoration(
                             color: _getStatusColor(reportStatus),
                             borderRadius: BorderRadius.circular(5),
@@ -468,7 +571,9 @@ class ReportedUserCard extends StatelessWidget {
                         // ประเภทผู้ใช้ที่ถูกรายงาน
                         Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 4),
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.blueAccent.shade400,
                             borderRadius: BorderRadius.circular(5),

@@ -14,18 +14,6 @@ import 'package:provider/provider.dart';
 import 'package:maebanjumpen/controller/notification_manager.dart';
 import 'package:maebanjumpen/screens/notificationScreen.dart';
 
-class JobListHistoryScreenState extends State<JobListHistoryScreen> {
-  void refreshJobHistory() {
-    print('Refreshing Job History Data...');
-    if (mounted) {}
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(); // Placeholder
-  }
-}
-
 class HousekeeperPage extends StatefulWidget {
   final Housekeeper user;
   final bool isEnglish;
@@ -41,7 +29,6 @@ class HousekeeperPage extends StatefulWidget {
 class _HousekeeperPageState extends State<HousekeeperPage> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   int _currentIndex = 0;
-  final GlobalKey<JobListHistoryScreenState> _jobHistoryKey = GlobalKey();
   late List<Widget> _pages;
   late Housekeeper _currentHousekeeperUser;
   final HousekeeperController _housekeeperController = HousekeeperController();
@@ -96,7 +83,6 @@ class _HousekeeperPageState extends State<HousekeeperPage> {
     _pages = [
       _buildHomePageContent(),
       JobListHistoryScreen(
-        key: _jobHistoryKey,
         isEnglish: widget.isEnglish,
         housekeeperId: _currentHousekeeperUser.id!,
         onGoToHome: () {
@@ -633,9 +619,7 @@ void _handleLogout() {
                   });
                 },
               ),
-              // **********************************************
               actions: appBarActions, // ใช้ actions ที่กำหนดตามเงื่อนไข
-              // **********************************************
             )
           : null, // ถ้าเป็นหน้า Home ให้ AppBar เป็น null
       body: IndexedStack(index: _currentIndex, children: _pages),
@@ -647,7 +631,6 @@ void _handleLogout() {
         showUnselectedLabels: true,
         onTap: (int index) {
           if (index == _currentIndex && index == 1) {
-            _jobHistoryKey.currentState?.refreshJobHistory();
           } else {
             setState(() {
               _currentIndex = index;

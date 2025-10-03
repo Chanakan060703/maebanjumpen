@@ -287,6 +287,8 @@ class _HomePageState extends State<HomePage> {
       if (mounted && list != null && list.isNotEmpty) {
         final filteredAndVerifiedList =
             list.where((housekeeper) {
+              final isActive = housekeeper.person?.accountStatus == 'active';
+
               final fullName =
                   "${housekeeper.person?.firstName ?? ''} ${housekeeper.person?.lastName ?? ''}"
                       .toLowerCase();
@@ -298,10 +300,13 @@ class _HomePageState extends State<HomePage> {
                   )
                   .join(' ');
               final query = _searchQuery.toLowerCase();
+
               final isVerified =
                   housekeeper.statusVerify == 'verified' ||
                   housekeeper.statusVerify == 'APPROVED';
-              return isVerified &&
+
+              return isActive &&
+                  isVerified &&
                   (fullName.contains(query) ||
                       address.contains(query) ||
                       skills.contains(query));
@@ -471,7 +476,7 @@ class _HomePageState extends State<HomePage> {
               ),
               BottomNavigationBarItem(
                 icon: const Icon(Icons.credit_card),
-                label: widget.isEnglish ? 'Cards' : 'บัตร',
+                label: widget.isEnglish ? 'Deposit' : 'เติมเงิน',
               ),
               BottomNavigationBarItem(
                 icon: const Icon(Icons.people),

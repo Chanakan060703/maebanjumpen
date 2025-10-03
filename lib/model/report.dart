@@ -99,4 +99,32 @@ class Report {
 
     return data;
   }
+
+  Report copyWith({
+    int? reportId,
+    String? reportTitle,
+    String? reportMessage,
+    DateTime? reportDate,
+    String? reportStatus,
+    PartyRole? reporter,
+    PartyRole? hirer,
+    PartyRole? housekeeper,
+    Penalty? penalty,
+    int? reportCount,
+    int? hireId, // ✅ เพิ่มใน copyWith
+  }) {
+    return Report(
+      reportId: reportId ?? this.reportId,
+      reportTitle: reportTitle ?? this.reportTitle,
+      reportMessage: reportMessage ?? this.reportMessage,
+      reportDate: reportDate ?? this.reportDate,
+      reportStatus: reportStatus ?? this.reportStatus,
+      reporter: reporter ?? this.reporter,
+      hirer: hirer ?? this.hirer,
+      housekeeper: housekeeper ?? this.housekeeper,
+      penalty: penalty ?? this.penalty,
+      reportCount: reportCount ?? this.reportCount,
+      hireId: hireId ?? this.hireId, // ✅ เพิ่มใน copyWith
+    );
+  }
 }

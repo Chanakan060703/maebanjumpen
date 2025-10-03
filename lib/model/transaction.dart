@@ -8,8 +8,8 @@ class Transaction {
   final DateTime? transactionDate;
   final String? transactionStatus;
   
-  final Member? member; // 👈 ใช้สำหรับเก็บข้อมูล Member (รวมถึง Person & PictureUrl) ที่ Backend ส่งกลับมา
-  final int? memberId; // 👈 ใช้สำหรับส่งข้อมูล (Request Body)
+  final Member? member; // 👈 ใช้สำหรับเก็บข้อมูล Member (เมื่อได้รับจาก Backend)
+  final int? memberId; // 👈 ใช้สำหรับส่งข้อมูล (Request Body) หรืออ้างอิง ID
   
   final String? prompayNumber;
   final String? bankAccountNumber;
@@ -44,12 +44,11 @@ class Transaction {
         parsedPerson = Person(
           firstName: json['memberFirstName'] as String?,
           lastName: json['memberLastName'] as String?,
-          phoneNumber: json['memberPhoneNumber'] as String?, // เพิ่มถ้ามี
-          pictureUrl: json['memberPictureUrl'] as String?, // 👈 ส่วนสำคัญ
+          phoneNumber: json['memberPhoneNumber'] as String?,
+          pictureUrl: json['memberPictureUrl'] as String?,
         );
       }
 
-      // สร้าง Member object
       parsedMember = Member(
         id: json['memberId'] as int?, 
         type: json['memberType'] as String?,
@@ -64,11 +63,11 @@ class Transaction {
       transactionAmount: (json['transactionAmount'] as num?)?.toDouble(),
       transactionDate:
           json['transactionDate'] != null
-              ? DateTime.parse(json['transactionDate']).toLocal() // toLocal() ช่วยปรับ Timezone
+              ? DateTime.parse(json['transactionDate']).toLocal() 
               : null,
       transactionStatus: json['transactionStatus'] as String?,
-      member: parsedMember, // 👈 เก็บ Member Object ที่สร้างขึ้น
-      memberId: json['memberId'] as int?, // เก็บ memberId สำหรับอ้างอิง
+      member: parsedMember, 
+      memberId: json['memberId'] as int?, 
       prompayNumber: json['prompayNumber'] as String?,
       bankAccountNumber: json['bankAccountNumber'] as String?,
       bankAccountName: json['bankAccountName'] as String?,
@@ -79,30 +78,47 @@ class Transaction {
     );
   }
 
-  // ... (ส่วน toJson() และ copyWith() เหมือนเดิม)
+  
+  // ----------------------------------------------------------------------
+  // 🎯 ส่วนที่แก้ไข: การสร้าง JSON (toJson) สำหรับส่ง Request
+  // ----------------------------------------------------------------------
   @override
   Map<String, dynamic> toJson() {
     final Map<String, dynamic> data = <String, dynamic>{};
     data['transactionType'] = transactionType;
     data['transactionAmount'] = transactionAmount;
-    data['transactionDate'] = transactionDate?.toIso8601String();
+    
+    // 💡 FIX DATE FORMAT: แปลงเป็น UTC, ตัด Microseconds, แล้วเพิ่ม 'Z' 
+    // เพื่อให้เข้ากันได้ดีกับ Spring Boot LocalDateTime (2025-10-03T16:58:12Z)
+    if (transactionDate != null) {
+      data['transactionDate'] = transactionDate!.toUtc().toIso8601String().split('.')[0] + 'Z'; 
+    } else {
+      data['transactionDate'] = null;
+    }
+    
     data['transactionStatus'] = transactionStatus;
 
-    if (memberId != null) {
-      data['memberId'] = memberId; 
-    } else if (member != null && member!.id != null) {
-      data['memberId'] = member!.id;
-    } 
+    // 🎯 FIX MEMBER: ส่ง Nested Object {"member": {"id": 4}}
+    int? idToSend = memberId ?? member?.id;
+    if (idToSend != null) {
+      data['member'] = {'id': idToSend}; 
+    }
     
     data['prompayNumber'] = prompayNumber;
     data['bankAccountNumber'] = bankAccountNumber;
     data['bankAccountName'] = bankAccountName;
-    data['transactionApprovalDate'] =
-        transactionApprovalDate?.toIso8601String();
+    
+    // 💡 FIX DATE FORMAT: ทำซ้ำสำหรับ transactionApprovalDate
+    if (transactionApprovalDate != null) {
+      data['transactionApprovalDate'] = transactionApprovalDate!.toUtc().toIso8601String().split('.')[0] + 'Z';
+    } else {
+      data['transactionApprovalDate'] = null;
+    }
 
     return data;
   }
-
+  // ----------------------------------------------------------------------
+  
   Transaction copyWith({
     int? transactionId,
     String? transactionType,
@@ -110,7 +126,7 @@ class Transaction {
     DateTime? transactionDate,
     String? transactionStatus,
     Member? member,
-    int? memberId, // 👈 เพิ่มใน copyWith
+    int? memberId, 
     String? prompayNumber,
     String? bankAccountNumber,
     String? bankAccountName,
@@ -123,7 +139,7 @@ class Transaction {
       transactionDate: transactionDate ?? this.transactionDate,
       transactionStatus: transactionStatus ?? this.transactionStatus,
       member: member ?? this.member,
-      memberId: memberId ?? this.memberId, // 👈 เพิ่มใน copyWith
+      memberId: memberId ?? this.memberId, 
       prompayNumber: prompayNumber ?? this.prompayNumber,
       bankAccountNumber: bankAccountNumber ?? this.bankAccountNumber,
       bankAccountName: bankAccountName ?? this.bankAccountName,

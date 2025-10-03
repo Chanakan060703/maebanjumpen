@@ -256,17 +256,31 @@ class _JobRequestDetailsPageState extends State<JobRequestDetailsPage> {
                                     color: Colors.grey,
                                     size: 14.0,
                                   ),
-
                                   const SizedBox(width: 4.0),
-
                                   Text(
                                     _currentHire.location ??
                                         (widget.isEnglish
                                             ? 'No address provided'
                                             : 'ไม่มีที่อยู่'),
-
                                     style: const TextStyle(fontSize: 12.0),
                                   ),
+                                ],
+                              ),
+                              Row(
+                                children: [
+                                  const Icon(
+                                    Icons.phone_outlined,
+                                    color: Colors.grey,
+                                    size: 14.0,
+                                  ),
+                                  const SizedBox(width: 4.0),
+                                    Text(
+                                    _currentHire.hirer?.person?.phoneNumber != null
+                                        ? '${_currentHire.hirer!.person!.phoneNumber}'
+                                        : '',
+                                    style: const TextStyle(fontSize: 12.0),
+                                  ),
+                                  const SizedBox(width: 8.0),
                                 ],
                               ),
                             ],
@@ -353,22 +367,24 @@ class _JobRequestDetailsPageState extends State<JobRequestDetailsPage> {
                                 padding: const EdgeInsets.symmetric(
                                   vertical: 2.0,
                                 ),
-
                                 child: Row(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment
+                                          .start,
                                   children: [
                                     const Icon(
                                       Icons.check_circle_outline,
                                       color: Colors.green,
                                       size: 16.0,
                                     ),
-
                                     const SizedBox(width: 8.0),
-
-                                    Text(service.trim()),
+                                  
+                                    Expanded(child: Text(service.trim())),
                                   ],
                                 ),
                               ),
                             ),
+
                       if (_currentHire.hireDetail == null ||
                           _currentHire.hireDetail!.isEmpty)
                         Padding(
@@ -556,9 +572,7 @@ class _JobRequestDetailsPageState extends State<JobRequestDetailsPage> {
           if (_isLoading)
             Container(
               color: Colors.black45,
-              child: const Center(
-                child: CircularProgressIndicator(),
-              ),
+              child: const Center(child: CircularProgressIndicator()),
             ),
         ],
       ),

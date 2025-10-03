@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:maebanjumpen/controller/hireController.dart'; 
 import 'package:maebanjumpen/controller/reportController.dart';
 import 'package:maebanjumpen/model/hire.dart';
 import 'package:maebanjumpen/model/hirer.dart';
@@ -11,8 +12,7 @@ class ReportMemberPage extends StatefulWidget {
   final Hire hire;
   final bool isEnglish;
   final Housekeeper? housekeeper; // Housekeeper is the reporter
-  final Person?
-      userPerson; // Pass userPerson for reporting context (if needed for reporter Person details)
+  final Person? userPerson; 
 
   const ReportMemberPage({
     super.key,
@@ -31,14 +31,13 @@ class _ReportMemberPageState extends State<ReportMemberPage> {
   final TextEditingController _dateController = TextEditingController();
   final TextEditingController _detailsController = TextEditingController();
 
-  final ReportController _reportController =
-      ReportController(); // สร้าง instance ของ controller
+  final ReportController _reportController = ReportController();
+  final Hirecontroller _hireController = Hirecontroller(); 
 
   @override
   void initState() {
     super.initState();
 
-    // ตรวจสอบ locale ปัจจุบันเพื่อแสดงรูปแบบวันที่ที่เหมาะสม
     _dateController.text = widget.isEnglish
         ? DateFormat('MM/dd/yyyy').format(DateTime.now())
         : DateFormat('dd/MM/yyyy').format(DateTime.now());
@@ -52,7 +51,6 @@ class _ReportMemberPageState extends State<ReportMemberPage> {
   }
 
   String _formatDate(DateTime date) {
-    // ใช้รูปแบบวันที่ตามภาษาที่เลือก
     return widget.isEnglish
         ? DateFormat('MM/dd/yyyy').format(date)
         : DateFormat('dd/MM/yyyy').format(date);
@@ -66,14 +64,14 @@ class _ReportMemberPageState extends State<ReportMemberPage> {
   }
 
   Future<void> _selectDate(BuildContext context) async {
-    FocusScope.of(context).requestFocus(FocusNode()); // ซ่อน keyboard
+    FocusScope.of(context).requestFocus(FocusNode());
     DateTime currentDate = DateTime.now();
 
     DateTime? picked = await showDatePicker(
       context: context,
       initialDate: currentDate,
       firstDate: DateTime(2000),
-      lastDate: currentDate, // สามารถเลือกวันที่ไม่เกินวันนี้
+      lastDate: currentDate, 
     );
 
     if (picked != null) {
@@ -82,6 +80,40 @@ class _ReportMemberPageState extends State<ReportMemberPage> {
       });
     }
   }
+  
+  // ✅ แก้ไข: ปรับการเรียก Controller ให้ส่ง ID และ Object (แก้ Type Error)
+  Future<void> _updateHireStatusOnReport() async {
+    const String newStatus = 'Reported'; 
+    
+    // ตรวจสอบว่า hireId มีค่าก่อน
+    if (widget.hire.hireId == null) {
+        debugPrint('Cannot update hire status: hireId is null.');
+        return;
+    }
+
+    final Hire updatedHire = widget.hire.copyWith(
+      jobStatus: newStatus,
+    );
+    
+    try {
+      // 🎯 แก้ไข: ส่ง hireId (int) และ updatedHire (Hire)
+      await _hireController.updateHire(widget.hire.hireId!, updatedHire); 
+      debugPrint('Hire status updated successfully to $newStatus.');
+    } catch (e) {
+      debugPrint('Error updating hire status: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            widget.isEnglish
+                ? 'Warning: Failed to update job status after report.'
+                : 'คำเตือน: ไม่สามารถอัปเดตสถานะงานจ้างหลังรายงานได้',
+          ),
+          backgroundColor: Colors.orange,
+        ),
+      );
+    }
+  }
+
 
   Future<void> _submitReport() async {
     // 1. ตรวจสอบข้อมูลที่จำเป็น
@@ -120,7 +152,7 @@ class _ReportMemberPageState extends State<ReportMemberPage> {
       return;
     }
 
-    // 3. เตรียม Reporter Object (Housekeeper) - ซึ่งเป็นผู้รายงาน
+    // 3. เตรียม Reporter Object (Housekeeper)
     final Housekeeper? reporterHousekeeper = widget.housekeeper;
     if (reporterHousekeeper == null || reporterHousekeeper.id == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -137,7 +169,6 @@ class _ReportMemberPageState extends State<ReportMemberPage> {
     }
 
     // 4. เตรียม Hirer Object (ผู้ถูกรายงาน)
-    // ใช้ Hirer ที่ได้รับมาจาก Hire object โดยตรง (widget.hire.hirer)
     final Hirer? reportedHirer = widget.hire.hirer as Hirer?;
     if (reportedHirer == null || reportedHirer.id == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -158,41 +189,37 @@ class _ReportMemberPageState extends State<ReportMemberPage> {
       reportTitle: _selectedIssue,
       reportMessage: _detailsController.text,
       reportDate: parsedDate,
-      reportStatus: 'pending', // กำหนดสถานะเริ่มต้นของรายงาน
-      hireId: widget.hire.hireId, // ✅ FIX: เพิ่ม hireId จาก Hire object
-      reporter: reporterHousekeeper, // <-- ผู้รายงานคือ Housekeeper
-      
-      // ✅ FIX: ต้องกำหนด Housekeeper ที่เกี่ยวข้องกับงานจ้าง (ซึ่งคือผู้รายงานเอง)
-      // เพื่อให้ Report entity ใน Backend มีความสัมพันธ์กับ Housekeeper ด้วย
+      reportStatus: 'pending', 
+      hireId: widget.hire.hireId, 
+      reporter: reporterHousekeeper, 
       housekeeper: reporterHousekeeper, 
-      
-      hirer: reportedHirer, // <-- ผู้ถูกรายงานคือ Hirer
-      penalty: null, // กำหนดค่าเริ่มต้นเป็น null
+      hirer: reportedHirer, 
+      penalty: null, 
     );
-
-    // Debugging: พิมพ์ข้อมูล Report ที่จะส่ง
-    debugPrint('Report object created: ${newReport.toJson()}');
 
     // 6. ส่ง Report ไปยัง Backend
     try {
       final savedReport = await _reportController.addReport(newReport);
 
       debugPrint('Report submitted successfully: ${savedReport.toJson()}');
+      
+      // 7. อัปเดตสถานะงานจ้างหลังจากส่งรายงานสำเร็จ
+      await _updateHireStatusOnReport(); 
 
       // แสดงข้อความสำเร็จ
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
             widget.isEnglish
-                ? 'Report submitted successfully.'
-                : 'ส่งรายงานสำเร็จแล้ว',
+                ? 'Report submitted successfully. Job status updated.'
+                : 'ส่งรายงานสำเร็จแล้ว และอัปเดตสถานะงานจ้างแล้ว',
           ),
           backgroundColor: Colors.green,
         ),
       );
 
-      // กลับไปยังหน้าจอก่อนหน้า พร้อมส่งข้อมูล report ที่บันทึกสำเร็จกลับไปด้วย
-      Navigator.pop(context, savedReport);
+      // 8. กลับไปยังหน้าจอก่อนหน้า พร้อมส่ง 'true' กลับไปเพื่อบอกให้หน้า Job History รีเฟรช
+      Navigator.pop(context, true); 
     } catch (e) {
       debugPrint('Error submitting report: $e');
 
@@ -219,11 +246,11 @@ class _ReportMemberPageState extends State<ReportMemberPage> {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.red),
           onPressed: () {
-            Navigator.pop(context);
+            // เมื่อกดกลับ ให้ส่งค่า false กลับไป
+            Navigator.pop(context, false); 
           },
         ),
         title: Text(
-          // **ปรับหัวข้อ AppBar ให้เป็น "รายงานผู้ว่าจ้าง"**
           widget.isEnglish ? 'Report Hirer' : 'รายงานผู้ว่าจ้าง',
           style: const TextStyle(
             color: Colors.black,
@@ -245,7 +272,6 @@ class _ReportMemberPageState extends State<ReportMemberPage> {
               ),
             ),
             const SizedBox(height: 8.0),
-            // **ปรับปรุงรายการประเภทปัญหาให้เป็นสำหรับแม่บ้านรายงานผู้ว่าจ้าง**
             _CircularRadioListTile(
               title: widget.isEnglish
                   ? 'Non-payment or delayed payment'
@@ -310,7 +336,6 @@ class _ReportMemberPageState extends State<ReportMemberPage> {
             TextField(
               controller: _dateController,
               decoration: InputDecoration(
-                // เปลี่ยน hintText ให้เหมาะสมกับรูปแบบวันที่
                 hintText: widget.isEnglish ? 'MM/DD/YYYY' : 'วว/ดด/ปปปป',
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(15.0),
@@ -360,7 +385,7 @@ class _ReportMemberPageState extends State<ReportMemberPage> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: _submitReport, // เรียกใช้ฟังก์ชันส่งรายงาน
+                onPressed: _submitReport, 
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.red,
                   padding: const EdgeInsets.symmetric(vertical: 16.0),
@@ -406,12 +431,11 @@ class _ReportMemberPageState extends State<ReportMemberPage> {
             label: widget.isEnglish ? 'Profile' : 'โปรไฟล์',
           ),
         ],
-        currentIndex: 2, // Highlight 'Hire' tab
+        currentIndex: 2, 
         selectedItemColor: Colors.red,
         unselectedItemColor: Colors.grey,
         showUnselectedLabels: true,
         onTap: (index) {
-          // Handle bottom navigation item taps
           debugPrint('Bottom navigation tapped: $index');
         },
       ),
@@ -423,7 +447,7 @@ class _ReportMemberPageState extends State<ReportMemberPage> {
 class _CircularRadioListTile extends StatelessWidget {
   final String title;
   final String value;
-  final String? groupValue; // Nullable to allow no selection
+  final String? groupValue; 
   final ValueChanged<String> onChanged;
 
   const _CircularRadioListTile({

@@ -11,6 +11,13 @@ import 'package:maebanjumpen/screens/profile_member.dart';
 import 'package:maebanjumpen/styles/finishJobStyles.dart';
 import 'package:maebanjumpen/widgets/verifyJob_member_dialog.dart';
 
+// 假设ว่า AppLocalizations, AppColors, AppTextStyles, AppSpacings ถูกกำหนดไว้ในไฟล์อื่น
+// เนื่องจากไม่ได้ให้โค้ดของไฟล์เหล่านั้นมา จึงสันนิษฐานว่าโค้ดที่เกี่ยวข้องกับการแปลภาษา สไตล์ และระยะห่างใช้งานได้
+// class AppLocalizations...
+// class AppColors...
+// class AppTextStyles...
+// class AppSpacings...
+
 class VerifyJobPage extends StatefulWidget {
   final bool isEnglish;
   final Hire hire;
@@ -28,12 +35,12 @@ class VerifyJobPage extends StatefulWidget {
 }
 
 class _VerifyJobPageState extends State<VerifyJobPage> {
-  int _currentIndex = 2; // ตั้งค่าเริ่มต้นให้เป็น Index ของ 'การจ้าง' (Bookings)
+  int _currentIndex =
+      2; // ตั้งค่าเริ่มต้นให้เป็น Index ของ 'การจ้าง' (Bookings)
   final Hirecontroller _hireController = Hirecontroller();
 
-  // แก้ไข: เปลี่ยนจาก late Hire _currentHire; เป็น final Hire _currentHire;
-  // เพื่อกำหนดค่าเริ่มต้นทันทีใน initState()
-  late Hire _currentHire;
+  // แก้ไข: เปลี่ยนจาก final Hire _currentHire;
+  late Hire _currentHire; // เก็บเป็น late และกำหนดค่าใน initState
 
   @override
   void initState() {
@@ -77,41 +84,45 @@ class _VerifyJobPageState extends State<VerifyJobPage> {
 
       if (startDateTime == null || endDateTime == null) {
         debugPrint(
-            'Error: Could not parse one or both time strings. Start: "$startTime", End: "$endTime".');
+          'Error: Could not parse one or both time strings. Start: "$startTime", End: "$endTime".',
+        );
         return 0.0;
       }
 
       if (endDateTime.isBefore(startDateTime)) {
         return endDateTime
-            .add(const Duration(days: 1))
-            .difference(startDateTime)
-            .inMinutes /
+                .add(const Duration(days: 1))
+                .difference(startDateTime)
+                .inMinutes /
             60.0;
       }
 
       return endDateTime.difference(startDateTime).inMinutes / 60.0;
     } catch (e) {
       debugPrint(
-          'An unexpected error occurred during time duration calculation: $e');
+        'An unexpected error occurred during time duration calculation: $e',
+      );
       return 0.0;
     }
   }
 
   // Function to show confirmation dialog
   void _showConfirmFinishJobAlert(
-      BuildContext context,
-      AppLocalizations localizations,
-      ) {
+    BuildContext context,
+    AppLocalizations localizations,
+  ) {
     showDialog(
       context: context,
       builder: (BuildContext dialogContext) {
         return ConfirmFinishJobAlert(
           localizations: localizations,
           onConfirm: (alertButtonContext) async {
-            if (widget.hire.hireId == null) {
+            if (_currentHire.hireId == null) {
               debugPrint(
-                  "Error: Cannot update job status because hireId is null.");
+                "Error: Cannot update job status because hireId is null.",
+              );
               Navigator.of(alertButtonContext).pop();
+
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(
@@ -135,18 +146,20 @@ class _VerifyJobPageState extends State<VerifyJobPage> {
               location: _currentHire.location,
               progressionImageUrls: _currentHire.progressionImageUrls,
               jobStatus: 'Completed',
-              hirer: _currentHire.hirer != null
-                  ? Hirer(
-                id: _currentHire.hirer!.id,
-                type: _currentHire.hirer!.type,
-              )
-                  : null,
-              housekeeper: _currentHire.housekeeper != null
-                  ? Housekeeper(
-                id: _currentHire.housekeeper!.id,
-                type: _currentHire.housekeeper!.type,
-              )
-                  : null,
+              hirer:
+                  _currentHire.hirer != null
+                      ? Hirer(
+                        id: _currentHire.hirer!.id,
+                        type: _currentHire.hirer!.type,
+                      )
+                      : null,
+              housekeeper:
+                  _currentHire.housekeeper != null
+                      ? Housekeeper(
+                        id: _currentHire.housekeeper!.id,
+                        type: _currentHire.housekeeper!.type,
+                      )
+                      : null,
               review: _currentHire.review,
             );
 
@@ -154,10 +167,16 @@ class _VerifyJobPageState extends State<VerifyJobPage> {
               _currentHire.hireId!,
               updatedHireForServer,
             );
-
+            
+            // ใช้ canPop() เพื่อตรวจสอบและป้องกัน Error ก่อนปิด Dialog
+            if (Navigator.of(alertButtonContext).canPop()) {
+              Navigator.of(alertButtonContext).pop(); // ปิด Dialog
+            }
             if (responseHire != null) {
-              Navigator.of(alertButtonContext).pop();
+              // 1. อัปเดตสำเร็จ
+              // ปิดหน้าจอ VerifyJobPage
               Navigator.of(context).pop();
+              // แสดง SnackBar แจ้งความสำเร็จ
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(localizations.getJobStatusUpdatedSuccess()),
@@ -165,7 +184,8 @@ class _VerifyJobPageState extends State<VerifyJobPage> {
                 ),
               );
             } else {
-              Navigator.of(alertButtonContext).pop();
+              // 2. อัปเดตไม่สำเร็จ
+              // ไม่ต้องเรียก pop() ของหน้าจอหลัก (context) เพราะยังอยู่หน้าเดิม
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(
@@ -185,12 +205,11 @@ class _VerifyJobPageState extends State<VerifyJobPage> {
   ImageProvider _getHousekeeperProfileImage(String? pictureUrl) {
     if (pictureUrl != null &&
         pictureUrl.isNotEmpty &&
-        (pictureUrl.startsWith('http://') || pictureUrl.startsWith('https://'))) {
+        (pictureUrl.startsWith('http://') ||
+            pictureUrl.startsWith('https://'))) {
       return NetworkImage(pictureUrl);
     }
-    return const AssetImage(
-      'assets/placeholder_housekeeper.png',
-    );
+    return const AssetImage('assets/placeholder_housekeeper.png');
   }
 
   // Helper function to get the appropriate image provider for progression image
@@ -200,16 +219,16 @@ class _VerifyJobPageState extends State<VerifyJobPage> {
         (imageUrl.startsWith('http://') || imageUrl.startsWith('https://'))) {
       return NetworkImage(imageUrl);
     }
-    return const AssetImage(
-      'assets/no_image_available.png',
-    );
+    return const AssetImage('assets/no_image_available.png');
   }
 
   // เพิ่มฟังก์ชันสำหรับโหลดข้อมูลงาน
   Future<void> _fetchJobDetails() async {
     try {
       if (widget.hire.hireId != null) {
-        final updatedHire = await _hireController.getHireById(widget.hire.hireId!);
+        final updatedHire = await _hireController.getHireById(
+          widget.hire.hireId!,
+        );
         if (updatedHire != null) {
           // ใช้ mounted เพื่อตรวจสอบว่า widget ยังอยู่ใน widget tree หรือไม่ก่อนเรียก setState
           if (mounted) {
@@ -217,7 +236,9 @@ class _VerifyJobPageState extends State<VerifyJobPage> {
               _currentHire = updatedHire;
               debugPrint('Job details reloaded successfully.');
               if (_currentHire.progressionImageUrls != null) {
-                debugPrint('Progression Image URLs: ${_currentHire.progressionImageUrls}');
+                debugPrint(
+                  'Progression Image URLs: ${_currentHire.progressionImageUrls}',
+                );
               }
             });
           }
@@ -234,18 +255,29 @@ class _VerifyJobPageState extends State<VerifyJobPage> {
   Widget build(BuildContext context) {
     final localizations = AppLocalizations(widget.isEnglish);
 
+    // *******************************************************************
+    // ** แก้ไข Null Check Operator Error ที่อาจเกิดขึ้นที่นี่ **
+    // *******************************************************************
+    // ใช้ Null-aware access operator (?.) และ Null-aware coalescing operator (??)
+    // เพื่อจัดการกับกรณีที่ housekeeper หรือ person เป็น null อย่างปลอดภัย
+    final String housekeeperFirstName =
+        _currentHire.housekeeper?.person?.firstName ?? '';
+    final String housekeeperLastName =
+        _currentHire.housekeeper?.person?.lastName ?? '';
+
     final String housekeeperName =
-        (_currentHire.housekeeper?.person?.firstName != null &&
-            _currentHire.housekeeper?.person?.lastName != null)
-            ? '${_currentHire.housekeeper!.person!.firstName} ${_currentHire.housekeeper!.person!.lastName}'
+        (housekeeperFirstName.isNotEmpty || housekeeperLastName.isNotEmpty)
+            ? '$housekeeperFirstName $housekeeperLastName'
             : localizations.getUnknownHousekeeper();
+    // *******************************************************************
 
     final String? housekeeperImageUrl =
         _currentHire.housekeeper?.person?.pictureUrl;
 
-    final String jobDate = (_currentHire.startDate != null)
-        ? '${_currentHire.startDate!.day} ${localizations.getMonthName(_currentHire.startDate!.month)}, ${_currentHire.startDate!.year}'
-        : '';
+    final String jobDate =
+        (_currentHire.startDate != null)
+            ? '${_currentHire.startDate!.day} ${localizations.getMonthName(_currentHire.startDate!.month)}, ${_currentHire.startDate!.year}'
+            : '';
 
     final double calculatedHours = _calculateHoursDuration(
       _currentHire.startTime,
@@ -475,7 +507,8 @@ class _VerifyJobPageState extends State<VerifyJobPage> {
                                   fit: BoxFit.cover,
                                   errorBuilder: (context, error, stackTrace) {
                                     debugPrint(
-                                        'Error loading progress image from URL: $imageUrl. Error: $error');
+                                      'Error loading progress image from URL: $imageUrl. Error: $error',
+                                    );
                                     return Container(
                                       width: 200,
                                       height: 200,
@@ -483,7 +516,7 @@ class _VerifyJobPageState extends State<VerifyJobPage> {
                                       child: Center(
                                         child: Column(
                                           mainAxisAlignment:
-                                          MainAxisAlignment.center,
+                                              MainAxisAlignment.center,
                                           children: [
                                             const Icon(
                                               Icons.broken_image,
@@ -496,8 +529,8 @@ class _VerifyJobPageState extends State<VerifyJobPage> {
                                                   : 'ไม่สามารถโหลดรูปภาพได้',
                                               style: AppTextStyles.jobDetails
                                                   .copyWith(
-                                                color: AppColors.greyText,
-                                              ),
+                                                    color: AppColors.greyText,
+                                                  ),
                                             ),
                                           ],
                                         ),
@@ -528,13 +561,18 @@ class _VerifyJobPageState extends State<VerifyJobPage> {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: isJobCompleted
-                      ? null
-                      : () => _showConfirmFinishJobAlert(context, localizations),
+                  onPressed:
+                      isJobCompleted
+                          ? null
+                          : () => _showConfirmFinishJobAlert(
+                            context,
+                            localizations,
+                          ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: isJobCompleted
-                        ? AppColors.greyText
-                        : AppColors.primaryGreen,
+                    backgroundColor:
+                        isJobCompleted
+                            ? AppColors.greyText
+                            : AppColors.primaryGreen,
                     padding: const EdgeInsets.symmetric(
                       vertical: AppSpacings.medium,
                     ),
@@ -584,20 +622,22 @@ class _VerifyJobPageState extends State<VerifyJobPage> {
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(
-                builder: (context) => HomePage(
-                  isEnglish: widget.isEnglish,
-                  user: widget.user!,
-                ),
+                builder:
+                    (context) => HomePage(
+                      isEnglish: widget.isEnglish,
+                      user: widget.user!,
+                    ),
               ),
             );
           } else if (index == 1) {
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(
-                builder: (context) => DepositMemberPage(
-                  user: widget.user!,
-                  isEnglish: widget.isEnglish,
-                ),
+                builder:
+                    (context) => DepositMemberPage(
+                      user: widget.user!,
+                      isEnglish: widget.isEnglish,
+                    ),
               ),
             );
           } else if (index == 2) {
@@ -605,10 +645,11 @@ class _VerifyJobPageState extends State<VerifyJobPage> {
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(
-                builder: (context) => ProfileMemberPage(
-                  user: widget.user!,
-                  isEnglish: widget.isEnglish,
-                ),
+                builder:
+                    (context) => ProfileMemberPage(
+                      user: widget.user!,
+                      isEnglish: widget.isEnglish,
+                    ),
               ),
             );
           }
@@ -630,34 +671,6 @@ class _VerifyJobPageState extends State<VerifyJobPage> {
             icon: const Icon(Icons.person_outline),
             label: localizations.getProfileLabel(),
           ),
-        ],
-      ),
-    );
-  }
-}
-
-class ServiceItem extends StatelessWidget {
-  final String text;
-  final bool isEnglish;
-
-  const ServiceItem({super.key, required this.text, required this.isEnglish});
-
-  @override
-  Widget build(BuildContext context) {
-    if (text.isEmpty) return const SizedBox.shrink();
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 4.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Icon(
-            Icons.check_circle_outline,
-            color: AppColors.primaryGreen,
-            size: 18,
-          ),
-          const SizedBox(width: 8),
-          Expanded(child: Text(text, style: AppTextStyles.jobDetails)),
         ],
       ),
     );

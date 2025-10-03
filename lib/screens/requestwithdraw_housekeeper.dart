@@ -74,6 +74,21 @@ class _RequestWithdrawalScreenState extends State<RequestWithdrawalScreen> {
 
     final double withdrawalAmount = double.tryParse(amountText) ?? 0.0;
 
+    // 🎯 ส่วนที่แก้ไข: การจัดการค่าว่าง (null/empty)
+    // 1. PromPay: ส่งเป็น null ถ้าว่างเปล่า (เพราะ Service Layer จะตรวจ Prompay และ Bank)
+    final String? finalPrompayNumber = prompayNumber.isNotEmpty ? prompayNumber : null;
+
+    // 2. Bank Account Number: ถ้าว่าง ให้ส่งข้อความระบุแทน null เพื่อหลีกเลี่ยงปัญหา Data Binding ใน Spring Boot
+    final String finalBankAccountNumber = bankAccountNumber.isNotEmpty 
+        ? bankAccountNumber 
+        : (widget.isEnglish ? 'No Bank Account Specified' : 'ไม่ระบุเลขบัญชี');
+    
+    // 3. Bank Account Name: ถ้าว่าง ให้ส่งข้อความระบุแทน null 
+    final String finalBankAccountName = bankAccountName.isNotEmpty 
+        ? bankAccountName 
+        : (widget.isEnglish ? 'No Account Name Specified' : 'ไม่ระบุชื่อบัญชี');
+
+
     // *** แก้ไขตรงนี้: ใช้ memberId โดยตรง แทนการสร้าง Member object ***
     final newTransaction = Transaction(
       transactionType: 'Withdrawal', // Backend expects 'Withdrawal'
@@ -81,9 +96,13 @@ class _RequestWithdrawalScreenState extends State<RequestWithdrawalScreen> {
       transactionDate: DateTime.now(), // Current date/time for the request
       transactionStatus: 'Pending Approve', // Initial status
       memberId: widget.user.id, // 🎯 ส่ง memberId (Integer) โดยตรง
-      prompayNumber: prompayNumber.isNotEmpty ? prompayNumber : null,
-      bankAccountNumber: bankAccountNumber.isNotEmpty ? bankAccountNumber : null,
-      bankAccountName: bankAccountName.isNotEmpty ? bankAccountName : null,
+      
+      // ใช้ค่าที่จัดการแล้ว
+      prompayNumber: finalPrompayNumber,
+      bankAccountNumber: finalBankAccountNumber, 
+      bankAccountName: finalBankAccountName, 
+
+      transactionApprovalDate: null, // Clear this field for a new request
     );
 
     try {
@@ -282,7 +301,7 @@ class _RequestWithdrawalScreenState extends State<RequestWithdrawalScreen> {
                             vertical: 15, horizontal: 10),
                       ),
                       validator: (value) {
-                        // ถ้า PromPay ว่าง และ Bank Account ว่าง ให้แจ้งเตือน
+                        // ถ้า PromPay ว่าง และ Bank Account ว่าง ให้แจ้งเตือน (เงื่อนไข OR)
                         if ((value == null || value.isEmpty) && _bankAccountNumberController.text.isEmpty) {
                           return widget.isEnglish ? 'Enter PromPay or Bank Account.' : 'กรุณากรอก PromPay หรือเลขที่บัญชีธนาคาร';
                         }
@@ -346,7 +365,7 @@ class _RequestWithdrawalScreenState extends State<RequestWithdrawalScreen> {
                       const EdgeInsets.symmetric(vertical: 15, horizontal: 10),
                 ),
                 validator: (value) {
-                  // ถ้า Bank Account ว่าง และ PromPay ว่าง ให้แจ้งเตือน
+                  // ถ้า Bank Account ว่าง และ PromPay ว่าง ให้แจ้งเตือน (เงื่อนไข OR)
                   if ((value == null || value.isEmpty) && _prompayNumberController.text.isEmpty) {
                     return widget.isEnglish ? 'Enter PromPay or Bank Account.' : 'กรุณากรอก PromPay หรือเลขที่บัญชีธนาคาร';
                   }

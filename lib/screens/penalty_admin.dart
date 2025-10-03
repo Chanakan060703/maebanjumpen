@@ -14,9 +14,7 @@ class PenaltyScreen extends StatefulWidget {
 
   const PenaltyScreen({
     super.key,
-
     required this.report,
-
     required this.isEnglish,
   });
 
@@ -46,7 +44,6 @@ class _PenaltyScreenState extends State<PenaltyScreen> {
 
       _endDateController.text = DateFormat(
         'dd/MM/yyyy',
-
         localeCode,
       ).format(_selectedPenaltyEndDate!);
     }
@@ -59,9 +56,7 @@ class _PenaltyScreenState extends State<PenaltyScreen> {
   @override
   void dispose() {
     _endDateController.dispose();
-
     _detailsController.dispose();
-
     super.dispose();
   }
 
@@ -73,31 +68,22 @@ class _PenaltyScreenState extends State<PenaltyScreen> {
 
     final DateTime? picked = await showDatePicker(
       context: context,
-
       initialDate: _selectedPenaltyEndDate ?? now, // ใช้ตัวแปรใหม่
-
       firstDate: now,
-
       lastDate: DateTime(2101),
-
       locale: currentLocale,
-
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: const ColorScheme.light(
               primary: Colors.red,
-
               onPrimary: Colors.white,
-
               onSurface: Colors.black,
             ),
-
             textButtonTheme: TextButtonThemeData(
               style: TextButton.styleFrom(foregroundColor: Colors.red),
             ),
           ),
-
           child: child!,
         );
       },
@@ -106,10 +92,8 @@ class _PenaltyScreenState extends State<PenaltyScreen> {
     if (picked != null && picked != _selectedPenaltyEndDate) {
       setState(() {
         _selectedPenaltyEndDate = picked; // อัปเดตตัวแปรใหม่
-
         _endDateController.text = DateFormat(
           'dd/MM/yyyy',
-
           currentLocale.toLanguageTag(),
         ).format(picked);
       });
@@ -117,6 +101,9 @@ class _PenaltyScreenState extends State<PenaltyScreen> {
   }
 
   Future<void> _submitPenalty() async {
+    // Check if the widget is still mounted before using context
+    if (!mounted) return;
+
     if (_selectedPenaltyType == null ||
         _endDateController.text.isEmpty || // ใช้ Controller ใหม่
         _detailsController.text.isEmpty) {
@@ -129,7 +116,6 @@ class _PenaltyScreenState extends State<PenaltyScreen> {
           ),
         ),
       );
-
       return;
     }
 
@@ -145,32 +131,23 @@ class _PenaltyScreenState extends State<PenaltyScreen> {
           ),
         ),
       );
-
       return;
     }
 
     // --- START: ROBUST LOGIC FOR TARGET USER IDENTIFICATION ---
-
-    // ดึง ID และแปลงเป็น String เพื่อเปรียบเทียบอย่างมั่นคง
-
     final String? reporterIdStr = widget.report.reporter?.id?.toString();
-
     final String? hirerIdStr = widget.report.hirer?.id?.toString();
-
     final String? housekeeperIdStr = widget.report.housekeeper?.id?.toString();
 
     String? targetHirerId;
-
     String? targetHousekeeperId;
 
     // 1. ตรวจสอบว่าผู้รายงานเป็น Hirer หรือไม่
-
     if (reporterIdStr != null &&
         hirerIdStr != null &&
         reporterIdStr.isNotEmpty &&
         reporterIdStr == hirerIdStr) {
       // หากเป็น Hirer -> เป้าหมายคือ Housekeeper
-
       if (housekeeperIdStr != null && housekeeperIdStr.isNotEmpty) {
         targetHousekeeperId = housekeeperIdStr;
       }
@@ -181,14 +158,12 @@ class _PenaltyScreenState extends State<PenaltyScreen> {
         reporterIdStr.isNotEmpty &&
         reporterIdStr == housekeeperIdStr) {
       // หากเป็น Housekeeper -> เป้าหมายคือ Hirer
-
       if (hirerIdStr != null && hirerIdStr.isNotEmpty) {
         targetHirerId = hirerIdStr;
       }
     }
 
     // ตรวจสอบขั้นสุดท้าย: หากไม่สามารถระบุเป้าหมายได้ (ทั้งสองตัวเป็น null)
-
     if (targetHirerId == null && targetHousekeeperId == null) {
       print(
         'DEBUG(PenaltyAdmin): Reporter ID: $reporterIdStr, Hirer ID: $hirerIdStr, Housekeeper ID: $housekeeperIdStr',
@@ -203,7 +178,6 @@ class _PenaltyScreenState extends State<PenaltyScreen> {
           ),
         ),
       );
-
       return;
     }
 
@@ -212,11 +186,8 @@ class _PenaltyScreenState extends State<PenaltyScreen> {
     try {
       final penaltyToCreate = Penalty(
         penaltyType: _selectedPenaltyType,
-
         penaltyDetail: _detailsController.text,
-
         penaltyDate: penaltyDateForBackend,
-
         penaltyStatus: 'อนุมัติ',
       );
 
@@ -224,13 +195,14 @@ class _PenaltyScreenState extends State<PenaltyScreen> {
 
       final createdPenalty = await _penaltyController.addPenalty(
         penaltyToCreate,
-
         widget.report.reportId!.toString(),
-
         targetHirerId,
-
         targetHousekeeperId,
       );
+
+      // --- CHECK MOUNTED STATE AFTER FIRST AWAIT ---
+      if (!mounted) return;
+      // ---------------------------------------------
 
       print(
         'สร้างบทลงโทษบน Backend สำเร็จด้วย ID: ${createdPenalty.penaltyId}',
@@ -238,21 +210,13 @@ class _PenaltyScreenState extends State<PenaltyScreen> {
 
       final updatedReport = Report(
         reportId: widget.report.reportId,
-
         reportTitle: widget.report.reportTitle,
-
         reportMessage: widget.report.reportMessage,
-
         reportDate: widget.report.reportDate,
-
         reportStatus: 'resolved',
-
         reporter: widget.report.reporter,
-
         hirer: widget.report.hirer,
-
         housekeeper: widget.report.housekeeper,
-
         penalty: createdPenalty,
       );
 
@@ -262,9 +226,12 @@ class _PenaltyScreenState extends State<PenaltyScreen> {
 
       final resultReport = await _reportController.updateReport(
         widget.report.reportId!,
-
         updatedReport,
       );
+
+      // --- CHECK MOUNTED STATE AFTER SECOND AWAIT ---
+      if (!mounted) return;
+      // ----------------------------------------------
 
       if (resultReport.reportId != null) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -277,11 +244,10 @@ class _PenaltyScreenState extends State<PenaltyScreen> {
           ),
         );
 
+        // This navigation uses context, so the mounted check is essential
         Navigator.pushAndRemoveUntil(
           context,
-
           MaterialPageRoute(builder: (context) => HomeAdminPage(user: Admin())),
-
           (route) => false,
         );
       } else {
@@ -297,6 +263,9 @@ class _PenaltyScreenState extends State<PenaltyScreen> {
       }
     } catch (e) {
       print("Error submitting penalty: $e");
+
+      // Check mounted state before showing error snackbar
+      if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -326,88 +295,60 @@ class _PenaltyScreenState extends State<PenaltyScreen> {
       reportedPerson = widget.report.hirer?.person;
     }
 
-    // If the reporter is neither Hirer nor Housekeeper (or data is missing), reportedPerson remains null.
-
-    // However, the check in the UI below handles the null case by displaying 'N/A' or 'ไม่ระบุ'
-
     return Scaffold(
       backgroundColor: Colors.grey[50],
-
       appBar: AppBar(
+        elevation: 0.5,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.black),
-
+          icon: const Icon(Icons.arrow_back, color: Colors.red),
           onPressed: () {
             Navigator.pop(context);
           },
         ),
-
         title: Text(
           widget.isEnglish ? 'Penalty' : 'บทลงโทษ',
-
           style: const TextStyle(color: Colors.black),
         ),
-
         backgroundColor: Colors.white,
-
-        elevation: 0,
-
         centerTitle: false,
       ),
-
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
-
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-
           children: [
             Align(
               alignment: Alignment.center,
-
               child: Padding(
                 padding: const EdgeInsets.only(bottom: 20.0),
-
                 child: Text(
                   widget.isEnglish
                       ? 'Applying penalty to: ${reportedPerson?.firstName ?? 'N/A'} ${reportedPerson?.lastName ?? ''}'
                       : 'กำลังใช้บทลงโทษกับ: ${reportedPerson?.firstName ?? 'ไม่ระบุ'} ${reportedPerson?.lastName ?? ''}',
-
                   style: const TextStyle(
                     fontSize: 18,
-
                     fontWeight: FontWeight.bold,
-
                     color: Colors.deepOrange,
                   ),
-
                   textAlign: TextAlign.center,
                 ),
               ),
             ),
-
             Text(
               widget.isEnglish ? 'Select Penalty Type' : 'เลือกประเภทบทลงโทษ',
-
               style: const TextStyle(
                 fontSize: 16,
-
                 fontWeight: FontWeight.bold,
-
                 color: Colors.black87,
               ),
             ),
-
             Row(
               children: [
                 Expanded(
                   child: RadioListTile<String>(
                     title: Text(widget.isEnglish ? 'Ban' : 'แบน'),
-
                     value: 'Ban',
-
                     groupValue: _selectedPenaltyType,
-
                     onChanged: (String? value) {
                       setState(() {
                         _selectedPenaltyType = value;
@@ -415,17 +356,13 @@ class _PenaltyScreenState extends State<PenaltyScreen> {
                     },
                   ),
                 ),
-
                 Expanded(
                   child: RadioListTile<String>(
                     title: Text(
                       widget.isEnglish ? 'Account Suspension' : 'ระงับบัญชี',
                     ),
-
                     value: 'Suspension of account',
-
                     groupValue: _selectedPenaltyType,
-
                     onChanged: (String? value) {
                       setState(() {
                         _selectedPenaltyType = value;
@@ -435,131 +372,88 @@ class _PenaltyScreenState extends State<PenaltyScreen> {
                 ),
               ],
             ),
-
             const SizedBox(height: 20),
-
             Text(
               widget.isEnglish
                   ? 'Until Date'
                   : 'จนถึงวันที่', // เปลี่ยนข้อความตรงนี้
-
               style: const TextStyle(
                 fontSize: 16,
-
                 fontWeight: FontWeight.bold,
-
                 color: Colors.black87,
               ),
             ),
-
             const SizedBox(height: 10),
-
             TextField(
               controller: _endDateController, // ใช้ Controller ตัวใหม่
-
               readOnly: true,
-
               onTap: () => _selectDate(context),
-
               decoration: InputDecoration(
                 hintText:
                     widget.isEnglish ? 'DD/MM/YYYY (AD)' : 'วว/ดด/ปปปป (พ.ศ.)',
-
                 filled: true,
-
                 fillColor: Colors.white,
-
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
-
                   borderSide: BorderSide.none,
                 ),
-
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: 15,
-
                   vertical: 15,
                 ),
               ),
             ),
-
             const SizedBox(height: 20),
-
             Text(
               widget.isEnglish ? 'Penalty Details' : 'รายละเอียดบทลงโทษ',
-
               style: const TextStyle(
                 fontSize: 16,
-
                 fontWeight: FontWeight.bold,
-
                 color: Colors.black87,
               ),
             ),
-
             const SizedBox(height: 10),
-
             TextField(
               controller: _detailsController,
-
               maxLines: 6,
-
               decoration: InputDecoration(
-                hintText:
-                    widget.isEnglish
-                        ? 'Please provide more details about the incident...'
-                        : 'โปรดระบุรายละเอียดเพิ่มเติมเกี่ยวกับเหตุการณ์...',
-
+                hintText: widget.isEnglish
+                    ? 'Please provide more details about the incident...'
+                    : 'โปรดระบุรายละเอียดเพิ่มเติมเกี่ยวกับเหตุการณ์...',
                 filled: true,
-
                 fillColor: Colors.white,
-
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
-
                   borderSide: BorderSide.none,
                 ),
-
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: 15,
-
                   vertical: 15,
                 ),
               ),
             ),
-
             const SizedBox(height: 40),
-
             SizedBox(
               width: double.infinity,
-
               height: 50,
-
               child: ElevatedButton(
                 onPressed: _submitPenalty,
-
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.red,
-
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
                   ),
                 ),
-
                 child: Text(
                   widget.isEnglish ? 'Submit Penalty' : 'ส่งบทลงโทษ',
-
                   style: const TextStyle(
                     fontSize: 18,
-
                     color: Colors.white,
-
                     fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
             ),
-
             const SizedBox(height: 20),
           ],
         ),

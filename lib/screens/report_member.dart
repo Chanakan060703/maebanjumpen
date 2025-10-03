@@ -38,7 +38,6 @@ class _ReportHousekeeperPageState extends State<ReportHousekeeperPage> {
   @override
   void initState() {
     super.initState();
-    // Check if the hire object already has a report attached
     _isReported = widget.hire.report != null;
 
     if (_isReported) {
@@ -168,15 +167,12 @@ class _ReportHousekeeperPageState extends State<ReportHousekeeperPage> {
       return;
     }
 
-    // IMPORTANT: Add the hireId to the report, and ensure reporter/hirer/housekeeper 
-    // fields are correctly mapped to the DTO structure expected by the backend.
     final newReport = Report(
       reportTitle: _selectedIssue,
       reportMessage: _detailsController.text,
       reportDate: parsedDate,
       reportStatus: 'pending',
-      // Explicitly adding hireId (FIX 1)
-      hireId: widget.hire.hireId, 
+      hireId: widget.hire.hireId,
       reporter: reporterHirer,
       hirer: reporterHirer,
       housekeeper: reportedHousekeeper,
@@ -195,43 +191,41 @@ class _ReportHousekeeperPageState extends State<ReportHousekeeperPage> {
       );
 
       if (mounted) {
-        // *** FIX: Navigate to HireListPage using pushReplacement on success ***
+        setState(() {
+          _isReported = true;
+        });
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (context) => HireListPage(
-              user: widget.hirerUser!,
-              isEnglish: widget.isEnglish),
+            builder:
+                (context) => HireListPage(
+                  user: widget.hirerUser!,
+                  isEnglish: widget.isEnglish,
+                ),
           ),
         );
-        // We use pushReplacement to prevent the user from navigating back to the report page immediately after submitting.
       }
     } catch (e) {
       debugPrint('Error submitting report: $e');
 
       String translatedMessage;
 
-      // **FIXED ERROR HANDLING LOGIC (FIX 2)**
-      // Consolidate the "Already Reported" message to catch the 409 status code reliably.
       if (e.toString().contains('409')) {
         translatedMessage =
             widget.isEnglish
                 ? 'This job has already been reported. You cannot report it again.'
                 : 'งานนี้ถูกรายงานไปแล้ว ไม่สามารถส่งรายงานใหม่ได้';
       } else if (e.toString().contains('400')) {
-        // ตัวอย่างการจัดการ HTTP 400 Bad Request
         translatedMessage =
             widget.isEnglish
                 ? 'Invalid data submitted. Please check the form.'
                 : 'ข้อมูลที่ส่งไม่ถูกต้อง โปรดตรวจสอบฟอร์มอีกครั้ง';
       } else if (e.toString().contains('500')) {
-        // 500 should be a general server error, not "Already reported"
         translatedMessage =
             widget.isEnglish
                 ? 'Internal Server Error. Please contact support.'
                 : 'ข้อผิดพลาดภายในเซิร์ฟเวอร์ โปรดติดต่อฝ่ายสนับสนุน';
       } else {
-        // กรณี error ทั่วไป
         translatedMessage =
             widget.isEnglish
                 ? 'Failed to submit report. Please try again.'

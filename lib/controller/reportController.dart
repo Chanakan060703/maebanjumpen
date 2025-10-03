@@ -9,6 +9,7 @@ import 'package:maebanjumpen/model/account_manager.dart'; // Import AccountManag
 import 'package:maebanjumpen/model/admin.dart'; // Import Admin model
 
 class ReportController {
+
   Future<List<Report>> getAllReport() async {
     var url = Uri.parse('$baseURL/maeban/reports');
 
@@ -40,6 +41,25 @@ class ReportController {
     }
   }
 
+  Future<bool> hasReported(int hireId, int reporterId) async {
+    var url = Uri.parse('$baseURL/maeban/reports/check-duplicate/hire/$hireId/reporter/$reporterId');
+    try {
+      final response = await http.get(url);
+
+      if (response.statusCode == 200) {
+        // API คืนค่า Boolean โดยตรง
+        return jsonDecode(response.body) as bool;
+      } else {
+        // ถ้าเกิดข้อผิดพลาดในการเรียก API ให้ถือว่ายังไม่ได้รายงาน
+        print('Failed to check report status: ${response.statusCode}');
+        return false;
+      }
+    } catch (e) {
+      print('Error checking report status: $e');
+      return false;
+    }
+  }
+
   // แก้ไข addReport ให้รับ Report object โดยตรง
   Future<Report> addReport(Report report) async {
     try {
@@ -58,45 +78,26 @@ class ReportController {
       if (response.statusCode == 200 || response.statusCode == 201) {
         return Report.fromJson(jsonDecode(response.body));
       } else {
-        // ✅ FIX: อ่าน Header 'x-error-message' ที่ส่งมาจาก Server (ReportController.java)
-
         final errorMessageHeader = response.headers['x-error-message'];
-
         final status = response.statusCode;
-
         String errorMessage = 'Failed to add report: $status';
-
         if (errorMessageHeader != null && errorMessageHeader.isNotEmpty) {
-          // ใช้ข้อความจาก Server ถ้ามี (เช่น "Hire ID is required.")
-
           errorMessage += ' - Reason: $errorMessageHeader';
         } else {
-          // ถ้าไม่มี Header ก็ใช้ Response Body ปกติ
-
           errorMessage += ' - Body: ${response.body}';
         }
-
         print('Failed to add report. Status code: $status');
-
         print('Response body: ${response.body}');
-
         throw Exception(errorMessage);
       }
     } catch (e) {
       print('Error calling addReport: $e');
-
       throw Exception('Error calling addReport: $e');
     }
   }
 
-  // แก้ไข updateReport ให้รับ Report object โดยตรง
   Future<Report> updateReport(int id, Report report) async {
-    // ปรับปรุงการส่งข้อมูล JSON เพื่อให้ Spring Boot สามารถ resolve type ได้
-
     final Map<String, dynamic> reportJson = report.toJson();
-
-    // Helper function to add DTYPE to PartyRole objects
-
     void addType(Map<String, dynamic> partyRoleJson, dynamic partyRoleObject) {
       if (partyRoleObject is Hirer) {
         partyRoleJson['type'] = 'hirer';
@@ -110,21 +111,16 @@ class ReportController {
         partyRoleJson['type'] = 'member';
       }
     }
-
     if (reportJson['hirer'] != null && report.hirer != null) {
       addType(reportJson['hirer'], report.hirer);
     }
-
     if (reportJson['housekeeper'] != null && report.housekeeper != null) {
       addType(reportJson['housekeeper'], report.housekeeper);
     }
-
     if (reportJson['reporter'] != null && report.reporter != null) {
       addType(reportJson['reporter'], report.reporter);
     }
-
     var body = json.encode(reportJson);
-
     var url = Uri.parse('$baseURL/maeban/reports/$id');
 
     try {
@@ -138,45 +134,36 @@ class ReportController {
         return Report.fromJson(jsonDecode(response.body));
       } else {
         print('Failed to update report. Status code: ${response.statusCode}');
-
         print('Response body: ${response.body}');
-
         throw Exception(
           'Failed to update report: ${response.statusCode} ${response.body}',
         );
       }
     } catch (e) {
       print('Error calling updateReport: $e');
-
       throw Exception('Failed to update report: $e');
     }
   }
 
   Future<Map<String, dynamic>> deleteReport(int id) async {
     var url = Uri.parse('$baseURL/maeban/reports/$id');
-
     try {
       http.Response response = await http.delete(
         url,
         headers: headers,
       ); // ใช้ headers
-
       if (response.statusCode == 204) {
         // 204 No Content for successful delete
-
         return {'message': 'Report deleted successfully'};
       } else {
         print('Failed to delete report. Status code: ${response.statusCode}');
-
         print('Response body: ${response.body}');
-
         throw Exception(
           'Failed to delete report: ${response.statusCode} ${response.body}',
         );
       }
     } catch (e) {
       print('Error calling deleteReport: $e');
-
       throw Exception('Failed to delete report: $e');
     }
   }
@@ -184,29 +171,24 @@ class ReportController {
   // เปลี่ยน getReportById ให้คืนค่าเป็น Report object โดยตรงหากต้องการ
   Future<Report> getReportById(int id) async {
     var url = Uri.parse('$baseURL/maeban/reports/$id');
-
     try {
       http.Response response = await http.get(
         url,
         headers: headers,
       ); // ใช้ headers
-
       if (response.statusCode == 200) {
         return Report.fromJson(jsonDecode(response.body));
       } else {
         print(
           'Failed to get report by ID. Status code: ${response.statusCode}',
         );
-
         print('Response body: ${response.body}');
-
         throw Exception(
           'Failed to get report by ID: ${response.statusCode} ${response.body}',
         );
       }
     } catch (e) {
       print('Error calling getReportById: $e');
-
       throw Exception('Failed to get report by ID: $e');
     }
   }
@@ -215,30 +197,24 @@ class ReportController {
     final url = Uri.parse(
       '$baseURL/maeban/reports/latest-with-penalty/by-person/$personId',
     ); // Endpoint ใหม่
-
     try {
       final response = await http.get(url, headers: headers);
-
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = jsonDecode(
           utf8.decode(response.bodyBytes),
         );
-
         return Report.fromJson(data);
       } else if (response.statusCode == 404) {
         print("No latest report with penalty found for personId: $personId");
-
         return null;
       } else {
         print(
           "Failed to fetch latest report with penalty: ${response.statusCode}, body: ${response.body}",
         );
-
         throw Exception('Failed to fetch latest report with penalty');
       }
     } catch (e) {
       print("Error fetching latest report with penalty: $e");
-
       rethrow;
     }
   }

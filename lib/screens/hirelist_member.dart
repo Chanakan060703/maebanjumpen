@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:maebanjumpen/controller/notification_manager.dart';
+import 'package:maebanjumpen/controller/reportController.dart';
 import 'package:maebanjumpen/model/hirer.dart';
 import 'package:maebanjumpen/model/hire.dart';
 import 'package:maebanjumpen/screens/deposit_member.dart';
@@ -27,11 +28,16 @@ class HireListPage extends StatefulWidget {
 }
 
 class _HireListPageState extends State<HireListPage> {
+  // --- [สำคัญ] เพิ่มตัวแปรสำหรับ Report Controller และสถานะการรายงาน ---
+  final ReportController _reportApi = ReportController();
+  Map<int, bool> _hasReported = {}; // <Hire ID, Is Reported by current user>
+  bool _isCheckingReports = false; // สถานะกำลังเช็ค API รายงานซ้ำ
+
   int _currentIndex = 2;
   String _selectedFilter = 'All';
   List<Hire> _allHires = [];
   List<Hire> _filteredHires = [];
-  List<Hire> _previousHires = []; // เก็บสถานะก่อนหน้าสำหรับการเปรียบเทียบ
+  List<Hire> _previousHires = [];
 
   bool _isLoading = false;
 
@@ -41,12 +47,12 @@ class _HireListPageState extends State<HireListPage> {
     _fetchHires();
   }
 
+  // --- [แก้ไข] อัปเดต _fetchHires เพื่อเรียกใช้ API ตรวจสอบการรายงานซ้ำ ---
   Future<void> _fetchHires() async {
     if (_isLoading) return;
     setState(() => _isLoading = true);
 
     try {
-      // เก็บสถานะปัจจุบันก่อน fetch ใหม่
       _previousHires = List.from(_allHires);
 
       final response = await http.get(
@@ -60,27 +66,121 @@ class _HireListPageState extends State<HireListPage> {
         List<dynamic> jsonList = jsonDecode(utf8.decode(response.bodyBytes));
         List<Hire> fetchedHires =
             jsonList.map((json) => Hire.fromJson(json)).toList();
+        
+        // 1. อัปเดตรายการ Hire
         setState(() {
           _allHires = fetchedHires;
           _applyFilter(_selectedFilter);
         });
+        
+        // 2. ตรวจสอบสถานะการรายงานซ้ำ (จะอัปเดต _hasReported ทั้งหมด)
+        await _checkAllReportStatuses(_allHires);
+
+        // 3. ตรวจสอบการเปลี่ยนแปลงสถานะสำหรับแจ้งเตือน
         _checkAndNotifyHireStatusChanges();
       } else {
         _showMessage(
-          widget.isEnglish
-              ? 'Failed to load hire list. Status: ${response.statusCode}'
-              : 'ไม่สามารถโหลดรายการจ้างได้. สถานะ: ${response.statusCode}',
-        );
+              widget.isEnglish
+                  ? 'Failed to load hire list. Status: ${response.statusCode}'
+                  : 'ไม่สามารถโหลดรายการจ้างได้. สถานะ: ${response.statusCode}',
+              );
         print('Failed to load hires: ${response.body}');
       }
     } catch (e) {
       print('Error fetching hires: $e');
       if (!mounted) return;
       _showMessage(
-        widget.isEnglish
-            ? 'Network error or unable to connect to the server.'
-            : 'ข้อผิดพลาดเครือข่าย หรือไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้',
+            widget.isEnglish
+                ? 'Network error or unable to connect to the server.'
+                : 'ข้อผิดพลาดเครือข่าย หรือไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้',
+            );
+    } finally {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+    }
+  }
+
+  // --- [แก้ไข] เมธอดสำหรับดึงสถานะการรายงานซ้ำจาก API (ใช้สำหรับรีเฟรชสถานะปุ่ม) ---
+  Future<void> _checkAllReportStatuses(List<Hire> hires) async {
+    if (_isCheckingReports) return;
+    setState(() => _isCheckingReports = true);
+
+    final reporterId = widget.user.id; // ใช้ Hirer ID เป็น Reporter ID
+
+    if (reporterId == null || reporterId == 0) {
+      if (mounted) setState(() => _isCheckingReports = false);
+      return;
+    }
+
+    // สร้าง Map ชั่วคราวสำหรับสถานะใหม่
+    final Map<int, bool> newReportStatuses = {}; 
+
+    // ใช้ Future.wait เพื่อเรียก API พร้อมกันทุกรายการ
+    List<Future<void>> checks = [];
+
+    for (var hire in hires) {
+      final hireId = hire.hireId;
+      if (hireId != null && hireId != 0) {
+        // เช็คสถานะการรายงานใหม่ทั้งหมด
+        checks.add(_reportApi.hasReported(hireId, reporterId).then((isReported) {
+          if (mounted) {
+            newReportStatuses[hireId] = isReported;
+          }
+        }).catchError((e) {
+          print('Error checking report for Hire ID $hireId: $e');
+          if (mounted) {
+            newReportStatuses[hireId] = false; // ถ้าเกิด Error ให้ถือว่ายังไม่ได้รายงาน
+          }
+        }));
+      }
+    }
+
+    await Future.wait(checks);
+
+    if (mounted) {
+      setState(() {
+        // อัปเดต Map หลักด้วยผลลัพธ์ใหม่ทั้งหมด
+        _hasReported = newReportStatuses; 
+        _isCheckingReports = false;
+      });
+    }
+  }
+
+
+  Future<void> _updateHireStatus(String hireId, String newStatus) async {
+    setState(() => _isLoading = true);
+    try {
+      final response = await http.put(
+        Uri.parse('$baseURL/maeban/hires/$hireId/status'),
+        headers: headers,
+        body: jsonEncode({'jobStatus': newStatus}),
       );
+
+      if (!mounted) return;
+
+      if (response.statusCode == 200) {
+        _showMessage(
+              widget.isEnglish
+                  ? 'Hire status updated to ${_getLocalizedJobStatus(newStatus)}.'
+                  : 'อัปเดตสถานะการจ้างเป็น ${_getLocalizedJobStatus(newStatus)} แล้ว',
+              );
+        await _fetchHires();
+      } else {
+        _showMessage(
+              widget.isEnglish
+                  ? 'Failed to update hire status. Status: ${response.statusCode}'
+                  : 'ไม่สามารถอัปเดตสถานะการจ้างได้. สถานะ: ${response.statusCode}',
+              );
+        print('Failed to update status: ${response.body}');
+      }
+    } catch (e) {
+      print('Error updating status: $e');
+      if (!mounted) return;
+      _showMessage(
+            widget.isEnglish
+                ? 'Network error or unable to connect to the server.'
+                : 'ข้อผิดพลาดเครือข่าย หรือไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้',
+            );
     } finally {
       if (!mounted) return;
       setState(() => _isLoading = false);
@@ -95,12 +195,11 @@ class _HireListPageState extends State<HireListPage> {
 
     for (final newHire in _allHires) {
       final oldHire = _previousHires.firstWhereOrNull(
-        (h) => h.hireId == newHire.hireId,
-      );
+            (h) => h.hireId == newHire.hireId,
+          );
 
       final String eventKeyPrefix = 'hire_${newHire.hireId}';
 
-      // Notifying for new hires (if oldHire is null)
       if (oldHire == null) {
         notificationManager.addNotification(
           title:
@@ -113,15 +212,13 @@ class _HireListPageState extends State<HireListPage> {
           showNow: true,
           eventKey: '${eventKeyPrefix}_created',
         );
-      }
-      // Notifying for status changes
-      else if (oldHire.jobStatus != newHire.jobStatus) {
+      } else if (oldHire.jobStatus != newHire.jobStatus) {
         final String oldStatusLocalized = _getLocalizedJobStatus(
-          oldHire.jobStatus ?? '',
-        );
+              oldHire.jobStatus ?? '',
+            );
         final String newStatusLocalized = _getLocalizedJobStatus(
-          newHire.jobStatus ?? '',
-        );
+              newHire.jobStatus ?? '',
+            );
 
         notificationManager.addNotification(
           title:
@@ -137,7 +234,6 @@ class _HireListPageState extends State<HireListPage> {
           eventKey: '${eventKeyPrefix}_status_change_${newHire.jobStatus}',
         );
       }
-      // NEW: Notifying for new review
       if (oldHire?.review == null && newHire.review != null) {
         notificationManager.addNotification(
           title: widget.isEnglish ? 'Hire Reviewed!' : 'มีการรีวิวการจ้างแล้ว!',
@@ -150,7 +246,7 @@ class _HireListPageState extends State<HireListPage> {
           eventKey: '${eventKeyPrefix}_reviewed',
         );
       }
-      // NEW: Notifying for new report
+      // ตรวจสอบ Report จากสถานะที่มาจาก Back-end (หากมี)
       if (oldHire?.report == null && newHire.report != null) {
         notificationManager.addNotification(
           title: widget.isEnglish ? 'Hire Reported!' : 'มีการรายงานการจ้าง!',
@@ -169,7 +265,6 @@ class _HireListPageState extends State<HireListPage> {
   String _formatTimeWithoutSeconds(String timeString) {
     if (timeString.isEmpty) return '';
 
-    // จัดการกรณีที่มีช่วงเวลา เช่น "10:00:00 - 12:00:00"
     return timeString
         .split(' - ')
         .map((part) {
@@ -202,10 +297,9 @@ class _HireListPageState extends State<HireListPage> {
               final jobStatus = hire.jobStatus?.toLowerCase();
               switch (filterLower) {
                 case 'upcoming':
-                  return jobStatus ==
-                      'pending'; // Changed to 'pending' as per your status map
+                  return jobStatus == 'pending' || jobStatus == 'accepted';
                 case 'completed':
-                  return jobStatus == 'completed' || jobStatus == 'reviewed';
+                  return jobStatus == 'completed' || jobStatus == 'reviewed' || jobStatus == 'verified';
                 case 'cancelled':
                   return jobStatus == 'cancelled';
                 case 'verified':
@@ -216,8 +310,10 @@ class _HireListPageState extends State<HireListPage> {
                   return jobStatus == 'pendingapproval';
                 case 'in progress':
                   return jobStatus == 'in_progress';
-                case 'accepted': // Added 'accepted' filter
+                case 'accepted':
                   return jobStatus == 'accepted';
+                case 'pending':
+                  return jobStatus == 'pending';
                 default:
                   return false;
               }
@@ -234,12 +330,15 @@ class _HireListPageState extends State<HireListPage> {
 
         final statusOrder = {
           'pending': 0,
-          'pendingapproval': 1,
-          'in_progress': 2,
-          'completed': 3,
-          'reviewed': 4,
-          'cancelled': 5,
-          'rejected': 6,
+          'accepted': 1,
+          'pendingapproval': 2,
+          'in_progress': 3,
+          'reported': 4, // จัดลำดับให้ Reported อยู่สูงกว่า Completed ชั่วคราว
+          'completed': 5,
+          'reviewed': 6,
+          'verified': 7,
+          'cancelled': 8,
+          'rejected': 9,
         };
         final orderA = statusOrder[a.jobStatus?.toLowerCase() ?? ''] ?? 99;
         final orderB = statusOrder[b.jobStatus?.toLowerCase() ?? ''] ?? 99;
@@ -272,6 +371,7 @@ class _HireListPageState extends State<HireListPage> {
       'reviewed': 'Reviewed',
       'pending': 'Pending',
       'accepted': 'Accepted',
+      'reported': 'Reported (Temp)',
     };
 
     Map<String, String> thMap = {
@@ -286,6 +386,7 @@ class _HireListPageState extends State<HireListPage> {
       'reviewed': 'รีวิวแล้ว',
       'pending': 'รอดำเนินการ',
       'accepted': 'ตอบรับแล้ว',
+      'reported': 'ถูกรายงาน (ชั่วคราว)',
     };
 
     return widget.isEnglish
@@ -312,6 +413,8 @@ class _HireListPageState extends State<HireListPage> {
         return Colors.yellow[700]!;
       case 'reviewed':
         return Colors.purple;
+      case 'reported':
+        return Colors.deepOrange;
       case 'accepted':
         return Colors.green;
       default:
@@ -323,6 +426,7 @@ class _HireListPageState extends State<HireListPage> {
     final filters = [
       'All',
       'Pending',
+      'Accepted',
       'Upcoming',
       'Pending Approval',
       'In Progress',
@@ -344,9 +448,8 @@ class _HireListPageState extends State<HireListPage> {
       );
     }).toList();
   }
-
+  
   void _handleReport(BuildContext context, Hire hire) async {
-    // NEW: Check if housekeeper is available before navigating to Report page
     if (hire.housekeeper != null) {
       final result = await Navigator.push(
         context,
@@ -360,22 +463,78 @@ class _HireListPageState extends State<HireListPage> {
         ),
       );
 
-      // Refresh hires if a report was submitted
+      // เมื่อกลับมาจากหน้า Report ให้ทำการดึงรายการใหม่เพื่ออัปเดตสถานะการรายงาน
       if (result == true) {
-        _fetchHires();
+        // อัปเดตสถานะการรายงานใน Map ทันทีเพื่อซ่อนปุ่ม (เพื่อให้ปุ่มหายไปทันทีโดยไม่ต้องรอ API)
+        if (hire.hireId != null && mounted) {
+          setState(() {
+            _hasReported[hire.hireId!] = true;
+          });
+        }
+        _fetchHires(); // ดึงข้อมูลใหม่จากเซิร์ฟเวอร์
       }
     } else {
-      // Show an error if housekeeper data is missing
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            widget.isEnglish
-                ? 'Housekeeper information is missing, cannot report.'
-                : 'ไม่พบข้อมูลแม่บ้าน ไม่สามารถรายงานได้',
-          ),
+              widget.isEnglish
+                  ? 'Housekeeper information is missing, cannot report.'
+                  : 'ไม่พบข้อมูลแม่บ้าน ไม่สามารถรายงานได้',
+              ),
           backgroundColor: Colors.red,
         ),
       );
+    }
+  }
+
+  void _handleVerify(BuildContext context, Hire hire) {
+    if (hire.hireId == null) {
+      _showMessage(
+            widget.isEnglish ? 'Hire ID is missing.' : 'ไม่พบรหัสการจ้าง',
+            );
+      return;
+    }
+
+    if (hire.jobStatus?.toLowerCase() == 'pendingapproval') {
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Text(
+                widget.isEnglish ? 'Confirm Verification' : 'ยืนยันการตรวจสอบ',
+                ),
+            content: Text(
+                widget.isEnglish
+                    ? 'Are you sure you want to verify this completed job?'
+                    : 'คุณแน่ใจหรือไม่ที่จะยืนยันงานที่เสร็จสิ้นแล้วนี้?',
+                ),
+            actions: <Widget>[
+              TextButton(
+                child: Text(widget.isEnglish ? 'Cancel' : 'ยกเลิก'),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+              ),
+              TextButton(
+                child: Text(
+                  widget.isEnglish ? 'Verify' : 'ตรวจสอบ',
+                  style: const TextStyle(color: Colors.green),
+                ),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  _updateHireStatus(hire.hireId!.toString(), 'verified');
+                },
+              ),
+            ],
+          );
+        },
+      );
+    } else {
+      _showMessage(
+            widget.isEnglish
+                ? 'This hire is not in "Pending Approval" status.'
+                : 'การจ้างนี้ไม่ได้อยู่ในสถานะ "รอการอนุมัติ"',
+            );
     }
   }
 
@@ -421,110 +580,121 @@ class _HireListPageState extends State<HireListPage> {
             ),
             Expanded(
               child:
-                  _isLoading
+                  _isLoading || _isCheckingReports 
                       ? const Center(
-                        child: CircularProgressIndicator(color: Colors.red),
-                      )
+                          child: CircularProgressIndicator(color: Colors.red),
+                        )
                       : _filteredHires.isEmpty
-                      ? Center(
-                        child: Text(
-                          widget.isEnglish
-                              ? 'No hires found.'
-                              : 'ไม่พบรายการจ้าง',
-                        ),
-                      )
-                      : ListView.builder(
-                        itemCount: _filteredHires.length,
-                        itemBuilder: (context, index) {
-                          final hire = _filteredHires[index];
-                          final status = hire.jobStatus?.toLowerCase() ?? '';
+                          ? Center(
+                              child: Text(
+                                widget.isEnglish
+                                    ? 'No hires found.'
+                                    : 'ไม่พบรายการจ้าง',
+                              ),
+                            )
+                          : ListView.builder(
+                              itemCount: _filteredHires.length,
+                              itemBuilder: (context, index) {
+                                final hire = _filteredHires[index];
+                                final status = hire.jobStatus?.toLowerCase() ?? '';
+                                
+                                // ตรวจสอบสถานะการรายงานจาก Map (ซึ่งถูกรีเฟรชจาก API แล้ว)
+                                final bool isReportedByMe = _hasReported[hire.hireId] ?? false; 
+                                
+                                final bool hasReview = hire.review != null;
 
-                          final bool hasReport = hire.report != null;
-                          final bool hasReview = hire.review != null;
+                                final String displayTime = _formatTimeWithoutSeconds(
+                                  '${hire.startTime ?? ''} ${hire.endTime != null ? '- ${hire.endTime}' : ''}',
+                                );
+                                
+                                // ตรรกะการซ่อนปุ่ม: ซ่อนถ้าผู้ใช้คนนี้เคยรายงานไปแล้ว
+                                final bool shouldHideReport = isReportedByMe;
 
-                          final String displayTime = _formatTimeWithoutSeconds(
-                            '${hire.startTime ?? ''} ${hire.endTime != null ? '- ${hire.endTime}' : ''}',
-                          );
+                                return JobCard(
+                                  name:
+                                      hire.housekeeper?.person?.firstName ?? hire.housekeeper?.person?.lastName ??
+                                      (widget.isEnglish ? 'N/A' : 'ไม่ระบุ'),
+                                  date: _formatDate(hire.startDate),
+                                  time: displayTime,
+                                  address:
+                                      hire.location ??
+                                      (widget.isEnglish
+                                          ? 'Unknown Address'
+                                          : 'ที่อยู่ไม่ระบุ'),
+                                  status: _getLocalizedJobStatus(status),
+                                  price:
+                                      '฿${hire.paymentAmount?.toStringAsFixed(0) ?? '0'}',
+                                  imageUrl: hire.housekeeper?.person?.pictureUrl,
+                                  serviceName:
+                                      hire.hireName ??
+                                      (widget.isEnglish
+                                          ? 'Unnamed Service'
+                                          : 'บริการที่ไม่มีชื่อ'),
+                                  details:
+                                      hire.hireDetail ??
+                                      (widget.isEnglish
+                                          ? 'No details'
+                                          : 'ไม่มีรายละเอียด'),
+                                  statusColor: _getStatusColor(status),
+                                  showVerifyButton: status == 'pendingapproval',
+                                  
+                                  onVerifyPressed: hire.hireId != null
+                                      ? () => _handleVerify(context, hire)
+                                      : null, 
 
-                          return JobCard(
-                            name:
-                                hire.housekeeper?.person?.firstName ?? hire.housekeeper?.person?.lastName ??
-                                (widget.isEnglish ? 'N/A' : 'ไม่ระบุ'),
-                            date: _formatDate(hire.startDate),
-                            time: displayTime,
-                            address:
-                                hire.location ??
-                                (widget.isEnglish
-                                    ? 'Unknown Address'
-                                    : 'ที่อยู่ไม่ระบุ'),
-                            status: _getLocalizedJobStatus(status),
-                            price:
-                                '฿${hire.paymentAmount?.toStringAsFixed(0) ?? '0'}',
-                            imageUrl: hire.housekeeper?.person?.pictureUrl,
-                            serviceName:
-                                hire.hireName ??
-                                (widget.isEnglish
-                                    ? 'Unnamed Service'
-                                    : 'บริการที่ไม่มีชื่อ'),
-                            details:
-                                hire.hireDetail ??
-                                (widget.isEnglish
-                                    ? 'No details'
-                                    : 'ไม่มีรายละเอียด'),
-                            statusColor: _getStatusColor(status),
-                            showVerifyButton: status == 'pendingapproval',
-                            // NEW: showReportButton ควรเป็น true ถ้าสถานะที่กำหนดและยังไม่มีรายงาน
-                            showReportButton:
-                                (status == 'pendingapproval' ||
-                                    status == 'completed' ||
-                                    status == 'reviewed' ||
-                                    status ==
-                                        'in_progress' || // สามารถรายงานขณะ in_progress ได้ด้วย
-                                    status == 'accepted') &&
-                                !hasReport, // เพิ่ม 'accepted' และ 'in_progress' ให้สามารถรายงานได้
-                            showReviewButton:
-                                status == 'completed' &&
-                                !hasReview &&
-                                status != 'reviewed',
-                            isEnglish: widget.isEnglish,
-                            hire: hire,
-                            hirerUser: widget.user,
-                            onReportPressed: () => _handleReport(context, hire),
-                            onTap: () async {
-                              final result = await Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder:
-                                      (_) => ViewhireHousekeeperPage(
-                                        hire: hire,
-                                        isEnglish: widget.isEnglish,
-                                        user: widget.user,
+                                  // ตรรกะการแสดงปุ่ม Report:
+                                  showReportButton:
+                                      (status == 'pendingapproval' ||
+                                          status == 'completed' ||
+                                          status == 'reviewed' ||
+                                          status == 'in_progress' ||
+                                          status == 'accepted') &&
+                                          !shouldHideReport, // ซ่อนถ้าถูกรายงานแล้วโดยผู้ใช้คนนี้
+
+                                  showReviewButton:
+                                      status == 'completed' &&
+                                          !hasReview &&
+                                          status != 'reviewed',
+                                  
+                                  isEnglish: widget.isEnglish,
+                                  hire: hire,
+                                  hirerUser: widget.user,
+                                  onReportPressed: () => _handleReport(context, hire),
+                                  onTap: () async {
+                                    final result = await Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder:
+                                            (_) => ViewhireHousekeeperPage(
+                                                hire: hire,
+                                                isEnglish: widget.isEnglish,
+                                                user: widget.user,
+                                              ),
                                       ),
-                                ),
-                              );
-                              if (result == true) {
-                                _fetchHires();
-                              }
-                            },
-                            onReviewPressed: () async {
-                              final result = await Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder:
-                                      (context) => ReviewHousekeeperPage(
-                                        hire: hire,
-                                        isEnglish: widget.isEnglish,
-                                        user: widget.user,
+                                    );
+                                    if (result == true) {
+                                      _fetchHires();
+                                    }
+                                  },
+                                  onReviewPressed: () async {
+                                    final result = await Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder:
+                                            (context) => ReviewHousekeeperPage(
+                                                hire: hire,
+                                                isEnglish: widget.isEnglish,
+                                                user: widget.user,
+                                              ),
                                       ),
-                                ),
-                              );
-                              if (result == true) {
-                                _fetchHires();
-                              }
-                            },
-                          );
-                        },
-                      ),
+                                    );
+                                    if (result == true) {
+                                      _fetchHires();
+                                    }
+                                  },
+                                );
+                              },
+                            ),
             ),
           ],
         ),

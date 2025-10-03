@@ -169,12 +169,25 @@ class _EditProfileHousekeeperPageState
   Future<void> _saveProfile() async {
     if (!mounted) return;
     setState(() => _isLoading = true);
-
     try {
       // --- Upload Image & Update Person ---
       String? newProfileUrl = _currentProfilePictureUrl;
       if (_pickedImageFile != null && widget.user.person?.personId != null) {
-        // Image upload logic
+        // 🟢 โค้ดที่เพิ่ม: เรียก service อัปโหลด
+        final uploadedUrl = await _imageUploadService.uploadImage(
+          id: widget.user.person!.personId!,
+          imageType: 'person', // 'person' จะใช้ endpoint สำหรับรูปโปรไฟล์
+          imageFile: _pickedImageFile!,
+        );
+        if (uploadedUrl != null) {
+          newProfileUrl = uploadedUrl;
+        } else {
+          throw Exception(
+            widget.isEnglish
+                ? 'Failed to upload profile image.'
+                : 'ไม่สามารถอัปโหลดรูปโปรไฟล์ได้',
+          );
+        }
       }
 
       final updatedPerson = widget.user.person?.copyWith(
@@ -449,16 +462,19 @@ class _EditProfileHousekeeperPageState
         ],
       ),
 
-      body:
+       body:
           _isLoading && _availableSkillTypes.isEmpty
               ? const Center(
-                child: CircularProgressIndicator(color: Colors.red),
-              )
-              : SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 20,
-                ),
+                  child: CircularProgressIndicator(color: Colors.red),
+                )
+              : RefreshIndicator( // 🟢 1. เพิ่ม RefreshIndicator
+                  onRefresh: _fetchAndInitializeSkills, // 🟢 2. กำหนดให้เรียกฟังก์ชันโหลดข้อมูล
+                  color: Colors.red, // สีของวงกลมโหลด
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 20,
+                    ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -537,6 +553,7 @@ class _EditProfileHousekeeperPageState
                   ],
                 ),
               ),
+            ),
     );
   }
 
